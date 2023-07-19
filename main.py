@@ -1,4 +1,4 @@
-import ipaddress
+from ipaddress import IPv4Address
 import json
 
 import httpx
@@ -7,16 +7,16 @@ import netifaces
 from chrisbase.io import JobTimer
 
 
-def available_ipv4_addresses():
-    for interface in netifaces.interfaces():
-        if netifaces.AF_INET in netifaces.ifaddresses(interface):
-            for address_info in netifaces.ifaddresses(interface)[netifaces.AF_INET]:
-                address_object = ipaddress.IPv4Address(address_info['addr'])
-                if address_object.is_global:
-                    yield address_info['addr']
+def local_ip_addrs():
+    for inf in netifaces.interfaces():
+        inf_addrs = netifaces.ifaddresses(inf).get(netifaces.AF_INET)
+        if inf_addrs:
+            for inf_addr in [x.get('addr') for x in inf_addrs]:
+                if inf_addr and IPv4Address(inf_addr).is_global:
+                    yield inf_addr
 
 
-ips = sorted(list(available_ipv4_addresses()))
+ips = sorted(list(local_ip_addrs()))
 
 
 def testInetAddr(title="* Check all IP addresses"):
