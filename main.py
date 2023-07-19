@@ -19,17 +19,27 @@ def local_ip_addrs():
 ips = sorted(list(local_ip_addrs()))
 
 
-def testInetAddr(title="* Check all IP addresses"):
+def check_ip_addrs(title="* Check all IP addresses"):
     with JobTimer(verbose=True, name=title, rt=1, rb=1):
         for ip in ips:
-            with httpx.Client(transport=httpx.HTTPTransport(local_address=ip)) as client:
-                r = client.get("https://api64.ipify.org?format=json", timeout=10.0)
-                res = json.loads(r.text)
-                src = '.'.join(ip.rsplit('.', maxsplit=2)[1:])
-                info = ' ---- '.join(map(lambda x: f"[{x}]", [f"{src:<7s}", f"{r.status_code}",
-                                                              f"{r.elapsed.total_seconds() * 1000:7,.0f}ms", f"{r.num_bytes_downloaded / 1024:7,.2f}KB"]))
-                print(f"  - checked result: {res} ---- {info}")
+            with httpx.Client(transport=httpx.HTTPTransport(local_address=ip)) as cli:
+                res = cli.get("https://api64.ipify.org?format=json", timeout=10.0)
+                checked_ip = json.loads(res.text)['ip']
+                response = {
+                    'source': '.'.join(ip.rsplit('.', maxsplit=2)[1:]),
+                    'status': res.status_code,
+                    'elapsed': res.elapsed.total_seconds() * 1000,
+                    'size': res.num_bytes_downloaded / 1024
+                }
+                print("  * " + ' ----> '.join(map(lambda x: f"[{x}]", [
+                    f"{response['source']:<7s}",
+                    f"{response['status']}",
+                    f"{response['elapsed']:7,.0f}ms",
+                    f"{response['size']:7,.2f}KB",
+                    f"Checked IP: {checked_ip:<15s}",
+                ])))
 
 
 if __name__ == "__main__":
-    print(ips)
+    print(f"IPs = {', '.join(ips)}")
+    check_ip_addrs()
