@@ -1,0 +1,6 @@
+include LICENSE
+include CHANGES.rst
+include README.rst
+include DEVELOPMENT.rst
+include API.rst
+recursive-include wikipedia *.py
