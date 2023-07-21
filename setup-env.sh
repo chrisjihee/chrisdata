@@ -14,4 +14,4 @@ rm -rf Wikipedia-API-*
 pip download --no-binary :all: --no-deps Wikipedia-API==0.6.0
 tar zxf *.tar.gz
 rm *.tar.gz
-\
+pip install --editable Wikipedia-API-0.6.0
