@@ -1,9 +1,11 @@
 import logging
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import pandas as pd
 import typer
+from dataclasses_json import DataClassJsonMixin
 
 import wikipediaapi
 from chrisbase.data import AppTyper, ArgumentsUsing
@@ -116,7 +118,7 @@ def crawl(
         debugging: bool = typer.Option(default=True),
         output_home: str = typer.Option(default="output"),
         input_home: str = typer.Option(default="input"),
-        input_name: str = typer.Option(default="kowiki-sample"),
+        input_name: str = typer.Option(default="kowiki-sample.txt"),
         input_lang: str = typer.Option(default="ko"),
 ):
     args = WikiCrawlArguments(
@@ -126,7 +128,7 @@ def crawl(
             output_home=output_home,
             debugging=debugging,
             msg_level=logging.DEBUG if debugging else logging.INFO,
-            msg_format=LoggingFormat.DEBUG_36 if debugging else LoggingFormat.CHECK_24,
+            msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
         ),
         data=DataOption(
             home=input_home,
@@ -137,66 +139,37 @@ def crawl(
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", rt=1, rb=1, rc='=', verbose=True, flush_sec=0.3):
         with ArgumentsUsing(args.info_arguments(), delete_on_exit=False):
             api = wikipediaapi.Wikipedia(f"{args.env.project}/1.0", args.data.lang)
+            assert (args.data.home / args.data.name).exists(), f"No input file: {args.data.home / args.data.name}"
             with open(args.data.home / args.data.name) as f:
-                titles = f.read().splitlines()
-            logger.info(f"Let's extract from {len(titles)} wikipedia pages!")
+                input_titles = f.read().splitlines()
+            with open(args.env.output_home / "passage.out", "w") as f_json:
+                logger.info(f"Let's extract from {len(input_titles)} wikipedia pages!")
+                for title in input_titles[:10]:
+                    page: wikipediaapi.WikipediaPage = api.page(title)
+
+                    @dataclass
+                    class PageData(DataClassJsonMixin):
+                        page_id: int
+                        title: str
+                        title2: str
+                        section_list: list = field(default_factory=list)
+
+                    if page.exists():
+                        logger.info(page.pageid)
+                        res = PageData(page_id=page.pageid, title=title, title2=page.title)
+
+                        res.section_list.append((title, '', '', page.summary))
+                        res.section_list += get_section_list_lv2(title, page.sections)
+                        if page.summary == '' and len(res.section_list) == 1:
+                            continue
+
+                        logger.info(res.to_json(ensure_ascii=False))
+                        passage_json = get_json(res.section_list, res.page_id)
+                        for passage in passage_json:
+                            json.dump(passage, f_json, ensure_ascii=False, indent=4, sort_keys=True)
+                            f_json.write('\n\n')
+                        exit(1)
 
 
 if __name__ == "__main__":
     app()
-
-    # raw_outpath = pathlib.Path(args.outfolder1)
-    # json_outpath = pathlib.Path(args.outfolder2)
-    #
-    # fileindex = 0
-    # filename = str(fileindex).zfill(5)
-    #
-    # outfile_raw = raw_outpath / filename
-    # f_raw = open(outfile_raw, 'w', encoding='utf-8')
-    # outfile_json = json_outpath / (filename + '.json')
-    # f_json = open(outfile_json, "w", encoding='utf-8')
-    #
-    # for index, title in enumerate(titles):
-    #     if title.find(':') != -1:
-    #         continue
-    #
-    #     if index % 1000 == 0 and index != 0:
-    #         f_raw.close()
-    #         f_json.close()
-    #
-    #         fileindex += 1
-    #         filename = str(fileindex).zfill(5)
-    #
-    #         outfile_raw = raw_outpath / filename
-    #         f_raw = open(outfile_raw, 'w', encoding='utf-8')
-    #         outfile_json = json_outpath / (filename + '.json')
-    #         f_json = open(outfile_json, "w", encoding='utf-8')
-    #
-    #     page = wiki.page(title)
-    #     from sys import stderr
-    #
-    #     print(f'{page.exists()}\t{title}\t{page.title}\t{filename}', file=stderr)
-    #
-    #     try:
-    #         if page.exists():
-    #             section_list = []
-    #             section_list.append((title, '', '', page.summary))
-    #             section_list += get_section_list_lv2(title, page.sections)
-    #
-    #             if page.summary == '' and len(section_list) == 1:
-    #                 continue
-    #
-    #             json.dump(section_list, f_raw, ensure_ascii=False, indent=4)
-    #             f_raw.write('\n\n')
-    #
-    #             passage_json = get_json(section_list, index)
-    #             for passage in passage_json:
-    #                 json.dump(passage, f_json, ensure_ascii=False, indent=4, sort_keys=True)
-    #                 f_json.write('\n\n')
-    #
-    #     except Exception as ex:
-    #         print(title)
-    #         print('[Error]\t', ex)
-    #
-    # f_raw.close()
-    # f_json.close()
