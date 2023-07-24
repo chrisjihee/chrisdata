@@ -116,7 +116,7 @@ def crawl(
         debugging: bool = typer.Option(default=True),
         output_home: str = typer.Option(default="output"),
         input_home: str = typer.Option(default="input"),
-        input_name: str = typer.Option(default="sample.txt"),
+        input_name: str = typer.Option(default="kowiki-sample"),
         input_lang: str = typer.Option(default="ko"),
 ):
     args = WikiCrawlArguments(
