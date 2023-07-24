@@ -9,7 +9,7 @@ from dataclasses import dataclass
 import typer
 
 import wikipediaapi
-from chrisbase.data import ProjectEnv, AppTyper, CommonArguments
+from chrisbase.data import ProjectEnv, AppTyper, CommonArguments, RuntimeChecking
 from chrisbase.io import LoggingFormat
 
 logger = logging.getLogger(__name__)
@@ -119,15 +119,9 @@ def crawl(
         titles = f.read().splitlines()
 
 
-
 if __name__ == "__main__":
     app()
 
-    # wiki = wikipediaapi.Wikipedia('WiseData-2023.07', 'ko')
-    #
-    # with open(args.infile) as f:
-    #     titles = f.read().splitlines()
-    #
     # raw_outpath = pathlib.Path(args.outfolder1)
     # json_outpath = pathlib.Path(args.outfolder2)
     #
