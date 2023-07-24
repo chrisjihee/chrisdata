@@ -92,18 +92,25 @@ def get_section_list_lv2(title, sections):
 
 @app.command()
 def crawl(
+        # env
+        project: str = typer.Option(default="WiseData"),
+        job_name: str = typer.Option(default=None),
+        debugging: bool = typer.Option(default=True),
+        # data
         infile: str = typer.Option(default="sample.title.list"),
         outdir: str = typer.Option(default="output"),
 ):
-    args = CommonArguments(env=ProjectEnv(
-        project="WiseData",
-        job_name=f"from-{infile}",
-        debugging=True,
-        output_home=outdir,
-        msg_level=logging.DEBUG,
-        msg_format=LoggingFormat.DEBUG,
-    ))
-    args.info_arguments(logger)
+    args = CommonArguments(
+        env=ProjectEnv(
+            project=project,
+            job_name=job_name if job_name else f"WikiCrawl-from-{infile}",
+            output_home=outdir,
+            debugging=debugging,
+            msg_level=logging.DEBUG if debugging else logging.INFO,
+            msg_format=LoggingFormat.DEBUG_60 if debugging else LoggingFormat.CHECK,
+        ),
+    )
+    args.info_arguments()
     args.save_arguments()
     logger.info(f"infile: {infile}")
     logger.info(f"outdir: {outdir}")
@@ -112,20 +119,6 @@ def crawl(
 if __name__ == "__main__":
     app()
 
-    # parser = argparse.ArgumentParser(description='crawl wikipedia')
-    # parser.add_argument('--infile', type=str)
-    # parser.add_argument('--outfolder1', type=str)
-    # parser.add_argument('--outfolder2', type=str)
-    # args = parser.parse_args()
-    # env = ProjectEnv(
-    #     project="WiseData",
-    #     job_name="Wikipedia_Cralwing",
-    #     debugging=True,
-    #     msg_level=logging.DEBUG,
-    #     msg_format=LoggingFormat.DEBUG,
-    # )
-    # print(args)
-    #
     # wiki = wikipediaapi.Wikipedia('WiseData-2023.07', 'ko')
     #
     # with open(args.infile) as f:
