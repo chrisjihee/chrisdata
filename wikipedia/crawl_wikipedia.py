@@ -97,7 +97,7 @@ def crawl(
         job_name: str = typer.Option(default=None),
         debugging: bool = typer.Option(default=True),
         # data
-        infile: str = typer.Option(default="sample.title.list"),
+        infile: str = typer.Option(default="input/sample-title.txt"),
         outdir: str = typer.Option(default="output"),
 ):
     args = CommonArguments(
@@ -107,13 +107,17 @@ def crawl(
             output_home=outdir,
             debugging=debugging,
             msg_level=logging.DEBUG if debugging else logging.INFO,
-            msg_format=LoggingFormat.DEBUG_60 if debugging else LoggingFormat.CHECK,
+            msg_format=LoggingFormat.DEBUG_36 if debugging else LoggingFormat.CHECK_24,
         ),
     )
     args.info_arguments()
     args.save_arguments()
     logger.info(f"infile: {infile}")
     logger.info(f"outdir: {outdir}")
+    wiki = wikipediaapi.Wikipedia(args.env.project, 'ko')
+    with open(infile) as f:
+        titles = f.read().splitlines()
+
 
 
 if __name__ == "__main__":
