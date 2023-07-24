@@ -9,8 +9,8 @@ from dataclasses import dataclass
 import typer
 
 import wikipediaapi
-from chrisbase.data import ProjectEnv, AppTyper, CommonArguments, RuntimeChecking
-from chrisbase.io import LoggingFormat
+from chrisbase.data import ProjectEnv, AppTyper, CommonArguments, ArgumentsUsing
+from chrisbase.io import LoggingFormat, JobTimer
 
 logger = logging.getLogger(__name__)
 app = AppTyper()
@@ -95,7 +95,7 @@ def crawl(
         # env
         project: str = typer.Option(default="WiseData"),
         job_name: str = typer.Option(default=None),
-        debugging: bool = typer.Option(default=True),
+        debugging: bool = typer.Option(default=False),
         # data
         infile: str = typer.Option(default="input/sample-title.txt"),
         outdir: str = typer.Option(default="output"),
@@ -110,13 +110,16 @@ def crawl(
             msg_format=LoggingFormat.DEBUG_36 if debugging else LoggingFormat.CHECK_24,
         ),
     )
-    args.info_arguments()
-    args.save_arguments()
-    logger.info(f"infile: {infile}")
-    logger.info(f"outdir: {outdir}")
-    wiki = wikipediaapi.Wikipedia(args.env.project, 'ko')
-    with open(infile) as f:
-        titles = f.read().splitlines()
+    with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", rt=1, rb=1, rc='=', verbose=True, flush_sec=0.3):
+        with ArgumentsUsing(args):
+            args.info_arguments()
+            # args.info_arguments()
+            # args.save_arguments()
+            logger.info(f"infile: {infile}")
+            logger.info(f"outdir: {outdir}")
+            # wiki = wikipediaapi.Wikipedia(args.env.project, 'ko')
+            # with open(infile) as f:
+            #     titles = f.read().splitlines()
 
 
 if __name__ == "__main__":
