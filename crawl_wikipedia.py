@@ -1,28 +1,19 @@
-import argparse
-import json
 import logging
-import pathlib
-import sys
+from dataclasses import dataclass, field
+from pathlib import Path
 
-from dataclasses import dataclass
-
+import pandas as pd
 import typer
 
 import wikipediaapi
-from chrisbase.data import ProjectEnv, AppTyper, CommonArguments, ArgumentsUsing
-from chrisbase.io import LoggingFormat, JobTimer
+from chrisbase.data import AppTyper, ArgumentsUsing
+from chrisbase.data import ProjectEnv, OptionData, CommonArguments
+from chrisbase.io import JobTimer
+from chrisbase.io import LoggingFormat
+from chrisbase.util import to_dataframe
 
 logger = logging.getLogger(__name__)
 app = AppTyper()
-
-
-# wikipediaapi.log.setLevel(level=wikipediaapi.logging.DEBUG)
-#
-# # Set handler if you use Python in interactive mode
-# out_hdlr = wikipediaapi.logging.StreamHandler(sys.stderr)
-# out_hdlr.setFormatter(wikipediaapi.logging.Formatter('%(asctime)s %(message)s'))
-# out_hdlr.setLevel(wikipediaapi.logging.DEBUG)
-# wikipediaapi.log.addHandler(out_hdlr)
 
 
 def get_json(section_list, doc_index):
@@ -90,36 +81,65 @@ def get_section_list_lv2(title, sections):
     return section_list
 
 
+@dataclass
+class DataOption(OptionData):
+    home: str | Path = field()
+    name: str | Path = field()
+    lang: str | Path = field()
+
+    def __post_init__(self):
+        self.home = Path(self.home)
+
+
+@dataclass
+class WikiCrawlArguments(CommonArguments):
+    tag = None
+    data: DataOption | None = field(default=None)
+
+    def __post_init__(self):
+        super().__post_init__()
+
+    def dataframe(self, columns=None) -> pd.DataFrame:
+        if not columns:
+            columns = [self.data_type, "value"]
+        return pd.concat([
+            to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
+            to_dataframe(columns=columns, raw=self.time, data_prefix="time"),
+            to_dataframe(columns=columns, raw=self.data, data_prefix="data"),
+        ]).reset_index(drop=True)
+
+
 @app.command()
 def crawl(
-        # env
         project: str = typer.Option(default="WiseData"),
         job_name: str = typer.Option(default=None),
-        debugging: bool = typer.Option(default=False),
-        # data
-        infile: str = typer.Option(default="input/sample-title.txt"),
-        outdir: str = typer.Option(default="output"),
+        debugging: bool = typer.Option(default=True),
+        output_home: str = typer.Option(default="output"),
+        input_home: str = typer.Option(default="input"),
+        input_name: str = typer.Option(default="sample.txt"),
+        input_lang: str = typer.Option(default="ko"),
 ):
-    args = CommonArguments(
+    args = WikiCrawlArguments(
         env=ProjectEnv(
             project=project,
-            job_name=job_name if job_name else f"WikiCrawl-from-{infile}",
-            output_home=outdir,
+            job_name=job_name if job_name else f"WikiCrawl-from-{input_name}",
+            output_home=output_home,
             debugging=debugging,
             msg_level=logging.DEBUG if debugging else logging.INFO,
             msg_format=LoggingFormat.DEBUG_36 if debugging else LoggingFormat.CHECK_24,
         ),
+        data=DataOption(
+            home=input_home,
+            name=input_name,
+            lang=input_lang,
+        ),
     )
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", rt=1, rb=1, rc='=', verbose=True, flush_sec=0.3):
-        with ArgumentsUsing(args):
-            args.info_arguments()
-            # args.info_arguments()
-            # args.save_arguments()
-            logger.info(f"infile: {infile}")
-            logger.info(f"outdir: {outdir}")
-            # wiki = wikipediaapi.Wikipedia(args.env.project, 'ko')
-            # with open(infile) as f:
-            #     titles = f.read().splitlines()
+        with ArgumentsUsing(args.info_arguments(), delete_on_exit=False):
+            api = wikipediaapi.Wikipedia(f"{args.env.project}/1.0", args.data.lang)
+            with open(args.data.home / args.data.name) as f:
+                titles = f.read().splitlines()
+            logger.info(f"Let's extract from {len(titles)} wikipedia pages!")
 
 
 if __name__ == "__main__":
