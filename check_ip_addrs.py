@@ -1,10 +1,11 @@
 import logging
+import os
 
 import typer
 
 from chrisbase.data import AppTyper, ProjectEnv, CommonArguments, JobTimer
 from chrisbase.io import LoggingFormat
-from chrisbase.net import ips, check_ip_addrs
+from chrisbase.net import check_ip_addrs
 
 logger = logging.getLogger(__name__)
 app = AppTyper()
@@ -16,11 +17,12 @@ def check(
         job_name: str = typer.Option(default=None),
         debugging: bool = typer.Option(default=False),
         output_home: str = typer.Option(default="output"),
+        num_workers: int = typer.Option(default=os.cpu_count()),
 ):
     args = CommonArguments(
         env=ProjectEnv(
             project=project,
-            job_name=job_name if job_name else f"IP Check",
+            job_name=job_name if job_name else f"IPCheck",
             output_home=output_home,
             debugging=debugging,
             msg_level=logging.DEBUG if debugging else logging.INFO,
@@ -31,8 +33,7 @@ def check(
     logging.getLogger("httpx").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='=', verbose=True, flush_sec=0.3):
         args.info_arguments()
-        logger.info(f"Check {len(ips)} IP addresses")
-        check_ip_addrs()
+        check_ip_addrs(args=args, num_workers=num_workers)
 
 
 if __name__ == "__main__":
