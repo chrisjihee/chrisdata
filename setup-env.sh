@@ -16,7 +16,10 @@ tar zxf *.tar.gz
 rm *.tar.gz
 pip install --editable Wikipedia-API-0.6.0
 
+mkdir mongodb
+cd mongodb
+mkdir data log
 wget https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2004-6.0.8.tgz
-tar zxf mongodb-linux-x86_64-ubuntu2004-6.0.8.tgz
-mv mongodb-linux-x86_64-ubuntu2004-6.0.8 mongodb
-mkdir -p mongodb/data
+tar zxvf mongodb-*.tgz --strip-components 1
+cd ..
+mongodb/bin/mongod --config cfg/mongod.yaml
