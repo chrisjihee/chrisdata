@@ -1,5 +1,5 @@
-import json
 import logging
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -7,16 +7,16 @@ import pandas as pd
 import typer
 from dataclasses_json import DataClassJsonMixin
 
-import wikipediaapi
-from chrisbase.data import AppTyper, ProjectEnv, OptionData, CommonArguments, ArgumentsUsing, JobTimer
+from chrisbase.data import AppTyper, ProjectEnv, OptionData, CommonArguments, JobTimer
 from chrisbase.io import LoggingFormat
-from chrisbase.util import to_dataframe
+from chrisbase.util import to_dataframe, MongoDB
+from wikipediaapi import Wikipedia, WikipediaPage
 
 logger = logging.getLogger(__name__)
 app = AppTyper()
 
 
-def get_json(section_list, doc_index):
+def get_passage_list(section_list, page_id):
     passage_list = []
     for i, s in enumerate(section_list):
         passage = {}
@@ -24,7 +24,7 @@ def get_json(section_list, doc_index):
         passage["파일명"] = s[0]
         passage["문서제목"] = s[0]
 
-        passage["문서번호"] = str(doc_index)
+        passage["문서번호"] = str(page_id)
         passage["장번호"] = str(i)
         passage["절번호"] = '0'
         passage["조번호"] = '0'
@@ -93,7 +93,6 @@ class DataOption(OptionData):
 
 @dataclass
 class WikiCrawlArguments(CommonArguments):
-    tag = None
     data: DataOption | None = field(default=None)
 
     def __post_init__(self):
@@ -109,11 +108,21 @@ class WikiCrawlArguments(CommonArguments):
         ]).reset_index(drop=True)
 
 
+@dataclass
+class WikiCrawlResult(DataClassJsonMixin):
+    _id: int
+    query: str
+    title: str
+    section_list: list = field(default_factory=list)
+    passage_list: list = field(default_factory=list)
+
+
 @app.command()
 def crawl(
         project: str = typer.Option(default="WiseData"),
-        job_name: str = typer.Option(default=None),
+        job_name: str = typer.Option(default="crawl_wikipedia"),
         debugging: bool = typer.Option(default=True),
+        max_workers: int = typer.Option(default=os.cpu_count()),
         output_home: str = typer.Option(default="output"),
         input_home: str = typer.Option(default="input"),
         input_name: str = typer.Option(default="kowiki-sample.txt"),
@@ -122,11 +131,12 @@ def crawl(
     args = WikiCrawlArguments(
         env=ProjectEnv(
             project=project,
-            job_name=job_name if job_name else f"WikiCrawl-from-{input_name}",
-            output_home=output_home,
+            job_name=job_name,
             debugging=debugging,
+            output_home=output_home,
             msg_level=logging.DEBUG if debugging else logging.INFO,
             msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
+            max_workers=1 if debugging else max(max_workers, 1),
         ),
         data=DataOption(
             home=input_home,
@@ -137,37 +147,24 @@ def crawl(
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        api = wikipediaapi.Wikipedia(f"{args.env.project}/1.0", args.data.lang)
         assert (args.data.home / args.data.name).exists(), f"No input file: {args.data.home / args.data.name}"
         with open(args.data.home / args.data.name) as f:
-            input_titles = f.read().splitlines()
-        with open(args.env.output_home / "passage.out", "w") as f_json:
-            logger.info(f"Let's extract from {len(input_titles)} wikipedia pages!")
-            for title in input_titles[:10]:
-                page: wikipediaapi.WikipediaPage = api.page(title)
-
-                @dataclass
-                class PageData(DataClassJsonMixin):
-                    page_id: int
-                    title: str
-                    title2: str
-                    section_list: list = field(default_factory=list)
-
-                if page.exists():
-                    logger.info(page.pageid)
-                    res = PageData(page_id=page.pageid, title=title, title2=page.title)
-
-                    res.section_list.append((title, '', '', page.summary))
-                    res.section_list += get_section_list_lv2(title, page.sections)
-                    if page.summary == '' and len(res.section_list) == 1:
-                        continue
-
-                    logger.info(res.to_json(ensure_ascii=False))
-                    passage_json = get_json(res.section_list, res.page_id)
-                    for passage in passage_json:
-                        json.dump(passage, f_json, ensure_ascii=False, indent=4, sort_keys=True)
-                        f_json.write('\n\n')
-                    exit(1)
+            input_queries = f.read().splitlines()
+        logger.info(f"Use {args.env.max_workers} workers to crawl {len(input_queries)} wikipedia pages")
+        with MongoDB(db_name=args.env.project, tab_name=args.env.job_name) as mongo:
+            api = Wikipedia(f"{args.env.project}/1.0", args.data.lang)
+            for query in input_queries[:10]:
+                page: WikipediaPage = api.page(query)
+                if page.exists() and len(page.summary.strip()) > 0:
+                    result = WikiCrawlResult(_id=page.pageid, query=query, title=page.title)
+                    result.section_list.append((query, '', '', page.summary))
+                    result.section_list += get_section_list_lv2(query, page.sections)
+                    if len(result.section_list) > 1:
+                        result.passage_list = get_passage_list(result.section_list, result._id)
+                        with Path("test.json").open("w") as out:
+                            out.write(result.to_json(ensure_ascii=False, indent=4))
+                        # logger.info(result.to_json(ensure_ascii=False, indent=4))
+                        exit(1)
 
 
 if __name__ == "__main__":
