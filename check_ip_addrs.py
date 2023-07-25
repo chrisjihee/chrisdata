@@ -2,6 +2,9 @@ import logging
 import os
 
 import typer
+from pymongo import MongoClient
+from pymongo.collection import Collection
+from pymongo.typings import _DocumentType
 
 from chrisbase.data import AppTyper, ProjectEnv, CommonArguments, JobTimer
 from chrisbase.io import LoggingFormat
@@ -9,6 +12,22 @@ from chrisbase.net import check_ip_addrs
 
 logger = logging.getLogger(__name__)
 app = AppTyper()
+
+
+class ResultDB:
+    def __init__(self, db_name, tab_name, host="localhost", port=27017):
+        self.db_name = db_name
+        self.tab_name = tab_name
+        self.host = host
+        self.port = port
+        self.mongo: MongoClient[_DocumentType] | None = None
+        self.table: Collection | None = None
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, *exc_info):
+        pass
 
 
 @app.command()
