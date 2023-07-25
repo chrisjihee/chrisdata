@@ -134,39 +134,40 @@ def crawl(
             lang=input_lang,
         ),
     )
-    with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", rt=1, rb=1, rc='=', verbose=True, flush_sec=0.3):
-        with ArgumentsUsing(args.info_arguments(), delete_on_exit=False):
-            api = wikipediaapi.Wikipedia(f"{args.env.project}/1.0", args.data.lang)
-            assert (args.data.home / args.data.name).exists(), f"No input file: {args.data.home / args.data.name}"
-            with open(args.data.home / args.data.name) as f:
-                input_titles = f.read().splitlines()
-            with open(args.env.output_home / "passage.out", "w") as f_json:
-                logger.info(f"Let's extract from {len(input_titles)} wikipedia pages!")
-                for title in input_titles[:10]:
-                    page: wikipediaapi.WikipediaPage = api.page(title)
 
-                    @dataclass
-                    class PageData(DataClassJsonMixin):
-                        page_id: int
-                        title: str
-                        title2: str
-                        section_list: list = field(default_factory=list)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
+        api = wikipediaapi.Wikipedia(f"{args.env.project}/1.0", args.data.lang)
+        assert (args.data.home / args.data.name).exists(), f"No input file: {args.data.home / args.data.name}"
+        with open(args.data.home / args.data.name) as f:
+            input_titles = f.read().splitlines()
+        with open(args.env.output_home / "passage.out", "w") as f_json:
+            logger.info(f"Let's extract from {len(input_titles)} wikipedia pages!")
+            for title in input_titles[:10]:
+                page: wikipediaapi.WikipediaPage = api.page(title)
 
-                    if page.exists():
-                        logger.info(page.pageid)
-                        res = PageData(page_id=page.pageid, title=title, title2=page.title)
+                @dataclass
+                class PageData(DataClassJsonMixin):
+                    page_id: int
+                    title: str
+                    title2: str
+                    section_list: list = field(default_factory=list)
 
-                        res.section_list.append((title, '', '', page.summary))
-                        res.section_list += get_section_list_lv2(title, page.sections)
-                        if page.summary == '' and len(res.section_list) == 1:
-                            continue
+                if page.exists():
+                    logger.info(page.pageid)
+                    res = PageData(page_id=page.pageid, title=title, title2=page.title)
 
-                        logger.info(res.to_json(ensure_ascii=False))
-                        passage_json = get_json(res.section_list, res.page_id)
-                        for passage in passage_json:
-                            json.dump(passage, f_json, ensure_ascii=False, indent=4, sort_keys=True)
-                            f_json.write('\n\n')
-                        exit(1)
+                    res.section_list.append((title, '', '', page.summary))
+                    res.section_list += get_section_list_lv2(title, page.sections)
+                    if page.summary == '' and len(res.section_list) == 1:
+                        continue
+
+                    logger.info(res.to_json(ensure_ascii=False))
+                    passage_json = get_json(res.section_list, res.page_id)
+                    for passage in passage_json:
+                        json.dump(passage, f_json, ensure_ascii=False, indent=4, sort_keys=True)
+                        f_json.write('\n\n')
+                    exit(1)
 
 
 if __name__ == "__main__":

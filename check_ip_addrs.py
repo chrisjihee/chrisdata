@@ -31,8 +31,7 @@ def check(
     )
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
-    with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='=', verbose=True, flush_sec=0.3):
-        args.info_arguments()
+    with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
         check_ip_addrs(args=args, num_workers=num_workers)
 
 
