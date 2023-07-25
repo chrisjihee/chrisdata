@@ -22,7 +22,7 @@ def check(
     args = CommonArguments(
         env=ProjectEnv(
             project=project,
-            job_name=job_name if job_name else f"IPCheck",
+            job_name=job_name if job_name else "check-ip-addrs",
             output_home=output_home,
             debugging=debugging,
             msg_level=logging.DEBUG if debugging else logging.INFO,
