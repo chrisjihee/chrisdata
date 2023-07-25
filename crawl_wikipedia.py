@@ -8,9 +8,7 @@ import typer
 from dataclasses_json import DataClassJsonMixin
 
 import wikipediaapi
-from chrisbase.data import AppTyper, ArgumentsUsing
-from chrisbase.data import ProjectEnv, OptionData, CommonArguments
-from chrisbase.io import JobTimer
+from chrisbase.data import AppTyper, ProjectEnv, OptionData, CommonArguments, ArgumentsUsing, JobTimer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe
 
