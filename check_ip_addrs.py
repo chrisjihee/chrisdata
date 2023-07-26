@@ -5,7 +5,7 @@ import typer
 
 from chrisbase.data import AppTyper, ProjectEnv, CommonArguments, JobTimer
 from chrisbase.io import LoggingFormat
-from chrisbase.net import check_ip_addrs
+from chrisbase.net import ips, num_ip_addrs, check_ip_addr
 from chrisbase.util import MongoDB
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ def check(
         job_name: str = typer.Option(default="check_ip_addrs"),
         debugging: bool = typer.Option(default=False),
         max_workers: int = typer.Option(default=os.cpu_count()),
-        output_home: str = typer.Option(default="output"),
+        output_home: str = typer.Option(default="output-check_ip_addrs"),
 ):
     args = CommonArguments(
         env=ProjectEnv(
@@ -34,8 +34,18 @@ def check(
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        with MongoDB(db_name=args.env.project, tab_name=args.env.job_name) as mongo:
-            check_ip_addrs(args=args, mongo=mongo)
+        with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=True) as mongo:
+            logger.info(f"Use {args.env.max_workers} workers to check {num_ip_addrs()} IP addresses")
+            if args.env.max_workers < 2:
+                for i, ip in enumerate(ips):
+                    res = check_ip_addr(ip=ip, _id=i + 1)
+                    mongo.table.insert_one(res)
+            else:
+                from concurrent.futures import ProcessPoolExecutor, as_completed
+                pool = ProcessPoolExecutor(max_workers=args.env.max_workers)
+                jobs = [pool.submit(check_ip_addr, ip=ip, _id=i + 1) for i, ip in enumerate(ips)]
+                for job in as_completed(jobs):
+                    mongo.table.insert_one(job.result())
             mongo.output_table(to=args.env.output_home / f"{args.env.job_name}.jsonl", include_id=True)
 
 
