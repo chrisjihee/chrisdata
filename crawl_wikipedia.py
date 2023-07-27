@@ -13,7 +13,7 @@ from dataclasses_json import DataClassJsonMixin
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments
 from chrisbase.io import LoggingFormat
-from chrisbase.util import MongoDB, to_dataframe, time_tqdm_cls, mute_tqdm_cls, wait_future_jobs
+from chrisbase.util import MongoDB, to_dataframe, time_tqdm_cls, mute_tqdm_cls, wait_future_jobs, LF
 from wikipediaapi import Wikipedia
 from wikipediaapi import WikipediaPage
 
@@ -113,8 +113,8 @@ def get_section_list_lv2(title, sections):
 
 @dataclass
 class NetOption(OptionData):
-    calling_sec: float = field(default=1.0)
-    waiting_sec: float = field(default=30.0),
+    calling_sec: float = field(default=0.5)
+    waiting_sec: float = field(default=300.0),
     retrial_sec: float = field(default=10.0),
     max_retrial: int = field(default=10),
 
@@ -198,8 +198,8 @@ def crawl(
         max_workers: int = typer.Option(default=os.cpu_count()),
         output_home: str = typer.Option(default="output-crawl_wikipedia"),
         # net
-        calling_sec: float = typer.Option(default=1.0),
-        waiting_sec: float = typer.Option(default=30.0),
+        calling_sec: float = typer.Option(default=0.5),
+        waiting_sec: float = typer.Option(default=300.0),
         retrial_sec: float = typer.Option(default=10.0),
         max_retrial: int = typer.Option(default=10),
         # data
@@ -251,13 +251,13 @@ def crawl(
                     failed_ids = wait_future_jobs(job_tqdm(jobs.items(), pre="┇", desc="visiting", unit="job"),
                                                   timeout=args.net.waiting_sec, pool=pool)
             logger.info(f"Success: {mongo.num_documents}/{len(query_list)}")
-            logger.info(f"Failure: {len(failed_ids)}/{args.env.num_ip_addrs}")
+            logger.info(f"Failure: {len(failed_ids)}/{len(query_list)}")
             mongo.output_table(to=args.env.output_home / f"{args.env.job_name}.jsonl")
             if failed_ids:
                 logger.info(f"Failed IDs: {failed_ids}")
                 failed_query_list = [query_list[i] for i in failed_ids]
-                with (args.env.output_home / f"{args.data.name.stem}-failed{args.data.name.suffix}").open('w') as out:
-                    out.writelines(failed_query_list)
+                failed_query_file = args.env.output_home / f"{args.data.name.stem}-failed{args.data.name.suffix}"
+                failed_query_file.write_text("\n".join(failed_query_list))
 
 
 if __name__ == "__main__":
