@@ -1,9 +1,10 @@
 import logging
 import os
-from concurrent.futures import ProcessPoolExecutor, Future
+import time
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List
+from typing import List, Dict, Any
 
 import httpx
 import pandas as pd
@@ -24,11 +25,23 @@ savers: List[MongoDB] = []
 
 
 class WikipediaFromIP(Wikipedia):
-    def __init__(self, *args, ip=None, **kwargs) -> None:
+    def __init__(self, *args, ip=None, max_retrial=3, retrial_sec=3.0, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         if ip:
             self._session.close()
             self._session = httpx.Client(transport=httpx.HTTPTransport(local_address=ip))
+        self.max_retrial = max_retrial
+        self.retrial_sec = retrial_sec
+
+    def _query(self, page: "WikipediaPage", params: Dict[str, Any]):
+        for i in range(self.max_retrial):
+            try:
+                return super()._query(page, params)
+            except httpx.HTTPError as e:
+                logger.warning(f"[{type(e)}] on _query(): (i={i}) (e.args={e.args}) {e}")
+                time.sleep(self.retrial_sec)
+        else:
+            raise RuntimeError(f"Failed to query {page} after {self.max_retrial} retrials")
 
 
 apis: List[WikipediaFromIP] = []
@@ -100,6 +113,14 @@ def get_section_list_lv2(title, sections):
 
 
 @dataclass
+class NetOption(OptionData):
+    max_retrial: int = field(default=3),
+    waiting_sec: float = field(default=30.0),
+    retrial_sec: float = field(default=3.0),
+    concurrent_sec: float = field(default=0.3)
+
+
+@dataclass
 class DataOption(OptionData):
     home: str | Path = field()
     name: str | Path = field()
@@ -111,6 +132,7 @@ class DataOption(OptionData):
 
 @dataclass
 class WikiCrawlArguments(CommonArguments):
+    net: NetOption | None = field(default=None)
     data: DataOption | None = field(default=None)
 
     def __post_init__(self):
@@ -131,17 +153,20 @@ class WikiCrawlResult(DataClassJsonMixin):
     _id: int
     query: str
     title: str | None = None
+    page_id: int | None = None
     section_list: list = field(default_factory=list)
     passage_list: list = field(default_factory=list)
 
 
-def process_query(i: int, x: str) -> int:
+def process_query(i: int, x: str, s: float | None = None) -> int:
     api = apis[i % len(apis)]
+    if s and s > 0.0:
+        time.sleep(s)
     page: WikipediaPage = api.page(x)
     if not page.exists():
         result = WikiCrawlResult(_id=i, query=x)
     else:
-        result = WikiCrawlResult(_id=i, query=x, title=page.title)
+        result = WikiCrawlResult(_id=i, query=x, title=page.title, page_id=page.pageid)
         result.section_list.append((x, '', '', page.summary))
         result.section_list += get_section_list_lv2(x, page.sections)
         result.passage_list = get_passage_list(result.section_list, page.pageid)
@@ -154,9 +179,12 @@ def process_query(i: int, x: str) -> int:
 def crawl(
         project: str = typer.Option(default="WiseData"),
         job_name: str = typer.Option(default="crawl_wikipedia"),
-        debugging: bool = typer.Option(default=False),
-        timeout: float = typer.Option(default=10.0),
+        debugging: bool = typer.Option(default=True),
         max_workers: int = typer.Option(default=os.cpu_count()),
+        max_retrial: int = typer.Option(default=3),
+        retrial_sec: float = typer.Option(default=3.0),
+        waiting_sec: float = typer.Option(default=30.0),
+        concurrent_sec: float = typer.Option(default=0.3),
         output_home: str = typer.Option(default="output-crawl_wikipedia"),
         input_home: str = typer.Option(default="input"),
         input_name: str = typer.Option(default="kowiki-sample.txt"),
@@ -171,6 +199,12 @@ def crawl(
             msg_level=logging.DEBUG if debugging else logging.INFO,
             msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
             max_workers=1 if debugging else max(max_workers, 1),
+        ),
+        net=NetOption(
+            max_retrial=max_retrial,
+            retrial_sec=retrial_sec,
+            waiting_sec=waiting_sec,
+            concurrent_sec=concurrent_sec,
         ),
         data=DataOption(
             home=input_home,
@@ -188,16 +222,18 @@ def crawl(
 
         global apis
         for ip in ips:
-            apis.append(WikipediaFromIP(user_agent=f"{args.env.project}/1.0", language=args.data.lang, ip=ip))
+            apis.append(WikipediaFromIP(user_agent=f"{args.env.project}/1.0", language=args.data.lang, ip=ip,
+                                        max_retrial=args.net.max_retrial, retrial_sec=args.net.retrial_sec,
+                                        timeout=args.net.waiting_sec))
 
         with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=True, pool=savers) as mongo:
             logger.info(f"Use {args.env.max_workers} workers to crawl {len(input_queries)} wikipedia pages")
             if args.env.max_workers < 2:
                 num_success = sum(process_query(i=i + 1, x=x) for i, x in enumerate(input_queries))
             else:
-                pool: ProcessPoolExecutor = ProcessPoolExecutor(max_workers=args.env.max_workers)
-                jobs: List[Future] = [pool.submit(process_query, i=i + 1, x=x) for i, x in enumerate(input_queries)]
-                num_success = sum(all_future_results(pool, jobs, default=0, timeout=timeout))
+                pool = ProcessPoolExecutor(max_workers=args.env.max_workers)
+                jobs = [pool.submit(process_query, i=i + 1, x=x, s=args.net.concurrent_sec) for i, x in enumerate(input_queries)]
+                num_success = sum(all_future_results(pool, jobs, default=0, timeout=args.net.waiting_sec))
             logger.info(f"Success: {num_success}/{len(input_queries)}")
             mongo.output_table(to=args.env.output_home / f"{args.env.job_name}.jsonl")
 
