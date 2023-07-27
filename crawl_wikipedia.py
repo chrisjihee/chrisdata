@@ -127,6 +127,7 @@ class DataOption(OptionData):
 
     def __post_init__(self):
         self.home = Path(self.home)
+        self.name = Path(self.name)
 
 
 @dataclass
@@ -235,6 +236,7 @@ def crawl(
     logging.getLogger("wikipediaapi").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
         with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=True, pool=mongos) as mongo:
+            failed_ids: List[int] = []
             query_list = load_query_list(args=args, limit=100_000)  # TODO: temporary slicing
             logger.info(f"Use {args.env.max_workers} workers to crawl {len(query_list)} wikipedia queries")
             job_tqdm = time_tqdm_cls(bar_size=100, desc_size=9) if use_tqdm else mute_tqdm_cls()
@@ -243,12 +245,19 @@ def crawl(
                     process_query(i=i + 1, x=x)
             else:
                 with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
-                    jobs: List[Future] = []
+                    jobs: Dict[int, Future] = {}
                     for i, x in enumerate(query_list):
-                        jobs.append(pool.submit(process_query, i=i + 1, x=x, s=args.net.calling_sec))
-                    wait_future_jobs(job_tqdm(jobs, pre="┇", desc="visiting", unit="job"), timeout=args.net.waiting_sec, pool=pool)
+                        jobs[i] = pool.submit(process_query, i=i + 1, x=x, s=args.net.calling_sec)
+                    failed_ids = wait_future_jobs(job_tqdm(jobs.items(), pre="┇", desc="visiting", unit="job"),
+                                                  timeout=args.net.waiting_sec, pool=pool)
             logger.info(f"Success: {mongo.num_documents}/{len(query_list)}")
+            logger.info(f"Failure: {len(failed_ids)}/{args.env.num_ip_addrs}")
             mongo.output_table(to=args.env.output_home / f"{args.env.job_name}.jsonl")
+            if failed_ids:
+                logger.info(f"Failed IDs: {failed_ids}")
+                failed_query_list = [query_list[i] for i in failed_ids]
+                with (args.env.output_home / f"{args.data.name.stem}-failed{args.data.name.suffix}").open('w') as out:
+                    out.writelines(failed_query_list)
 
 
 if __name__ == "__main__":

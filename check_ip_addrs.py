@@ -3,7 +3,7 @@ import os
 import time
 from concurrent.futures import ProcessPoolExecutor, Future
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Dict
 
 import httpx
 import pandas as pd
@@ -110,6 +110,7 @@ def check(
     logging.getLogger("httpx").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
         with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=True, pool=mongos) as mongo:
+            failed_ids: List[int] = []
             logger.info(f"Use {args.env.max_workers} workers to check {args.env.num_ip_addrs} IP addresses")
             job_tqdm = time_tqdm_cls(bar_size=100, desc_size=9) if use_tqdm else mute_tqdm_cls()
             if args.env.max_workers < 2:
@@ -117,12 +118,17 @@ def check(
                     process_query(i=i + 1, x=x, log=not use_tqdm)
             else:
                 with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
-                    jobs: List[Future] = []
+                    jobs: Dict[int, Future] = {}
                     for i, x in enumerate(args.env.ip_addrs):
-                        jobs.append(pool.submit(process_query, i=i + 1, x=x, s=args.net.calling_sec, log=not use_tqdm))
-                    wait_future_jobs(job_tqdm(jobs, pre="┇", desc="visiting", unit="job"), timeout=args.net.waiting_sec, pool=pool)
+                        jobs[i] = pool.submit(process_query, i=i + 1, x=x, s=args.net.calling_sec, log=not use_tqdm)
+                    failed_ids = wait_future_jobs(job_tqdm(jobs.items(), pre="┇", desc="visiting", unit="job"),
+                                                  timeout=args.net.waiting_sec, pool=pool)
             logger.info(f"Success: {mongo.num_documents}/{args.env.num_ip_addrs}")
+            logger.info(f"Failure: {len(failed_ids)}/{args.env.num_ip_addrs}")
             mongo.output_table(to=args.env.output_home / f"{args.env.job_name}.jsonl")
+            if failed_ids:
+                logger.info(f"Failed IDs: {failed_ids}")
+                logger.info(f"Failed IPs: {[args.env.ip_addrs[i] for i in failed_ids]}")
 
 
 if __name__ == "__main__":
