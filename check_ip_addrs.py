@@ -17,7 +17,7 @@ app = AppTyper()
 savers: List[MongoDB] = []
 
 
-def check_local_address(i: int, x: str) -> int:
+def check_local_address(i: int, x: str, log: bool = True) -> int:
     with httpx.Client(transport=httpx.HTTPTransport(local_address=x)) as cli:
         response = cli.get("https://api64.ipify.org?format=json", timeout=10.0)
         result = {
@@ -28,13 +28,14 @@ def check_local_address(i: int, x: str) -> int:
             'size': round(response.num_bytes_downloaded / 1024, 6),
             'text': response.text,
         }
-        logger.info("  * " + ' ----> '.join([
-            f"[{result['local_address']:<15s}]",
-            f"[{result['status']}]",
-            f"[{result['elapsed'] * 1000:7,.0f}ms]",
-            f"[{result['size']:7,.2f}KB]",
-            f"{result['text']}",
-        ]))
+        if log:
+            logger.info("  * " + ' ----> '.join([
+                f"[{result['local_address']:<15s}]",
+                f"[{result['status']}]",
+                f"[{result['elapsed'] * 1000:7,.0f}ms]",
+                f"[{result['size']:7,.2f}KB]",
+                f"{result['text']}",
+            ]))
         if response.status_code == 200:
             for saver in savers:
                 saver.table.insert_one(result)
@@ -67,11 +68,11 @@ def check(
         with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=True, pool=savers) as mongo:
             logger.info(f"Use {args.env.max_workers} workers to check {num_ip_addrs()} IP addresses")
             if args.env.max_workers < 2:
-                num_success = sum(check_local_address(i=i + 1, x=x) for i, x in enumerate(ips))
+                num_success = sum(check_local_address(i=i + 1, x=x, log=True) for i, x in enumerate(ips))
             else:
                 pool: ProcessPoolExecutor = ProcessPoolExecutor(max_workers=args.env.max_workers)
-                jobs: List[Future] = [pool.submit(check_local_address, i=i + 1, x=x) for i, x in enumerate(ips)]
-                num_success = sum(all_future_results(pool, jobs, default=0, timeout=timeout))
+                jobs: List[Future] = [pool.submit(check_local_address, i=i + 1, x=x, log=True) for i, x in enumerate(ips)]
+                num_success = sum(all_future_results(pool, jobs, default=0, timeout=timeout, use_tqdm=False))
             logger.info(f"Success: {num_success}/{len(ips)}")
             mongo.output_table(to=args.env.output_home / f"{args.env.job_name}.jsonl")
 
