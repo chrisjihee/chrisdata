@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, Future
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Dict, Any
@@ -11,11 +11,9 @@ import pandas as pd
 import typer
 from dataclasses_json import DataClassJsonMixin
 
-from chrisbase.data import AppTyper, ProjectEnv, OptionData, CommonArguments, JobTimer
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments
 from chrisbase.io import LoggingFormat
-from chrisbase.net import ips
-from chrisbase.proc import gather_results
-from chrisbase.util import to_dataframe, MongoDB, time_tqdm_cls, mute_tqdm_cls
+from chrisbase.util import MongoDB, to_dataframe, time_tqdm_cls, mute_tqdm_cls, wait_future_jobs
 from wikipediaapi import Wikipedia
 from wikipediaapi import WikipediaPage
 
@@ -24,7 +22,7 @@ app = AppTyper()
 mongos: List[MongoDB] = []
 
 
-class WikipediaFromIP(Wikipedia):
+class WikipediaEx(Wikipedia):
     def __init__(self, *args, ip=None, max_retrial=10, retrial_sec=10.0, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         if ip:
@@ -33,19 +31,19 @@ class WikipediaFromIP(Wikipedia):
         self.max_retrial = max_retrial
         self.retrial_sec = retrial_sec
 
-    def _query(self, page: "WikipediaPage", params: Dict[str, Any]):
-        for i in range(self.max_retrial):
+    def _query(self, page: WikipediaPage, params: Dict[str, Any]):
+        for n in range(self.max_retrial):
             try:
                 return super()._query(page, params)
             except httpx.HTTPError as e:
                 print()
-                logger.warning(f"{type(e).__qualname__} on _query(title={page.title}, num_retrial={i + 1}): {e}")
+                logger.warning(f"{type(e).__qualname__} on _query(): {e} || n={n} || title={page.title}")
                 time.sleep(self.retrial_sec)
         else:
-            raise RuntimeError(f"Failed to query {page} after {self.max_retrial} retrials")
+            raise RuntimeError(f"Failed to query {page.title} after {self.max_retrial} retrials")
 
 
-apis: List[WikipediaFromIP] = []
+apis: List[WikipediaEx] = []
 
 
 def get_passage_list(section_list, page_id):
@@ -115,10 +113,10 @@ def get_section_list_lv2(title, sections):
 
 @dataclass
 class NetOption(OptionData):
-    max_retrial: int = field(default=10),
-    retrial_sec: float = field(default=10.0),
-    waiting_sec: float = field(default=30.0),
     calling_sec: float = field(default=1.0)
+    waiting_sec: float = field(default=30.0),
+    retrial_sec: float = field(default=10.0),
+    max_retrial: int = field(default=10),
 
 
 @dataclass
@@ -132,7 +130,7 @@ class DataOption(OptionData):
 
 
 @dataclass
-class WikiCrawlArguments(CommonArguments):
+class ProgramArguments(CommonArguments):
     net: NetOption | None = field(default=None)
     data: DataOption | None = field(default=None)
 
@@ -150,8 +148,22 @@ class WikiCrawlArguments(CommonArguments):
         ]).reset_index(drop=True)
 
 
+def load_query_list(args: ProgramArguments, limit: int | None = None) -> List[str]:
+    assert (args.data.home / args.data.name).exists(), f"No input file: {args.data.home / args.data.name}"
+    global apis
+    for ip in args.env.ip_addrs:
+        apis.append(WikipediaEx(user_agent=f"{args.env.project}/1.0", language=args.data.lang, ip=ip,
+                                max_retrial=args.net.max_retrial, retrial_sec=args.net.retrial_sec,
+                                timeout=args.net.waiting_sec))
+    with open(args.data.home / args.data.name) as f:
+        if not limit:
+            return f.read().splitlines()
+        else:
+            return f.read().splitlines()[:limit]
+
+
 @dataclass
-class WikiCrawlResult(DataClassJsonMixin):
+class ProcessResult(DataClassJsonMixin):
     _id: int
     query: str
     title: str | None = None
@@ -160,40 +172,43 @@ class WikiCrawlResult(DataClassJsonMixin):
     passage_list: list = field(default_factory=list)
 
 
-def process_query(i: int, x: str, s: float | None = None) -> int:
-    api = apis[i % len(apis)]
+def process_query(i: int, x: str, s: float | None = None):
     if s and s > 0:
         time.sleep(s)
+    api = apis[i % len(apis)]
     page: WikipediaPage = api.page(x)
     if not page.exists():
-        result = WikiCrawlResult(_id=i, query=x)
+        result = ProcessResult(_id=i, query=x)
     else:
-        result = WikiCrawlResult(_id=i, query=x, title=page.title, page_id=page.pageid)
+        result = ProcessResult(_id=i, query=x, title=page.title, page_id=page.pageid)
         result.section_list.append((x, '', '', page.summary))
         result.section_list += get_section_list_lv2(x, page.sections)
         result.passage_list = get_passage_list(result.section_list, page.pageid)
     for mongo in mongos:
         mongo.table.insert_one(result.to_dict())
-    return 1 if page.exists() else 0
 
 
 @app.command()
 def crawl(
+        # env
         project: str = typer.Option(default="WiseData"),
         job_name: str = typer.Option(default="crawl_wikipedia"),
         debugging: bool = typer.Option(default=False),
-        enable_tqdm: bool = typer.Option(default=True),
         max_workers: int = typer.Option(default=os.cpu_count()),
-        max_retrial: int = typer.Option(default=10),
-        retrial_sec: float = typer.Option(default=10.0),
-        waiting_sec: float = typer.Option(default=30.0),
-        calling_sec: float = typer.Option(default=1.0),
         output_home: str = typer.Option(default="output-crawl_wikipedia"),
+        # net
+        calling_sec: float = typer.Option(default=1.0),
+        waiting_sec: float = typer.Option(default=30.0),
+        retrial_sec: float = typer.Option(default=10.0),
+        max_retrial: int = typer.Option(default=10),
+        # data
         input_home: str = typer.Option(default="input"),
         input_name: str = typer.Option(default="kowiki-sample.txt"),
         input_lang: str = typer.Option(default="ko"),
+        # etc
+        use_tqdm: bool = typer.Option(default=True),
 ):
-    args = WikiCrawlArguments(
+    args = ProgramArguments(
         env=ProjectEnv(
             project=project,
             job_name=job_name,
@@ -204,10 +219,10 @@ def crawl(
             max_workers=1 if debugging else max(max_workers, 1),
         ),
         net=NetOption(
-            max_retrial=max_retrial,
-            retrial_sec=retrial_sec,
-            waiting_sec=waiting_sec,
             calling_sec=calling_sec,
+            waiting_sec=waiting_sec,
+            retrial_sec=retrial_sec,
+            max_retrial=max_retrial,
         ),
         data=DataOption(
             home=input_home,
@@ -219,28 +234,20 @@ def crawl(
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("wikipediaapi").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        assert (args.data.home / args.data.name).exists(), f"No input file: {args.data.home / args.data.name}"
-        global apis
-        for ip in ips:
-            apis.append(WikipediaFromIP(user_agent=f"{args.env.project}/1.0", language=args.data.lang, ip=ip,
-                                        max_retrial=args.net.max_retrial, retrial_sec=args.net.retrial_sec,
-                                        timeout=args.net.waiting_sec))
-        tqdm = time_tqdm_cls(bar_size=100, desc_size=9) if enable_tqdm else mute_tqdm_cls()
-        with open(args.data.home / args.data.name) as f:
-            query_list = f.read().splitlines()[:100000]  # TODO: temporary slicing
-
         with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=True, pool=mongos) as mongo:
+            query_list = load_query_list(args=args, limit=100_000)  # TODO: temporary slicing
             logger.info(f"Use {args.env.max_workers} workers to crawl {len(query_list)} wikipedia queries")
+            job_tqdm = time_tqdm_cls(bar_size=100, desc_size=9) if use_tqdm else mute_tqdm_cls()
             if args.env.max_workers < 2:
-                jobs = tqdm(enumerate(query_list),
-                            pre="┇", desc="crawling", unit="job", total=len(query_list))
-                num_success = sum(process_query(i=i + 1, x=x) for i, x in jobs)
+                for i, x in enumerate(job_tqdm(query_list, pre="┇", desc="visiting", unit="job")):
+                    process_query(i=i + 1, x=x)
             else:
-                pool = ProcessPoolExecutor(max_workers=args.env.max_workers)
-                jobs = tqdm([pool.submit(process_query, i=i + 1, x=x, s=args.net.calling_sec) for i, x in enumerate(query_list)],
-                            pre="┇", desc="crawling", unit="job", total=len(query_list))
-                num_success = sum(gather_results(pool, jobs, default=0, timeout=args.net.waiting_sec))
-            logger.info(f"Success: {num_success}/{len(query_list)}")
+                with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
+                    jobs: List[Future] = []
+                    for i, x in enumerate(query_list):
+                        jobs.append(pool.submit(process_query, i=i + 1, x=x, s=args.net.calling_sec))
+                    wait_future_jobs(job_tqdm(jobs, pre="┇", desc="visiting", unit="job"), timeout=args.net.waiting_sec, pool=pool)
+            logger.info(f"Success: {mongo.num_documents}/{len(query_list)}")
             mongo.output_table(to=args.env.output_home / f"{args.env.job_name}.jsonl")
 
 
