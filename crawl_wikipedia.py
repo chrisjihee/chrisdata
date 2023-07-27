@@ -114,8 +114,8 @@ def get_section_list_lv2(title, sections):
 @dataclass
 class NetOption(OptionData):
     calling_sec: float = field(default=0.5)
-    waiting_sec: float = field(default=300.0),
-    retrial_sec: float = field(default=10.0),
+    waiting_sec: float = field(default=60.0),
+    retrial_sec: float = field(default=3.0),
     max_retrial: int = field(default=10),
 
 
@@ -200,8 +200,8 @@ def crawl(
         output_home: str = typer.Option(default="output-crawl_wikipedia"),
         # net
         calling_sec: float = typer.Option(default=0.5),
-        waiting_sec: float = typer.Option(default=300.0),
-        retrial_sec: float = typer.Option(default=10.0),
+        waiting_sec: float = typer.Option(default=60.0),
+        retrial_sec: float = typer.Option(default=3.0),
         max_retrial: int = typer.Option(default=10),
         # data
         input_home: str = typer.Option(default="input"),
