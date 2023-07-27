@@ -17,7 +17,7 @@ app = AppTyper()
 savers: List[MongoDB] = []
 
 
-def check_local_address(i, x):
+def check_local_address(i: int, x: str) -> int:
     with httpx.Client(transport=httpx.HTTPTransport(local_address=x)) as cli:
         response = cli.get("https://api64.ipify.org?format=json", timeout=10.0)
         result = {
@@ -65,7 +65,6 @@ def check(
     logging.getLogger("httpx").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
         with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=True, pool=savers) as mongo:
-            logger.info(f"savers: {savers}")
             logger.info(f"Use {args.env.max_workers} workers to check {num_ip_addrs()} IP addresses")
             if args.env.max_workers < 2:
                 num_success = sum(check_local_address(i=i + 1, x=x) for i, x in enumerate(ips))
@@ -75,7 +74,6 @@ def check(
                 num_success = sum(all_future_results(pool, jobs, default=0, timeout=timeout))
             logger.info(f"Success: {num_success}/{len(ips)}")
             mongo.output_table(to=args.env.output_home / f"{args.env.job_name}.jsonl")
-        logger.info(f"savers: {savers}")
 
 
 if __name__ == "__main__":
