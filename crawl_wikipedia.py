@@ -124,6 +124,7 @@ class DataOption(OptionData):
     home: str | Path = field()
     name: str | Path = field()
     lang: str | Path = field()
+    limit: int = field(default=-1)
 
     def __post_init__(self):
         self.home = Path(self.home)
@@ -157,7 +158,7 @@ def load_query_list(args: ProgramArguments, limit: int | None = None) -> List[st
                                 max_retrial=args.net.max_retrial, retrial_sec=args.net.retrial_sec,
                                 timeout=args.net.waiting_sec))
     with open(args.data.home / args.data.name) as f:
-        if not limit:
+        if not limit or limit < 1:
             return f.read().splitlines()
         else:
             return f.read().splitlines()[:limit]
@@ -206,6 +207,7 @@ def crawl(
         input_home: str = typer.Option(default="input"),
         input_name: str = typer.Option(default="kowiki-sample.txt"),
         input_lang: str = typer.Option(default="ko"),
+        input_limit: int = typer.Option(default=-1),
         # etc
         use_tqdm: bool = typer.Option(default=True),
 ):
@@ -229,6 +231,7 @@ def crawl(
             home=input_home,
             name=input_name,
             lang=input_lang,
+            limit=input_limit,
         ),
     )
 
@@ -237,7 +240,7 @@ def crawl(
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
         with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=True, pool=mongos) as mongo:
             failed_ids: List[int] = []
-            query_list = load_query_list(args=args, limit=100_000)  # TODO: temporary slicing
+            query_list = load_query_list(args=args, limit=args.data.limit)
             logger.info(f"Use {args.env.max_workers} workers to crawl {len(query_list)} wikipedia queries")
             job_tqdm = time_tqdm_cls(bar_size=100, desc_size=9) if use_tqdm else mute_tqdm_cls()
             if args.env.max_workers < 2:
