@@ -9,8 +9,9 @@ configure_unit_logger(logging.INFO, fmt=LoggingFormat.CHECK_24)
 
 indent = None
 with MongoDB(db_name="WiseData", tab_name="crawl_wikipedia", clear_table=False) as mongo:
-    logger.info(f"#result: {mongo.table.count_documents({})}")
+    logger.info(f"#result: {mongo.num_documents}")
+    mongo.output_table(to=f"output-crawl_wikipedia/kowiki-20230701-all-titles-in-ns0.jsonl")
     for row in mongo.table.find({}).sort("_id"):
         res = ProcessResult.from_dict(row)
         logger.info(res.to_json(ensure_ascii=False, indent=indent))
-    logger.info(f"#result: {mongo.table.count_documents({})}")
+    logger.info(f"#result: {mongo.num_documents}")

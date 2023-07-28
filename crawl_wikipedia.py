@@ -43,7 +43,7 @@ class WikipediaEx(Wikipedia):
             raise RuntimeError(f"Failed to query {page.title} after {self.max_retrial} retrials")
 
 
-apis: List[WikipediaEx] = []
+wikipedia_api: List[WikipediaEx] = []
 
 
 def get_passage_list(section_list, page_id):
@@ -123,8 +123,8 @@ class NetOption(OptionData):
 class DataOption(OptionData):
     home: str | Path = field()
     name: str | Path = field()
-    lang: str | Path = field()
-    limit: int = field(default=-1)
+    lang: str | None = field(default=None)
+    limit: int | None = field(default=None)
 
     def __post_init__(self):
         self.home = Path(self.home)
@@ -144,24 +144,31 @@ class ProgramArguments(CommonArguments):
             columns = [self.data_type, "value"]
         return pd.concat([
             to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
-            to_dataframe(columns=columns, raw=self.net, data_prefix="net"),
-            to_dataframe(columns=columns, raw=self.data, data_prefix="data"),
+            to_dataframe(columns=columns, raw=self.net, data_prefix="net") if self.net else None,
+            to_dataframe(columns=columns, raw=self.data, data_prefix="data") if self.data else None,
             to_dataframe(columns=columns, raw=self.time, data_prefix="time"),
         ]).reset_index(drop=True)
 
 
-def load_query_list(args: ProgramArguments, limit: int | None = None) -> List[str]:
+def load_query_list(args: ProgramArguments) -> List[str]:
     assert (args.data.home / args.data.name).exists(), f"No input file: {args.data.home / args.data.name}"
-    global apis
-    for ip in args.env.ip_addrs:
-        apis.append(WikipediaEx(user_agent=f"{args.env.project}/1.0", language=args.data.lang, ip=ip,
-                                max_retrial=args.net.max_retrial, retrial_sec=args.net.retrial_sec,
-                                timeout=args.net.waiting_sec))
     with open(args.data.home / args.data.name) as f:
-        if not limit or limit < 1:
+        if not args.data.limit or args.data.limit < 1:
             return f.read().splitlines()
         else:
-            return f.read().splitlines()[:limit]
+            return f.read().splitlines()[:args.data.limit]
+
+
+def reset_global_api(args: ProgramArguments):
+    assert args.net, "No net option on args"
+    assert args.data.lang, "No lang option on args.data"
+    global wikipedia_api
+    wikipedia_api.clear()
+    for ip in args.env.ip_addrs:
+        wikipedia_api.append(WikipediaEx(user_agent=f"{args.env.project}/1.0", language=args.data.lang, ip=ip,
+                                         max_retrial=args.net.max_retrial, retrial_sec=args.net.retrial_sec,
+                                         timeout=args.net.waiting_sec))
+    return len(wikipedia_api)
 
 
 @dataclass
@@ -177,7 +184,7 @@ class ProcessResult(DataClassJsonMixin):
 def process_query(i: int, x: str, s: float | None = None):
     if s and s > 0:
         time.sleep(s)
-    api = apis[i % len(apis)]
+    api = wikipedia_api[i % len(wikipedia_api)]
     page: WikipediaPage = api.page(x)
     if not page.exists():
         result = ProcessResult(_id=i, query=x)
@@ -195,9 +202,9 @@ def crawl(
         # env
         project: str = typer.Option(default="WiseData"),
         job_name: str = typer.Option(default="crawl_wikipedia"),
-        debugging: bool = typer.Option(default=False),
-        max_workers: int = typer.Option(default=os.cpu_count()),
         output_home: str = typer.Option(default="output-crawl_wikipedia"),
+        max_workers: int = typer.Option(default=os.cpu_count()),
+        debugging: bool = typer.Option(default=False),
         # net
         calling_sec: float = typer.Option(default=0.5),
         waiting_sec: float = typer.Option(default=60.0),
@@ -240,8 +247,9 @@ def crawl(
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
         with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=True, pool=mongos) as mongo:
             failed_ids: List[int] = []
-            query_list = load_query_list(args=args, limit=args.data.limit)
-            logger.info(f"Use {args.env.max_workers} workers to crawl {len(query_list)} wikipedia queries")
+            query_list = load_query_list(args=args)
+            num_global_api = reset_global_api(args=args)
+            logger.info(f"Use {num_global_api} apis and {args.env.max_workers} workers to crawl {len(query_list)} wikipedia queries")
             job_tqdm = time_tqdm_cls(bar_size=100, desc_size=9) if use_tqdm else mute_tqdm_cls()
             if args.env.max_workers < 2:
                 for i, x in enumerate(job_tqdm(query_list, pre="┇", desc="visiting", unit="job")):
@@ -261,6 +269,43 @@ def crawl(
                 failed_query_list = [query_list[i] for i in failed_ids]
                 failed_query_file = args.env.output_home / f"{args.data.name.stem}-failed{args.data.name.suffix}"
                 failed_query_file.write_text("\n".join(failed_query_list))
+
+
+@app.command()
+def export(
+        # env
+        project: str = typer.Option(default="WiseData"),
+        job_name: str = typer.Option(default="crawl_wikipedia"),
+        output_home: str = typer.Option(default="output-crawl_wikipedia"),
+        debugging: bool = typer.Option(default=False),
+        # data
+        input_home: str = typer.Option(default="input"),
+        input_name: str = typer.Option(default="kowiki-sample.txt"),
+        # etc
+        use_tqdm: bool = typer.Option(default=True),
+):
+    args = ProgramArguments(
+        env=ProjectEnv(
+            project=project,
+            job_name=job_name,
+            debugging=debugging,
+            output_home=output_home,
+            msg_level=logging.DEBUG if debugging else logging.INFO,
+            msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
+        ),
+        data=DataOption(
+            home=input_home,
+            name=input_name,
+        ),
+    )
+
+    with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
+        with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=False, pool=mongos) as mongo:
+            query_list = load_query_list(args=args)
+            output_file = args.env.output_home / f"{args.data.name.stem}.jsonl"
+            logger.info(f"Export {mongo.num_documents}/{len(query_list)} documents to {output_file}")
+            job_tqdm = time_tqdm_cls(bar_size=100, desc_size=9) if use_tqdm else mute_tqdm_cls()
+            mongo.output_table(to=output_file, tqdm=job_tqdm)
 
 
 if __name__ == "__main__":

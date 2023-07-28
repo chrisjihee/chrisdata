@@ -37,7 +37,7 @@ class ProgramArguments(CommonArguments):
             columns = [self.data_type, "value"]
         return pd.concat([
             to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
-            to_dataframe(columns=columns, raw=self.net, data_prefix="net"),
+            to_dataframe(columns=columns, raw=self.net, data_prefix="net") if self.net else None,
             to_dataframe(columns=columns, raw=self.time, data_prefix="time"),
         ]).reset_index(drop=True)
 
