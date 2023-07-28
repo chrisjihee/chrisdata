@@ -211,8 +211,9 @@ def process_query(i: int, x: str, s: float | None = None):
     is_exist = False
     try:
         is_exist = page.exists()
-    except KeyError as e:
-        logger.warning(f"KeyError on process_query(i={i}, x={x}): {e}")
+    except KeyError:
+        print()
+        logger.warning(f"KeyError on process_query(i={i}, x={x})")
     if is_exist:
         result.title = page.title
         result.page_id = page.pageid
@@ -223,7 +224,7 @@ def process_query(i: int, x: str, s: float | None = None):
         try:
             mongo.table.insert_one(result.to_dict())
         except DuplicateKeyError:
-            logger.warning(f"Already inserted on process_query(i={i}, x={x})")
+            logger.warning(f"DuplicateKeyError on process_query(i={i}, x={x})")
 
 
 @app.command()
