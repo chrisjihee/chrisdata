@@ -1,0 +1,492 @@
+/home/chris/miniforge3/envs/WiseData-2023.07/bin/python /dat/proj/WiseData-2023.07/crawl_wikipedia.py --input-name kowiki-20230701-all-titles-in-ns0.txt --max-workers 48 --input-limit 1500000
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇ [INIT] python crawl_wikipedia.py --input-name kowiki-20230701-all-titles-in-ns0.txt --max-workers 48 --input-limit 1500000
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇    # | ProgramArguments   | value
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇ -----+--------------------+--------------------------------------------------------------------------------------------------------------
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇    1 | env.project        | WiseData
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇    2 | env.job_name       | crawl_wikipedia
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇    3 | env.hostname       | chris70
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇    4 | env.hostaddr       | 129.254.181.70
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇    5 | env.python_path    | /home/chris/miniforge3/envs/WiseData-2023.07/bin/python
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇    6 | env.working_path   | /dat/proj/WiseData-2023.07
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇    7 | env.running_file   | crawl_wikipedia.py
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇    8 | env.command_args   | ['--input-name', 'kowiki-20230701-all-titles-in-ns0.txt', '--max-workers', '48', '--input-limit', '1500000']
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇    9 | env.num_ip_addrs   | 99
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   10 | env.max_workers    | 48
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   11 | env.output_home    | output-crawl_wikipedia
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   12 | env.logging_file   | message.out
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   13 | env.argument_file  | arguments.json
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   14 | env.debugging      | False
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   15 | env.msg_level      | 20
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   16 | env.msg_format     | %(asctime)s ┇ %(levelname)-8s ┇ %(name)24s ┇ %(message)s
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   17 | env.date_format    | [%m.%d %H:%M:%S]
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   18 | net.calling_sec    | 0.5
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   19 | net.waiting_sec    | 60.0
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   20 | net.retrial_sec    | 3.0
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   21 | net.max_retrial    | 10.0
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   22 | data.home          | input
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   23 | data.name          | kowiki-20230701-all-titles-in-ns0.txt
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   24 | data.lang          | ko
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   25 | data.limit         | 1500000
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   26 | time.started       | [07.27 23:36:59]
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   27 | time.settled       |
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇   28 | time.elapsed       |
+[07.27 23:36:59] ┇ INFO     ┇           chrisbase.data ┇ -----------------------------------------------------------------------------------------------------------------------------------------
+[07.27 23:37:01] ┇ INFO     ┇                 __main__ ┇ Use 48 workers to crawl 1410203 wikipedia queries
+[07.27 23:37:31] ┇  visiting:   0%|▏                                                                                                   | 3244/1410203 [01:20<13:17:54, 29.39job/s]
+[07.27 23:39:36] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=10년_(2018년_영화)
+
+[07.27 23:39:37] ┇ WARNING  ┇           chrisbase.util ┇ TimeoutError on job[3259](<Future at 0x7fe6cbffc940 state=running>)
+[07.27 23:37:31] ┇  visiting:   1%|▉                                                                                                   | 12781/1410203 [06:00<9:23:03, 41.36job/s]
+[07.27 23:44:18] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=1964년_세계_박람회
+
+[07.27 23:44:19] ┇ WARNING  ┇           chrisbase.util ┇ TimeoutError on job[12784](<Future at 0x7fe6caea4cd0 state=running>)
+[07.27 23:37:31] ┇  visiting:   3%|██▌                                                                                                 | 36418/1410203 [17:40<14:48:28, 25.77job/s]
+[07.27 23:55:57] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=2018년_동계_올림픽_컬링_남자
+
+[07.27 23:55:59] ┇ WARNING  ┇           chrisbase.util ┇ TimeoutError on job[36427](<Future at 0x7fe6c458d690 state=running>)
+[07.27 23:37:31] ┇  visiting:   6%|██████▎                                                                                             | 89374/1410203 [43:40<20:29:13, 17.91job/s]
+[07.28 00:21:55] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=FarmVille
+
+[07.28 00:21:56] ┇ WARNING  ┇           chrisbase.util ┇ TimeoutError on job[89378](<Future at 0x7fe678fb4ca0 state=running>)
+[07.27 23:37:31] ┇  visiting:   7%|███████▏                                                                                            | 100511/1410203 [49:00<14:11:20, 25.64job/s]
+[07.28 00:27:15] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=Harbin_Brewery
+
+[07.28 00:27:16] ┇ WARNING  ┇           chrisbase.util ┇ TimeoutError on job[100514](<Future at 0x7fe677ce0b50 state=running>)
+[07.27 23:37:31] ┇  visiting:   7%|███████▍                                                                                            | 104055/1410203 [50:40<15:44:08, 23.06job/s]
+[07.28 00:28:58] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=IHO
+
+[07.28 00:28:59] ┇ WARNING  ┇           chrisbase.util ┇ TimeoutError on job[104055](<Future at 0x7fe6776e3490 state=running>)
+[07.27 23:37:31] ┇  visiting:   8%|████████▏                                                                                           | 115776/1410203 [56:09<10:27:47, 34.36job/s]
+
+[07.28 00:36:09] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=LG밴드플레이
+
+[07.28 00:41:10] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=Monotheist
+
+[07.28 00:45:02] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=Office_365
+
+[07.28 00:47:16] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=Pine_Tree
+
+[07.28 00:49:03] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=RTECS
+
+[07.28 00:58:25] ┇ WARNING  ┇                 __main__ ┇ RemoteProtocolError on _query(): Server disconnected without sending a response. || n=0 || title=메시에 59
+
+[07.28 00:58:26] ┇ WARNING  ┇                 __main__ ┇ RemoteProtocolError on _query(): Server disconnected without sending a response. || n=0 || title=NGC 5866
+
+[07.28 00:58:26] ┇ WARNING  ┇                 __main__ ┇ RemoteProtocolError on _query(): Server disconnected without sending a response. || n=0 || title=웁살라 일반목록
+
+[07.28 00:58:27] ┇ WARNING  ┇                 __main__ ┇ RemoteProtocolError on _query(): Server disconnected without sending a response. || n=0 || title=UHD 명품관
+
+[07.28 00:59:50] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=USS 본험 리처드 (CV-31)
+
+[07.28 00:59:50] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_사라토가_(CV-3)
+
+[07.28 00:59:50] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=USS_사라토가
+
+
+
+[07.28 00:59:50] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_사우스다코타
+[07.28 00:59:50] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=USS 블랙하트 (NCC-2327)
+[07.28 00:59:50] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=USS 블루리지
+
+
+[07.28 00:59:50] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_새넌도어
+[07.28 00:59:50] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=USS 브루클린
+
+[07.28 00:59:50] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=USS 볼티모어 (1861년)
+
+[07.28 00:59:50] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_사우스캐롤라이나
+
+[07.28 00:59:50] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_새넌도어_(1862년)
+
+[07.28 00:59:50] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_새러토가
+
+[07.28 00:59:50] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=USS 블루리지 (LCC-19)
+
+[07.28 00:59:50] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_새러토가_(CV-3)
+
+[07.28 00:59:50] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=USS 빈센스
+
+[07.28 00:59:50] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=USS_선더차일드_(NCC-63549)
+
+[07.28 00:59:50] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=USS 새러토가 (CV-60)
+
+[07.28 00:59:50] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_새러토가_(CV-60)
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_샌_안토니오급_수송함
+
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_샤크
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_샤이엔
+
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_샌프란시스코
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_샌디에고
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_샌디에이고
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_샤이엔_(SSN-773)
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_샤크_(SS-8)
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_세인트폴
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_세일럼
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_셔벌리어_(DD-805)
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_셔벌리어_DD-805
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=USS_시어도어_루스벨트_(CVN-71)의_코로나바이러스감염증-19_범유행
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_솔라스
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_시어도어_루스벨트_(CVN-71)의_코로나19_범유행
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_스테니스
+
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_시어도어_루스벨트_(CVN-71)
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_스타게이저_(NCC-2893)
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_시어도어_루스벨트
+
+
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_시어도어_루즈벨트_(CVN-71)
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_시울프
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=USS_아메리카_(LHA-6)
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_시카고
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_시어도어_루스벨트의_코로나19_범유행
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_아메리카
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_썬더차일드_(NCC-63549)
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_아메리칸
+
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_아이오와_(BB-61)
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_아이오와
+
+[07.28 00:59:51] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=USS_아이다호
+
+[07.28 01:09:51] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=가스_피스톨
+
+[07.28 01:15:04] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=강덕_(만주국)
+
+[07.28 01:18:51] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=거제_고군현치소지
+
+[07.28 01:29:06] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=고양이노화
+
+[07.28 01:36:59] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=괴시동
+
+[07.28 01:45:47] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=굿바이_뉴욕_황금을_찾아라
+
+[07.28 01:47:27] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=그녀의_플레그가_꺾이면
+
+[07.28 01:52:28] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=금동여래입상_(보물_제401호)
+
+[07.28 01:57:07] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=기타가타_역_(사가현)
+
+[07.28 01:59:37] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=김두영
+
+[07.28 02:10:41] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=나카무라_아츠오
+
+[07.28 02:18:36] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=네이추
+
+[07.28 02:24:42] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=뉴스현장_(연합뉴스TV)
+
+[07.28 02:28:33] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=닌자_터틀
+
+[07.28 02:42:52] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=대한민국_육군_기술병과학교
+
+[07.28 02:45:31] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=대한민국의_전문대학교
+
+[07.28 02:46:46] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=대한신학교
+
+[07.28 02:50:40] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=데모폰_(엘레우시스)
+
+[07.28 02:56:09] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=도에이초
+
+[07.28 02:59:58] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=동경_48도
+
+[07.28 03:12:36] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=라카_전역_(2016년-2017년)
+
+[07.28 03:18:35] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=레이맨_오리진스
+
+[07.28 03:24:20] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=로저_클라크_(1908년생_배우)
+
+[07.28 03:28:07] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=루이스마린사바테르
+
+[07.28 03:31:43] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=리모트_프로시저_콜
+
+[07.28 03:36:49] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=마누엘_아메차수라
+
+[07.28 03:38:38] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=마를렌_하우스호퍼
+
+[07.28 03:40:28] ┇ WARNING  ┇                 __main__ ┇ RemoteProtocolError on _query(): Server disconnected without sending a response. || n=0 || title=마쓰부시정
+
+[07.28 04:11:32] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=미야쿠보초
+
+[07.28 04:13:35] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=미혼남자
+
+[07.28 04:23:58] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=발타사르_코르마우퀴르
+
+[07.28 04:31:34] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=베른
+
+[07.28 04:41:22] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=부린스키_군
+
+[07.28 04:41:25] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=부미페드네카르
+
+[07.28 04:43:18] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=부정행위
+
+[07.28 04:44:28] ┇ WARNING  ┇                 __main__ ┇ RemoteProtocolError on _query(): Server disconnected without sending a response. || n=0 || title=고속도로 분기점
+
+[07.28 04:46:49] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=불을_찾아서
+
+[07.28 04:52:28] ┇ WARNING  ┇                 __main__ ┇ RemoteProtocolError on _query(): Server disconnected without sending a response. || n=0 || title=비스마르크_내각
+
+[07.28 04:57:53] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=뽀즈난
+
+[07.28 05:40:15] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=수춘삼반
+
+[07.28 05:54:26] ┇ WARNING  ┇                 __main__ ┇ RemoteProtocolError on _query(): Server disconnected without sending a response. || n=0 || title=시부야 쓰바사
+
+[07.28 05:59:56] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=신성로마제국의_루돌프_2세
+
+[07.28 06:21:29] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=아흐수구
+
+[07.28 06:22:40] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=안도라의_국가
+
+[07.28 06:32:55] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=애플_뉴튼
+
+[07.28 06:43:13] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=에님바
+
+[07.28 06:45:05] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=에리히_멘델손
+
+[07.28 07:13:26] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=옹딘
+
+[07.28 07:13:31] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=와그너_그룹
+
+[07.28 07:32:30] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=윈도우_드라이버_프레임웍스
+
+[07.28 07:59:20] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=인구_밀도
+
+[07.28 08:08:55] ┇ WARNING  ┇                 __main__ ┇ RemoteProtocolError on _query(): Server disconnected without sending a response. || n=0 || title=맷 블룸
+
+[07.28 08:21:23] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=정동철
+
+[07.28 08:26:22] ┇ WARNING  ┇                 __main__ ┇ RemoteProtocolError on _query(): Server disconnected without sending a response. || n=0 || title=제4회_전조선수상경기대회
+
+[07.28 08:26:22] ┇ WARNING  ┇                 __main__ ┇ RemoteProtocolError on _query(): Server disconnected without sending a response. || n=0 || title=제4회 전국동시지방선거 칠곡군의회
+
+[07.28 08:41:03] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=존오트버그
+
+[07.28 08:43:37] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=주산기사망률
+
+[07.28 08:44:31] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=주제1세
+
+[07.28 08:53:06] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=지하야_성
+
+[07.28 08:54:09] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=진먼_포격전
+
+[07.28 08:58:26] ┇ WARNING  ┇                 __main__ ┇ RemoteProtocolError on _query(): Server disconnected without sending a response. || n=0 || title=창문 넘어 도망친 100세 노인
+
+[07.28 08:58:26] ┇ WARNING  ┇                 __main__ ┇ RemoteProtocolError on _query(): Server disconnected without sending a response. || n=0 || title=창문 넘어 도망친 100세 노인 (연극)
+
+[07.28 08:58:27] ┇ WARNING  ┇                 __main__ ┇ RemoteProtocolError on _query(): Server disconnected without sending a response. || n=0 || title=창밀로
+
+[07.28 08:58:27] ┇ WARNING  ┇                 __main__ ┇ RemoteProtocolError on _query(): Server disconnected without sending a response. || n=0 || title=창바이산맥
+
+[07.28 08:58:29] ┇ WARNING  ┇                 __main__ ┇ RemoteProtocolError on _query(): Server disconnected without sending a response. || n=0 || title=창비신인문학상
+
+[07.28 08:58:29] ┇ WARNING  ┇                 __main__ ┇ RemoteProtocolError on _query(): Server disconnected without sending a response. || n=0 || title=창비신인문학상
+
+[07.28 08:59:39] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원_공씨_(公)
+
+[07.28 08:59:39] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=MBC경남 창원방송
+
+[07.28 08:59:39] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원NC파크
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_내광사_지장보살본원경
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원_나들목
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원 구씨
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원 구산성지
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원광장
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_내동_패총
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원_남산유적
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_내동패총
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원 LG 세이커스
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원 금룡사 목조보살입상
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원 길상사 법집별행록절요병입사기
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_다이노스
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원 금룡사 입능가경
+
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_다호리_고분군
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원_길상사_고봉화상선요
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_달천구천
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_대광사_경덕전등록
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원 길상사 선원제전집도서
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원_길상사_법집별행록절요병입사기(용장사본)
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원 남산 유적
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원 (동음이의)
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_대광사_대방광불화엄경소초
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원 광산사 목조보살좌상
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원 관술정
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원 김주열 열사 시신 인양지
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_대광사_대불정다라니
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_대광사_묘법연화경
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_대광사_석문홍각범임간록
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_대광사_수능엄경
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_대광사_주화엄법계관문
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_대광사_십지경론
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_대광사_치문경훈
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원_대광사_조상경
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_덕천리유적
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ReadTimeout on _query(): The read operation timed out || n=0 || title=창원_덕천리_유적
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_도시철도
+
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_마산_이산성지
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_길상사_법집별행록절요병입사기(운흥사본)
+
+[07.28 08:59:40] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_두대_FC
+
+[07.28 08:59:41] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_마산_가을포_봉수대
+
+[07.28 08:59:41] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_마산_합포성지
+
+[07.28 08:59:41] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_길상사_승가예의문
+
+[07.28 08:59:41] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=창원_메트로시티_1차
+
+[07.28 08:59:41] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_마산_회원현_성지
+
+[07.28 08:59:41] ┇ WARNING  ┇                 __main__ ┇ ConnectTimeout on _query(): _ssl.c:990: The handshake operation timed out || n=0 || title=창원_마산합포구_내포리_삼효각
+
+[07.28 09:03:39] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=철권을_가진_사나이
+
+[07.28 09:12:22] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=취나물속
+
+[07.28 09:13:12] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=치바에리이
+
+[07.28 09:18:40] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=카와카미_토모코
+
+[07.28 09:35:57] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=큐어_써니
+
+[07.28 09:38:14] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=크리스토펠_기호
+
+[07.28 09:46:45] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=탁리
+
+[07.28 09:52:52] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=토끼자리의_항성_목록
+
+[07.28 09:56:32] ┇ WARNING  ┇                 __main__ ┇ RemoteProtocolError on _query(): Server disconnected without sending a response. || n=0 || title=툴륨 동위 원소
+
+[07.28 10:00:09] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=틀니_세정제
+
+[07.28 10:13:01] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=평택시장
+
+[07.28 10:31:47] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=하늘에_가득한_수수께끼_별
+
+[07.28 10:35:11] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=하이퍼_스레딩
+
+[07.28 10:44:11] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=핫토리한조
+
+[07.28 10:46:08] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=해왕성
+
+[07.28 10:56:13] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=혹성_로보트_썬더_A
+
+[07.28 10:59:50] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=화이트컬러
+
+[07.28 11:05:00] ┇ WARNING  ┇                 __main__ ┇ ConnectError on _query(): [Errno -9] Address family for hostname not supported || n=0 || title=후카미
+[07.28 11:09:51] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[07.28 11:09:51] ┇ INFO     ┇           chrisbase.data ┇ [EXIT] python crawl_wikipedia.py --input-name kowiki-20230701-all-titles-in-ns0.txt --max-workers 48 --input-limit 1500000 ($=11:32:51.304)
+[07.28 11:09:51] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+concurrent.futures.process._RemoteTraceback:
+"""
+Traceback (most recent call last):
+  File "/home/chris/miniforge3/envs/WiseData-2023.07/lib/python3.10/concurrent/futures/process.py", line 246, in _process_worker
+    r = call_item.fn(*call_item.args, **call_item.kwargs)
+  File "/dat/proj/WiseData-2023.07/crawl_wikipedia.py", line 182, in process_query
+    if not page.exists():
+  File "/dat/proj/WiseData-2023.07/Wikipedia-API-0.6.0/wikipediaapi/__init__.py", line 910, in exists
+    return bool(self.pageid != -1)
+  File "/dat/proj/WiseData-2023.07/Wikipedia-API-0.6.0/wikipediaapi/__init__.py", line 874, in __getattr__
+    self._fetch(call)
+  File "/dat/proj/WiseData-2023.07/Wikipedia-API-0.6.0/wikipediaapi/__init__.py", line 1064, in _fetch
+    getattr(self.wiki, call)(self)
+  File "/dat/proj/WiseData-2023.07/Wikipedia-API-0.6.0/wikipediaapi/__init__.py", line 334, in info
+    pages = raw["query"]["pages"]
+KeyError: 'pages'
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/dat/proj/WiseData-2023.07/crawl_wikipedia.py", line 267, in <module>
+    app()
+  File "/home/chris/miniforge3/envs/WiseData-2023.07/lib/python3.10/site-packages/typer/main.py", line 328, in __call__
+    raise e
+  File "/home/chris/miniforge3/envs/WiseData-2023.07/lib/python3.10/site-packages/typer/main.py", line 311, in __call__
+    return get_command(self)(*args, **kwargs)
+  File "/home/chris/miniforge3/envs/WiseData-2023.07/lib/python3.10/site-packages/click/core.py", line 1157, in __call__
+    return self.main(*args, **kwargs)
+  File "/home/chris/miniforge3/envs/WiseData-2023.07/lib/python3.10/site-packages/typer/core.py", line 716, in main
+    return _main(
+  File "/home/chris/miniforge3/envs/WiseData-2023.07/lib/python3.10/site-packages/typer/core.py", line 216, in _main
+    rv = self.invoke(ctx)
+  File "/home/chris/miniforge3/envs/WiseData-2023.07/lib/python3.10/site-packages/click/core.py", line 1434, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/home/chris/miniforge3/envs/WiseData-2023.07/lib/python3.10/site-packages/click/core.py", line 783, in invoke
+    return __callback(*args, **kwargs)
+  File "/home/chris/miniforge3/envs/WiseData-2023.07/lib/python3.10/site-packages/typer/main.py", line 683, in wrapper
+    return callback(**use_params)  # type: ignore
+  File "/dat/proj/WiseData-2023.07/crawl_wikipedia.py", line 254, in crawl
+    failed_ids = wait_future_jobs(job_tqdm(jobs.items(), pre="┇", desc="visiting", unit="job"),
+  File "/dat/proj/WiseData-2023.07/chrisbase/src/chrisbase/util.py", line 302, in wait_future_jobs
+    job.result(timeout=timeout)
+  File "/home/chris/miniforge3/envs/WiseData-2023.07/lib/python3.10/concurrent/futures/_base.py", line 451, in result
+    return self.__get_result()
+  File "/home/chris/miniforge3/envs/WiseData-2023.07/lib/python3.10/concurrent/futures/_base.py", line 403, in __get_result
+    raise self._exception
+KeyError: 'pages'
+
+Process finished with exit code 1
