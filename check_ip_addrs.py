@@ -58,7 +58,7 @@ def process_query(i: int, x: str, s: float | None = None, log: bool = True):
     with httpx.Client(transport=httpx.HTTPTransport(local_address=x), timeout=10.0) as cli:
         response = cli.get("https://api64.ipify.org?format=json")
         result = ProcessResult(
-            _id=i,
+            _id=i + 1,
             query=x,
             status=response.status_code,
             elapsed=round(response.elapsed.total_seconds(), 3),
@@ -115,17 +115,17 @@ def check(
             job_tqdm = time_tqdm_cls(bar_size=100, desc_size=9) if use_tqdm else mute_tqdm_cls()
             if args.env.max_workers < 2:
                 for i, x in enumerate(job_tqdm(args.env.ip_addrs, pre="┇", desc="visiting", unit="job")):
-                    process_query(i=i + 1, x=x, log=not use_tqdm)
+                    process_query(i=i, x=x, log=not use_tqdm)
             else:
                 with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
                     jobs: Dict[int, Future] = {}
                     for i, x in enumerate(args.env.ip_addrs):
-                        jobs[i] = pool.submit(process_query, i=i + 1, x=x, s=args.net.calling_sec, log=not use_tqdm)
+                        jobs[i] = pool.submit(process_query, i=i, x=x, s=args.net.calling_sec, log=not use_tqdm)
                     failed_ids = wait_future_jobs(job_tqdm(jobs.items(), pre="┇", desc="visiting", unit="job"),
                                                   timeout=args.net.waiting_sec, pool=pool)
             logger.info(f"Success: {mongo.num_documents}/{args.env.num_ip_addrs}")
             logger.info(f"Failure: {len(failed_ids)}/{args.env.num_ip_addrs}")
-            mongo.output_table(to=args.env.output_home / f"{args.env.job_name}.jsonl")
+            mongo.export_table(to=args.env.output_home / f"{args.env.job_name}.jsonl")
             if failed_ids:
                 logger.info(f"Failed IDs: {failed_ids}")
                 logger.info(f"Failed IPs: {[args.env.ip_addrs[i] for i in failed_ids]}")

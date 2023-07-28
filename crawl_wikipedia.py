@@ -125,6 +125,7 @@ class DataOption(OptionData):
     name: str | Path = field()
     lang: str | None = field(default=None)
     limit: int | None = field(default=None)
+    from_scratch: bool = field(default=False)
 
     def __post_init__(self):
         self.home = Path(self.home)
@@ -186,10 +187,10 @@ def process_query(i: int, x: str, s: float | None = None):
         time.sleep(s)
     api = wikipedia_api[i % len(wikipedia_api)]
     page: WikipediaPage = api.page(x)
-    if not page.exists():
-        result = ProcessResult(_id=i, query=x)
-    else:
-        result = ProcessResult(_id=i, query=x, title=page.title, page_id=page.pageid)
+    result = ProcessResult(_id=i + 1, query=x)
+    if page.exists():
+        result.title = page.title
+        result.page_id = page.pageid
         result.section_list.append((x, '', '', page.summary))
         result.section_list += get_section_list_lv2(x, page.sections)
         result.passage_list = get_passage_list(result.section_list, page.pageid)
@@ -215,6 +216,7 @@ def crawl(
         input_name: str = typer.Option(default="kowiki-sample.txt"),
         input_lang: str = typer.Option(default="ko"),
         input_limit: int = typer.Option(default=-1),
+        from_scratch: bool = typer.Option(default=True),
         # etc
         use_tqdm: bool = typer.Option(default=True),
 ):
@@ -239,13 +241,14 @@ def crawl(
             name=input_name,
             lang=input_lang,
             limit=input_limit,
+            from_scratch=from_scratch,
         ),
     )
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("wikipediaapi").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=True, pool=mongos) as mongo:
+        with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=args.data.from_scratch, pool=mongos) as mongo:
             failed_ids: List[int] = []
             query_list = load_query_list(args=args)
             num_global_api = reset_global_api(args=args)
@@ -253,17 +256,17 @@ def crawl(
             job_tqdm = time_tqdm_cls(bar_size=100, desc_size=9) if use_tqdm else mute_tqdm_cls()
             if args.env.max_workers < 2:
                 for i, x in enumerate(job_tqdm(query_list, pre="┇", desc="visiting", unit="job")):
-                    process_query(i=i + 1, x=x)
+                    process_query(i=i, x=x)
             else:
                 with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
                     jobs: Dict[int, Future] = {}
                     for i, x in enumerate(query_list):
-                        jobs[i] = pool.submit(process_query, i=i + 1, x=x, s=args.net.calling_sec)
+                        jobs[i] = pool.submit(process_query, i=i, x=x, s=args.net.calling_sec)
                     failed_ids = wait_future_jobs(job_tqdm(jobs.items(), pre="┇", desc="visiting", unit="job"),
                                                   timeout=args.net.waiting_sec, pool=pool)
             logger.info(f"Success: {mongo.num_documents}/{len(query_list)}")
             logger.info(f"Failure: {len(failed_ids)}/{len(query_list)}")
-            mongo.output_table(to=args.env.output_home / f"{args.env.job_name}.jsonl")
+            mongo.export_table(to=args.env.output_home / f"{args.env.job_name}.jsonl")
             if failed_ids:
                 logger.info(f"Failed IDs: {failed_ids}")
                 failed_query_list = [query_list[i] for i in failed_ids]
@@ -281,6 +284,7 @@ def export(
         # data
         input_home: str = typer.Option(default="input"),
         input_name: str = typer.Option(default="kowiki-sample.txt"),
+        input_limit: int = typer.Option(default=-1),
         # etc
         use_tqdm: bool = typer.Option(default=True),
 ):
@@ -296,16 +300,28 @@ def export(
         data=DataOption(
             home=input_home,
             name=input_name,
+            limit=input_limit,
         ),
     )
 
+    job_tqdm = time_tqdm_cls(bar_size=100, desc_size=9) if use_tqdm else mute_tqdm_cls()
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=False, pool=mongos) as mongo:
+        with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=False) as mongo:
             query_list = load_query_list(args=args)
             output_file = args.env.output_home / f"{args.data.name.stem}.jsonl"
+
             logger.info(f"Export {mongo.num_documents}/{len(query_list)} documents to {output_file}")
-            job_tqdm = time_tqdm_cls(bar_size=100, desc_size=9) if use_tqdm else mute_tqdm_cls()
-            mongo.output_table(to=output_file, tqdm=job_tqdm)
+            existing_indices = mongo.export_table(to=output_file, tqdm=job_tqdm)
+
+            logger.info(f"Find failed queries among ({len(query_list)} queries, {len(existing_indices)} existing indices)")
+            failed_indices = [i for i, _ in enumerate(query_list) if i not in existing_indices]
+            if not failed_indices:
+                logger.info("No failed queries")
+            else:
+                logger.info(f"Found failed indices({len(failed_indices)}): {failed_indices}")
+                failed_query_list = [query_list[i] for i in failed_indices]
+                failed_query_file = args.env.output_home / f"{args.data.name.stem}-failed{args.data.name.suffix}"
+                failed_query_file.write_text("\n".join(failed_query_list))
 
 
 if __name__ == "__main__":
