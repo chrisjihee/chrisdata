@@ -4,12 +4,13 @@ import time
 from concurrent.futures import ProcessPoolExecutor, Future
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 
 import httpx
 import pandas as pd
 import typer
 from dataclasses_json import DataClassJsonMixin
+from pymongo.errors import DuplicateKeyError
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments
 from chrisbase.io import LoggingFormat
@@ -26,15 +27,29 @@ class WikipediaEx(Wikipedia):
     def __init__(self, *args, ip=None, max_retrial=10, retrial_sec=10.0, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         if ip:
-            self._session.close()
-            self._session = httpx.Client(transport=httpx.HTTPTransport(local_address=ip))
+            self._httpx_client = httpx.Client(transport=httpx.HTTPTransport(local_address=ip))
         self.max_retrial = max_retrial
         self.retrial_sec = retrial_sec
+
+    def __del__(self) -> None:
+        super().__del__()
+        try:
+            self._httpx_client.close()
+        except Exception:
+            pass
 
     def _query(self, page: WikipediaPage, params: Dict[str, Any]):
         for n in range(self.max_retrial):
             try:
-                return super()._query(page, params)
+                base_url = "https://" + page.language + ".wikipedia.org/w/api.php"
+                logger.debug(
+                    "Request URL: %s",
+                    base_url + "?" + "&".join([k + "=" + str(v) for k, v in params.items()]),
+                )
+                params["format"] = "json"
+                params["redirects"] = 1
+                r = self._httpx_client.get(base_url, params=params, **self._request_kwargs)
+                return r.json()
             except httpx.HTTPError as e:
                 print()
                 logger.warning(f"{type(e).__qualname__} on _query(): {e} || n={n} || title={page.title}")
@@ -43,7 +58,7 @@ class WikipediaEx(Wikipedia):
             raise RuntimeError(f"Failed to query {page.title} after {self.max_retrial} retrials")
 
 
-wikipedia_api: List[WikipediaEx] = []
+api_list_per_ip: List[WikipediaEx] = []
 
 
 def get_passage_list(section_list, page_id):
@@ -151,25 +166,30 @@ class ProgramArguments(CommonArguments):
         ]).reset_index(drop=True)
 
 
-def load_query_list(args: ProgramArguments) -> List[str]:
+def load_query_list(args: ProgramArguments) -> List[Tuple[int, str]]:
     assert (args.data.home / args.data.name).exists(), f"No input file: {args.data.home / args.data.name}"
     with open(args.data.home / args.data.name) as f:
         if not args.data.limit or args.data.limit < 1:
-            return f.read().splitlines()
+            lines = f.read().splitlines()
         else:
-            return f.read().splitlines()[:args.data.limit]
+            lines = f.read().splitlines()[:args.data.limit]
+    rows = [x.split("\t") for x in lines]
+    if len(rows[0]) < 2:
+        return [(i, row) for i, row in enumerate(rows)]
+    else:
+        return [(int(row[0]), row[1]) for row in rows]
 
 
 def reset_global_api(args: ProgramArguments):
     assert args.net, "No net option on args"
     assert args.data.lang, "No lang option on args.data"
-    global wikipedia_api
-    wikipedia_api.clear()
+    global api_list_per_ip
+    api_list_per_ip.clear()
     for ip in args.env.ip_addrs:
-        wikipedia_api.append(WikipediaEx(user_agent=f"{args.env.project}/1.0", language=args.data.lang, ip=ip,
-                                         max_retrial=args.net.max_retrial, retrial_sec=args.net.retrial_sec,
-                                         timeout=args.net.waiting_sec))
-    return len(wikipedia_api)
+        api_list_per_ip.append(WikipediaEx(user_agent=f"{args.env.project}/1.0", language=args.data.lang, ip=ip,
+                                           max_retrial=args.net.max_retrial, retrial_sec=args.net.retrial_sec,
+                                           timeout=args.net.waiting_sec))
+    return len(api_list_per_ip)
 
 
 @dataclass
@@ -185,17 +205,25 @@ class ProcessResult(DataClassJsonMixin):
 def process_query(i: int, x: str, s: float | None = None):
     if s and s > 0:
         time.sleep(s)
-    api = wikipedia_api[i % len(wikipedia_api)]
+    api = api_list_per_ip[i % len(api_list_per_ip)]
     page: WikipediaPage = api.page(x)
     result = ProcessResult(_id=i + 1, query=x)
-    if page.exists():
+    is_exist = False
+    try:
+        is_exist = page.exists()
+    except KeyError as e:
+        logger.warning(f"KeyError on process_query(i={i}, x={x}): {e}")
+    if is_exist:
         result.title = page.title
         result.page_id = page.pageid
         result.section_list.append((x, '', '', page.summary))
         result.section_list += get_section_list_lv2(x, page.sections)
         result.passage_list = get_passage_list(result.section_list, page.pageid)
     for mongo in mongos:
-        mongo.table.insert_one(result.to_dict())
+        try:
+            mongo.table.insert_one(result.to_dict())
+        except DuplicateKeyError:
+            logger.warning(f"Already inserted on process_query(i={i}, x={x})")
 
 
 @app.command()
@@ -216,7 +244,7 @@ def crawl(
         input_name: str = typer.Option(default="kowiki-sample.txt"),
         input_lang: str = typer.Option(default="ko"),
         input_limit: int = typer.Option(default=-1),
-        from_scratch: bool = typer.Option(default=True),
+        from_scratch: bool = typer.Option(default=False),
         # etc
         use_tqdm: bool = typer.Option(default=True),
 ):
@@ -255,23 +283,19 @@ def crawl(
             logger.info(f"Use {num_global_api} apis and {args.env.max_workers} workers to crawl {len(query_list)} wikipedia queries")
             job_tqdm = time_tqdm_cls(bar_size=100, desc_size=9) if use_tqdm else mute_tqdm_cls()
             if args.env.max_workers < 2:
-                for i, x in enumerate(job_tqdm(query_list, pre="┇", desc="visiting", unit="job")):
+                for i, x in job_tqdm(query_list, pre="┇", desc="visiting", unit="job"):
                     process_query(i=i, x=x)
             else:
                 with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
                     jobs: Dict[int, Future] = {}
-                    for i, x in enumerate(query_list):
+                    for i, x in query_list:
                         jobs[i] = pool.submit(process_query, i=i, x=x, s=args.net.calling_sec)
                     failed_ids = wait_future_jobs(job_tqdm(jobs.items(), pre="┇", desc="visiting", unit="job"),
                                                   timeout=args.net.waiting_sec, pool=pool)
             logger.info(f"Success: {mongo.num_documents}/{len(query_list)}")
             logger.info(f"Failure: {len(failed_ids)}/{len(query_list)}")
-            mongo.export_table(to=args.env.output_home / f"{args.env.job_name}.jsonl")
             if failed_ids:
                 logger.info(f"Failed IDs: {failed_ids}")
-                failed_query_list = [query_list[i] for i in failed_ids]
-                failed_query_file = args.env.output_home / f"{args.data.name.stem}-failed{args.data.name.suffix}"
-                failed_query_file.write_text("\n".join(failed_query_list))
 
 
 @app.command()
@@ -319,9 +343,8 @@ def export(
                 logger.info("No failed queries")
             else:
                 logger.info(f"Found failed indices({len(failed_indices)}): {failed_indices}")
-                failed_query_list = [query_list[i] for i in failed_indices]
-                failed_query_file = args.env.output_home / f"{args.data.name.stem}-failed{args.data.name.suffix}"
-                failed_query_file.write_text("\n".join(failed_query_list))
+                failed_query_file = args.env.output_home / f"{args.data.name.stem}-failed.tsv"
+                failed_query_file.write_text("\n".join(["\t".join([str(i), query_list[i]]) for i in failed_indices]))
 
 
 if __name__ == "__main__":
