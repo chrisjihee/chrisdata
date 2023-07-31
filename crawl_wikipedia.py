@@ -14,7 +14,7 @@ from pymongo.errors import DuplicateKeyError
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments
 from chrisbase.io import LoggingFormat
-from chrisbase.util import MongoDB, to_dataframe, time_tqdm_cls, mute_tqdm_cls, wait_future_jobs, LF
+from chrisbase.util import MongoDB, to_dataframe, time_tqdm_cls, mute_tqdm_cls, wait_future_jobs
 from wikipediaapi import Wikipedia
 from wikipediaapi import WikipediaPage
 
@@ -277,7 +277,7 @@ def crawl(
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("wikipediaapi").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=args.data.from_scratch, pool=mongos) as mongo:
+        with MongoDB(db_name=args.env.project, tab_name=f"{args.env.job_name}-{args.data.name.stem}", clear_table=args.data.from_scratch, pool=mongos) as mongo:
             failed_ids: List[int] = []
             query_list = load_query_list(args=args)
             num_global_api = reset_global_api(args=args)
@@ -331,7 +331,7 @@ def export(
 
     job_tqdm = time_tqdm_cls(bar_size=100, desc_size=9) if use_tqdm else mute_tqdm_cls()
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=False) as mongo:
+        with MongoDB(db_name=args.env.project, tab_name=f"{args.env.job_name}-{args.data.name.stem}", clear_table=False) as mongo:
             query_list = load_query_list(args=args)
             output_file = args.env.output_home / f"{args.data.name.stem}.jsonl"
 
