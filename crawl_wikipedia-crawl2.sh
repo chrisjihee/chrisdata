@@ -1,0 +1,1 @@
+python crawl_wikipedia.py craFwl --input-name kowiki-20230720-all-titles-in-ns0-failed.tsv --max-workers 1
