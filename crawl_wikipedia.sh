@@ -1,1 +1,0 @@
-python crawl_wikipedia.py crawl --input-name kowiki-20230720-all-titles-in-ns0.txt --max-workers 24 --from-scratch

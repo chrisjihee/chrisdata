@@ -175,7 +175,7 @@ def load_query_list(args: ProgramArguments) -> List[Tuple[int, str]]:
             lines = f.read().splitlines()[:args.data.limit]
     rows = [x.split("\t") for x in lines]
     if len(rows[0]) < 2:
-        return [(i, row) for i, row in enumerate(rows)]
+        return [(i, row[0]) for i, row in enumerate(rows)]
     else:
         return [(int(row[0]), row[1]) for row in rows]
 
@@ -345,7 +345,8 @@ def export(
             else:
                 logger.info(f"Found failed indices({len(failed_indices)}): {failed_indices}")
                 failed_query_file = args.env.output_home / f"{args.data.name.stem}-failed.tsv"
-                failed_query_file.write_text("\n".join(["\t".join([str(i), query_list[i]]) for i in failed_indices]))
+                query_dict = dict(query_list)
+                failed_query_file.write_text("\n".join([f"{i}\t{query_dict[i]}" for i in failed_indices]))
 
 
 if __name__ == "__main__":
