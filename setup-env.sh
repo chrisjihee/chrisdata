@@ -1,6 +1,6 @@
 #!/bin/bash
-conda create -n WiseData-2023.07 python=3.10 -y
-conda activate WiseData-2023.07
+conda create -n WiseData-2023.08 python=3.10 -y
+conda activate WiseData-2023.08
 pip install -r requirements.txt
 pip list
 
