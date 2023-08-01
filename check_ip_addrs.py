@@ -8,11 +8,10 @@ from typing import List, Dict
 import httpx
 import pandas as pd
 import typer
-from dataclasses_json import DataClassJsonMixin
-
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments
 from chrisbase.io import LoggingFormat
 from chrisbase.util import MongoDB, to_dataframe, time_tqdm_cls, mute_tqdm_cls, wait_future_jobs
+from dataclasses_json import DataClassJsonMixin
 
 logger = logging.getLogger(__name__)
 app = AppTyper()

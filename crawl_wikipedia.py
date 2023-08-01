@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import time
 from concurrent.futures import ProcessPoolExecutor, Future
 from dataclasses import dataclass, field
@@ -9,12 +10,11 @@ from typing import List, Dict, Any, Tuple
 import httpx
 import pandas as pd
 import typer
-from dataclasses_json import DataClassJsonMixin
-from pymongo.errors import DuplicateKeyError
-
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments
 from chrisbase.io import LoggingFormat
 from chrisbase.util import MongoDB, to_dataframe, time_tqdm_cls, mute_tqdm_cls, wait_future_jobs
+from dataclasses_json import DataClassJsonMixin
+from pymongo.errors import DuplicateKeyError
 from wikipediaapi import Wikipedia
 from wikipediaapi import WikipediaPage
 
@@ -227,6 +227,11 @@ def process_query(i: int, x: str, s: float | None = None):
             logger.warning(f"DuplicateKeyError on process_query(i={i}, x={x})")
 
 
+def table_name(args: ProgramArguments) -> str:
+    postfix = re.sub("-failed.*", "", args.data.name.stem)
+    return f"{args.env.job_name}-{postfix}"
+
+
 @app.command()
 def crawl(
         # env
@@ -277,8 +282,7 @@ def crawl(
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("wikipediaapi").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        with MongoDB(db_name=args.env.project, tab_name=f"{args.env.job_name}-{args.data.name.stem}", clear_table=args.data.from_scratch, pool=mongos) as mongo:
-            failed_ids: List[int] = []
+        with MongoDB(db_name=args.env.project, tab_name=table_name(args), clear_table=args.data.from_scratch, pool=mongos) as mongo:
             query_list = load_query_list(args=args)
             num_global_api = reset_global_api(args=args)
             logger.info(f"Use {num_global_api} apis and {args.env.max_workers} workers to crawl {len(query_list)} wikipedia queries")
@@ -291,12 +295,9 @@ def crawl(
                     jobs: Dict[int, Future] = {}
                     for i, x in query_list:
                         jobs[i] = pool.submit(process_query, i=i, x=x, s=args.net.calling_sec)
-                    failed_ids = wait_future_jobs(job_tqdm(jobs.items(), pre="┇", desc="visiting", unit="job"),
-                                                  timeout=args.net.waiting_sec, pool=pool)
-            logger.info(f"Success: {mongo.num_documents}/{len(query_list)}")
-            logger.info(f"Failure: {len(failed_ids)}/{len(query_list)}")
-            if failed_ids:
-                logger.info(f"Failed IDs: {failed_ids}")
+                    wait_future_jobs(job_tqdm(jobs.items(), pre="┇", desc="visiting", unit="job"),
+                                     timeout=args.net.waiting_sec, pool=pool)
+            logger.info(f"#ProcessResult: {mongo.num_documents}")
 
 
 @app.command()
@@ -331,7 +332,7 @@ def export(
 
     job_tqdm = time_tqdm_cls(bar_size=100, desc_size=9) if use_tqdm else mute_tqdm_cls()
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        with MongoDB(db_name=args.env.project, tab_name=f"{args.env.job_name}-{args.data.name.stem}", clear_table=False) as mongo:
+        with MongoDB(db_name=args.env.project, tab_name=table_name(args), clear_table=False) as mongo:
             query_list = load_query_list(args=args)
             output_file = args.env.output_home / f"{args.data.name.stem}.jsonl"
 
