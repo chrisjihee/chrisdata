@@ -1,0 +1,2 @@
+Wikipedia-API==0.6.0
+chrisbase==0.4.3
