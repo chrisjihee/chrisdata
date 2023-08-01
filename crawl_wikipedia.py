@@ -344,7 +344,7 @@ def export(
                 logger.info("No failed queries")
             else:
                 logger.info(f"Found failed indices({len(failed_indices)}): {failed_indices}")
-                failed_query_file = args.env.output_home / f"{args.data.name.stem}-failed.tsv"
+                failed_query_file = args.data.home / f"{args.data.name.stem}-failed.tsv"
                 query_dict = dict(query_list)
                 failed_query_file.write_text("\n".join([f"{i}\t{query_dict[i]}" for i in failed_indices]))
 
