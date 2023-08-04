@@ -1,0 +1,189 @@
+(WiseData-2023.08) chris@chris70:/dat/proj/WiseData-2023.08$ bash crawl_wikipedia-export.sh
+[08.04 22:03:27] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[08.04 22:03:27] ┇ INFO     ┇           chrisbase.data ┇ [INIT] python crawl_wikipedia.py export --input-name kowiki-20230720-all-titles-in-ns0.txt
+[08.04 22:03:27] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇    # | ProgramArguments   | value
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇ -----+--------------------+---------------------------------------------------------------------
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇    1 | env.project        | WiseData
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇    2 | env.job_name       | crawl_wikipedia
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇    3 | env.hostname       | chris70
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇    4 | env.hostaddr       | 129.254.181.36
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇    5 | env.python_path    | /home/chris/miniforge3/envs/WiseData-2023.08/bin/python
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇    6 | env.working_path   | /dat/proj/WiseData-2023.08
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇    7 | env.running_file   | crawl_wikipedia.py
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇    8 | env.command_args   | ['export', '--input-name', 'kowiki-20230720-all-titles-in-ns0.txt']
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇    9 | env.num_ip_addrs   | 100
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇   10 | env.max_workers    | 24
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇   11 | env.output_home    | output-crawl_wikipedia
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇   12 | env.logging_file   | message.out
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇   13 | env.argument_file  | arguments.json
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇   14 | env.debugging      | False
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇   15 | env.msg_level      | 20
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇   16 | env.msg_format     | %(asctime)s ┇ %(levelname)-8s ┇ %(name)24s ┇ %(message)s
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇   17 | env.date_format    | [%m.%d %H:%M:%S]
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇   18 | data.home          | input
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇   19 | data.name          | kowiki-20230720-all-titles-in-ns0.txt
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇   20 | data.lang          |
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇   21 | data.limit         | -1
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇   22 | data.from_scratch  | False
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇   23 | time.started       | [08.04 22:03:28]
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇   24 | time.settled       |
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇   25 | time.elapsed       |
+[08.04 22:03:28] ┇ INFO     ┇           chrisbase.data ┇ -----------------------------------------------------------------------------------------------------------------------------------------
+[08.04 22:03:30] ┇ INFO     ┇                 __main__ ┇ Export 1412680/1412904 documents to output-crawl_wikipedia/kowiki-20230720-all-titles-in-ns0.jsonl
+[08.04 22:03:30] ┇ exporting: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████| 1412680/1412680 [02:59<00:00, 7889.12job/s]
+[08.04 22:06:29] ┇ INFO     ┇                 __main__ ┇ Find failed queries among (1412904 queries, 1412680 existing indices)
+[08.04 22:06:30] ┇ INFO     ┇                 __main__ ┇ Found failed indices(224): [77947, 78047, 78147, 78247, 78347, 78447, 78547, 78647, 78747, 78847, 78947, 79047, 79147, 79247, 79347, 79447, 79547, 79647, 79747, 79847, 79947, 80047, 80147, 80247, 80347, 80447, 80547, 80647, 80747, 80847, 80947, 81047, 81147, 81247, 81347, 81447, 81547, 81647, 81747, 81847, 81947, 82047, 82147, 82247, 82347, 82447, 82547, 82647, 82747, 82847, 82947, 83047, 83147, 83247, 83347, 83447, 83547, 83647, 83747, 83847, 83947, 84047, 84147, 84247, 84347, 84447, 84547, 84647, 84747, 84847, 84947, 85047, 85147, 85247, 85347, 85447, 85547, 85647, 85747, 85847, 85947, 86047, 86147, 86247, 86347, 86447, 86547, 86647, 86747, 86847, 86947, 87047, 87147, 87247, 87347, 87447, 87547, 87647, 87747, 87847, 87947, 88047, 88147, 88247, 88347, 88447, 88547, 88647, 88747, 88847, 88947, 89047, 89147, 89247, 89347, 89447, 89547, 89647, 89747, 89847, 89947, 90047, 90147, 90247, 90347, 90447, 90547, 90647, 90747, 90847, 90947, 91047, 91147, 91247, 91347, 91447, 91547, 91647, 91747, 91847, 91947, 92047, 92147, 92247, 92347, 92447, 92547, 92647, 92747, 92847, 92947, 93047, 93147, 93247, 93347, 93447, 93547, 93647, 93747, 93847, 93947, 94047, 94147, 94247, 94347, 94447, 94547, 94647, 94747, 94847, 94947, 95047, 95147, 95247, 95347, 95447, 95547, 95647, 95747, 95847, 95947, 96047, 96147, 96247, 96347, 96447, 96547, 96647, 96747, 96847, 96947, 97047, 97147, 97247, 97347, 97447, 97547, 97647, 97747, 97847, 97947, 98047, 98147, 98247, 98347, 98447, 98547, 98647, 98747, 98847, 98947, 99047, 99147, 99247, 99347, 99447, 99547, 99647, 99747, 99847, 99947, 100047, 100147, 100247]
+[08.04 22:06:30] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[08.04 22:06:30] ┇ INFO     ┇           chrisbase.data ┇ [EXIT] python crawl_wikipedia.py export --input-name kowiki-20230720-all-titles-in-ns0.txt ($=00:03:02.055)
+[08.04 22:06:30] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+(WiseData-2023.08) chris@chris70:/dat/proj/WiseData-2023.08$ bash crawl_wikipedia-crawl2.sh
+[08.04 22:07:48] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[08.04 22:07:48] ┇ INFO     ┇           chrisbase.data ┇ [INIT] python crawl_wikipedia.py crawl --input-name kowiki-20230720-all-titles-in-ns0-failed.tsv --max-workers 1
+[08.04 22:07:48] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇    # | ProgramArguments   | value
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇ -----+--------------------+-------------------------------------------------------------------------------------------------
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇    1 | env.project        | WiseData
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇    2 | env.job_name       | crawl_wikipedia
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇    3 | env.hostname       | chris70
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇    4 | env.hostaddr       | 129.254.181.36
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇    5 | env.python_path    | /home/chris/miniforge3/envs/WiseData-2023.08/bin/python
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇    6 | env.working_path   | /dat/proj/WiseData-2023.08
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇    7 | env.running_file   | crawl_wikipedia.py
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇    8 | env.command_args   | ['crawl', '--input-name', 'kowiki-20230720-all-titles-in-ns0-failed.tsv', '--max-workers', '1']
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇    9 | env.num_ip_addrs   | 100
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   10 | env.max_workers    | 1
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   11 | env.output_home    | output-crawl_wikipedia
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   12 | env.logging_file   | message.out
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   13 | env.argument_file  | arguments.json
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   14 | env.debugging      | False
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   15 | env.msg_level      | 20
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   16 | env.msg_format     | %(asctime)s ┇ %(levelname)-8s ┇ %(name)24s ┇ %(message)s
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   17 | env.date_format    | [%m.%d %H:%M:%S]
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   18 | net.calling_sec    | 0.5
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   19 | net.waiting_sec    | 60.0
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   20 | net.retrial_sec    | 3.0
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   21 | net.max_retrial    | 10.0
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   22 | data.home          | input
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   23 | data.name          | kowiki-20230720-all-titles-in-ns0-failed.tsv
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   24 | data.lang          | ko
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   25 | data.limit         | -1
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   26 | data.from_scratch  | False
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   27 | time.started       | [08.04 22:07:49]
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   28 | time.settled       |
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇   29 | time.elapsed       |
+[08.04 22:07:49] ┇ INFO     ┇           chrisbase.data ┇ -----------------------------------------------------------------------------------------------------------------------------------------
+[08.04 22:07:50] ┇ INFO     ┇                 __main__ ┇ Use 100 apis and 1 workers to crawl 26 wikipedia queries
+[08.04 22:07:50] ┇  visiting:   0%|                                                                                                    | 0/26 [00:00<?, ?job/s][08.04 22:07:51] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1252513, x=태양의계절)
+[08.04 22:07:50] ┇  visiting:   4%|███▊                                                                                                | 1/26 [00:01<00:26,  1.07s/job][08.04 22:07:52] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1252579, x=태양향점)
+[08.04 22:07:50] ┇  visiting:   8%|███████▋                                                                                            | 2/26 [00:01<00:22,  1.07job/s][08.04 22:07:53] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1252847, x=태조_이성계_(영화))
+[08.04 22:07:50] ┇  visiting:  12%|███████████▌                                                                                        | 3/26 [00:02<00:20,  1.13job/s][08.04 22:07:54] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1253020, x=태초_(전한))
+[08.04 22:07:50] ┇  visiting:  15%|███████████████▍                                                                                    | 4/26 [00:03<00:19,  1.15job/s][08.04 22:07:54] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1253328, x=태풍_곤파스)
+[08.04 22:07:50] ┇  visiting:  19%|███████████████████▏                                                                                | 5/26 [00:04<00:17,  1.17job/s][08.04 22:07:56] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1253791, x=태풍_볼라벤_(2012년))
+[08.04 22:07:50] ┇  visiting:  23%|███████████████████████                                                                             | 6/26 [00:05<00:18,  1.06job/s][08.04 22:07:56] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1253887, x=태풍_손띤_(2018년))
+[08.04 22:07:50] ┇  visiting:  27%|██████████████████████████▉                                                                         | 7/26 [00:06<00:17,  1.08job/s][08.04 22:07:57] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1253933, x=태풍_아이사)
+[08.04 22:07:50] ┇  visiting:  31%|██████████████████████████████▊                                                                     | 8/26 [00:07<00:15,  1.13job/s][08.04 22:07:58] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1256679, x=테드_디비아시_2세)
+[08.04 22:07:50] ┇  visiting:  35%|██████████████████████████████████▌                                                                 | 9/26 [00:08<00:14,  1.15job/s][08.04 22:07:59] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1256840, x=테라_텀)
+[08.04 22:07:50] ┇  visiting:  38%|██████████████████████████████████████▍                                                             | 10/26 [00:08<00:13,  1.16job/s][08.04 22:08:00] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1257056, x=테런스맥스위니)
+[08.04 22:07:50] ┇  visiting:  42%|██████████████████████████████████████████▎                                                         | 11/26 [00:09<00:12,  1.17job/s][08.04 22:08:00] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1257340, x=테렘_궁전)
+[08.04 22:07:50] ┇  visiting:  46%|██████████████████████████████████████████████▏                                                     | 12/26 [00:10<00:11,  1.26job/s][08.04 22:08:01] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1257547, x=테리_노터리)
+[08.04 22:07:50] ┇  visiting:  50%|██████████████████████████████████████████████████                                                  | 13/26 [00:11<00:10,  1.22job/s][08.04 22:08:02] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1257645, x=테리사라이트)
+[08.04 22:07:50] ┇  visiting:  54%|█████████████████████████████████████████████████████▊                                              | 14/26 [00:12<00:09,  1.22job/s][08.04 22:08:03] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1257941, x=테살로니카_왕국)
+[08.04 22:07:50] ┇  visiting:  58%|█████████████████████████████████████████████████████████▋                                          | 15/26 [00:12<00:09,  1.19job/s][08.04 22:08:04] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1257987, x=테셴_공작_카를_대공)
+[08.04 22:07:50] ┇  visiting:  62%|█████████████████████████████████████████████████████████████▌                                      | 16/26 [00:13<00:08,  1.19job/s][08.04 22:08:05] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1258170, x=테오_로시)
+[08.04 22:07:50] ┇  visiting:  65%|█████████████████████████████████████████████████████████████████▍                                  | 17/26 [00:14<00:07,  1.20job/s][08.04 22:08:05] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1258558, x=테이바_팻치)
+[08.04 22:07:50] ┇  visiting:  69%|█████████████████████████████████████████████████████████████████████▏                              | 18/26 [00:15<00:06,  1.18job/s][08.04 22:08:06] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1258560, x=테이블_(데이터베이스))
+[08.04 22:07:50] ┇  visiting:  73%|█████████████████████████████████████████████████████████████████████████                           | 19/26 [00:16<00:05,  1.19job/s][08.04 22:08:07] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1258568, x=테이블_만)
+[08.04 22:07:50] ┇  visiting:  77%|████████████████████████████████████████████████████████████████████████████▉                       | 20/26 [00:17<00:05,  1.15job/s][08.04 22:08:08] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1258697, x=테이크_오프)
+[08.04 22:07:50] ┇  visiting:  81%|████████████████████████████████████████████████████████████████████████████████▊                   | 21/26 [00:18<00:04,  1.17job/s][08.04 22:08:09] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1258839, x=테일러_녹스)
+[08.04 22:07:50] ┇  visiting:  85%|████████████████████████████████████████████████████████████████████████████████████▌               | 22/26 [00:18<00:03,  1.16job/s][08.04 22:08:10] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1258841, x=테일러_니콜스)
+[08.04 22:07:50] ┇  visiting:  88%|████████████████████████████████████████████████████████████████████████████████████████▍           | 23/26 [00:19<00:02,  1.15job/s][08.04 22:08:11] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1259151, x=테크네튬-112)
+[08.04 22:07:50] ┇  visiting:  92%|████████████████████████████████████████████████████████████████████████████████████████████▎       | 24/26 [00:20<00:01,  1.18job/s][08.04 22:08:11] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1259297, x=테클라_봉다제프스카_바라노프스카)
+[08.04 22:07:50] ┇  visiting:  96%|████████████████████████████████████████████████████████████████████████████████████████████████▏   | 25/26 [00:21<00:00,  1.26job/s][08.04 22:08:12] ┇ WARNING  ┇                 __main__ ┇ DuplicateKeyError on process_query(i=1259754, x=텍스토미)
+[08.04 22:07:50] ┇  visiting: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████| 26/26 [00:22<00:00,  1.17job/s]
+[08.04 22:08:13] ┇ INFO     ┇                 __main__ ┇ #ProcessResult: 1412680
+[08.04 22:08:13] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[08.04 22:08:13] ┇ INFO     ┇           chrisbase.data ┇ [EXIT] python crawl_wikipedia.py crawl --input-name kowiki-20230720-all-titles-in-ns0-failed.tsv --max-workers 1 ($=00:00:23.896)
+[08.04 22:08:13] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+(WiseData-2023.08) chris@chris70:/dat/proj/WiseData-2023.08$ bash crawl_wikipedia-crawl2.sh
+[08.04 22:08:32] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[08.04 22:08:32] ┇ INFO     ┇           chrisbase.data ┇ [INIT] python crawl_wikipedia.py crawl --input-name kowiki-20230720-all-titles-in-ns0-failed-2.tsv --max-workers 1
+[08.04 22:08:32] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇    # | ProgramArguments   | value
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇ -----+--------------------+---------------------------------------------------------------------------------------------------
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇    1 | env.project        | WiseData
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇    2 | env.job_name       | crawl_wikipedia
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇    3 | env.hostname       | chris70
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇    4 | env.hostaddr       | 129.254.181.36
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇    5 | env.python_path    | /home/chris/miniforge3/envs/WiseData-2023.08/bin/python
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇    6 | env.working_path   | /dat/proj/WiseData-2023.08
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇    7 | env.running_file   | crawl_wikipedia.py
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇    8 | env.command_args   | ['crawl', '--input-name', 'kowiki-20230720-all-titles-in-ns0-failed-2.tsv', '--max-workers', '1']
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇    9 | env.num_ip_addrs   | 100
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   10 | env.max_workers    | 1
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   11 | env.output_home    | output-crawl_wikipedia
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   12 | env.logging_file   | message.out
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   13 | env.argument_file  | arguments.json
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   14 | env.debugging      | False
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   15 | env.msg_level      | 20
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   16 | env.msg_format     | %(asctime)s ┇ %(levelname)-8s ┇ %(name)24s ┇ %(message)s
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   17 | env.date_format    | [%m.%d %H:%M:%S]
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   18 | net.calling_sec    | 0.5
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   19 | net.waiting_sec    | 60.0
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   20 | net.retrial_sec    | 3.0
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   21 | net.max_retrial    | 10.0
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   22 | data.home          | input
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   23 | data.name          | kowiki-20230720-all-titles-in-ns0-failed-2.tsv
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   24 | data.lang          | ko
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   25 | data.limit         | -1
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   26 | data.from_scratch  | False
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   27 | time.started       | [08.04 22:08:33]
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   28 | time.settled       |
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇   29 | time.elapsed       |
+[08.04 22:08:33] ┇ INFO     ┇           chrisbase.data ┇ -----------------------------------------------------------------------------------------------------------------------------------------
+[08.04 22:08:34] ┇ INFO     ┇                 __main__ ┇ Use 100 apis and 1 workers to crawl 224 wikipedia queries
+[08.04 22:08:34] ┇  visiting: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████| 224/224 [02:45<00:00,  1.35job/s]
+[08.04 22:11:20] ┇ INFO     ┇                 __main__ ┇ #ProcessResult: 1412904
+[08.04 22:11:21] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[08.04 22:11:21] ┇ INFO     ┇           chrisbase.data ┇ [EXIT] python crawl_wikipedia.py crawl --input-name kowiki-20230720-all-titles-in-ns0-failed-2.tsv --max-workers 1 ($=00:02:47.567)
+[08.04 22:11:21] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+(WiseData-2023.08) chris@chris70:/dat/proj/WiseData-2023.08$ bash crawl_wikipedia-export.sh
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇ [INIT] python crawl_wikipedia.py export --input-name kowiki-20230720-all-titles-in-ns0.txt
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇    # | ProgramArguments   | value
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇ -----+--------------------+---------------------------------------------------------------------
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇    1 | env.project        | WiseData
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇    2 | env.job_name       | crawl_wikipedia
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇    3 | env.hostname       | chris70
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇    4 | env.hostaddr       | 129.254.181.36
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇    5 | env.python_path    | /home/chris/miniforge3/envs/WiseData-2023.08/bin/python
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇    6 | env.working_path   | /dat/proj/WiseData-2023.08
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇    7 | env.running_file   | crawl_wikipedia.py
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇    8 | env.command_args   | ['export', '--input-name', 'kowiki-20230720-all-titles-in-ns0.txt']
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇    9 | env.num_ip_addrs   | 100
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇   10 | env.max_workers    | 24
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇   11 | env.output_home    | output-crawl_wikipedia
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇   12 | env.logging_file   | message.out
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇   13 | env.argument_file  | arguments.json
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇   14 | env.debugging      | False
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇   15 | env.msg_level      | 20
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇   16 | env.msg_format     | %(asctime)s ┇ %(levelname)-8s ┇ %(name)24s ┇ %(message)s
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇   17 | env.date_format    | [%m.%d %H:%M:%S]
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇   18 | data.home          | input
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇   19 | data.name          | kowiki-20230720-all-titles-in-ns0.txt
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇   20 | data.lang          |
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇   21 | data.limit         | -1
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇   22 | data.from_scratch  | False
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇   23 | time.started       | [08.04 22:11:57]
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇   24 | time.settled       |
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇   25 | time.elapsed       |
+[08.04 22:11:57] ┇ INFO     ┇           chrisbase.data ┇ -----------------------------------------------------------------------------------------------------------------------------------------
+[08.04 22:11:59] ┇ INFO     ┇                 __main__ ┇ Export 1412904/1412904 documents to output-crawl_wikipedia/kowiki-20230720-all-titles-in-ns0.jsonl
+[08.04 22:12:01] ┇ exporting: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████| 1412904/1412904 [02:59<00:00, 7861.72job/s]
+[08.04 22:15:04] ┇ INFO     ┇                 __main__ ┇ Find failed queries among (1412904 queries, 1412904 existing indices)
+[08.04 22:15:04] ┇ INFO     ┇                 __main__ ┇ No failed queries
+[08.04 22:15:05] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[08.04 22:15:05] ┇ INFO     ┇           chrisbase.data ┇ [EXIT] python crawl_wikipedia.py export --input-name kowiki-20230720-all-titles-in-ns0.txt ($=00:03:06.863)
+[08.04 22:15:05] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+(WiseData-2023.08) chris@chris70:/dat/proj/WiseData-2023.08$
