@@ -16,4 +16,3 @@ sudo ip addr add 129.254.181.248/24 dev enp4s0
 sudo ip addr add 129.254.181.251/24 dev enp4s0
 sudo ip addr add 129.254.181.252/24 dev enp4s0
 sudo ip addr add 129.254.181.253/24 dev enp4s0
-sudo ip addr add 129.254.181.36/24 dev enp4s0
