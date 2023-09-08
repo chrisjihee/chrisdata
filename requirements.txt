@@ -1,3 +1,5 @@
+#chrisbase==0.4.6
 Wikipedia-API==0.6.0
-ipynbname
-chrisbase==0.4.6
+wikibaseintegrator
+wikidata
+qwikidata
