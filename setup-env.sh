@@ -14,8 +14,12 @@ pip install --editable chrislab
 
 # MongoDB
 mkdir mongodb
-cd mongodb
+cd mongodb || exit
 mkdir data log
-wget https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2004-6.0.8.tgz
+if [ "$(uname)" = "Darwin" ]; then
+  wget https://fastdl.mongodb.org/osx/mongodb-macos-arm64-7.0.1.tgz
+elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+  wget https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2004-7.0.1.tgz
+fi
 tar zxvf mongodb-*.tgz --strip-components 1
 cd ..
