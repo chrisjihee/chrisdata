@@ -3,8 +3,6 @@ net:
   port: 27017
 storage:
   dbPath: "mongodb/data"
-  journal:
-    enabled: true
 systemLog:
   destination: file
   path: "mongodb/log/mongod.log"
