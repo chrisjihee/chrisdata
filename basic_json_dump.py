@@ -24,7 +24,7 @@ def has_occupation_politician(item: WikidataItem, truthy: bool = True) -> bool:
 
 
 # create an instance of WikidataJsonDump
-wjd_dump_path = "/fed/Wikidata/latest-truthy-nt-bz2/latest-truthy.nt.bz2"
+wjd_dump_path = "/fed/Wikidata/latest-all.json.bz2"
 wjd = WikidataJsonDump(wjd_dump_path)
 
 # create an iterable of WikidataItem representing politicians
