@@ -58,7 +58,7 @@ class DataOption(OptionData):
     name: str | Path = field()
     lang1: str = field(default="ko")
     lang2: str = field(default="en")
-    limit: int | None = field(default=None)
+    limit: int = field(default=-1)
     from_scratch: bool = field(default=False)
 
     def __post_init__(self):
@@ -137,7 +137,7 @@ def parse(
 
         wikidata = WikidataJsonDump(str(args.data.home / args.data.name))
         for ii, entity_dict in enumerate(wikidata):
-            if 0 <= args.data.limit < ii + 1:
+            if 0 < args.data.limit < ii + 1:
                 break
             if entity_dict['type'] == "item" and entity_dict['ns'] == 0:
                 continue

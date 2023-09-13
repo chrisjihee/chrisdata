@@ -138,8 +138,8 @@ class NetOption(OptionData):
 class DataOption(OptionData):
     home: str | Path = field()
     name: str | Path = field()
-    lang: str | None = field(default=None)
-    limit: int | None = field(default=None)
+    lang: str = field(default="ko")
+    limit: int = field(default=-1)
     from_scratch: bool = field(default=False)
 
     def __post_init__(self):
