@@ -9,7 +9,7 @@ from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArg
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe
 from qwikidata.claim import WikidataClaim
-from qwikidata.entity import WikidataItem
+from qwikidata.entity import WikidataItem, WikidataProperty
 from qwikidata.json_dump import WikidataJsonDump
 from qwikidata.typedefs import LanguageCode
 
@@ -28,6 +28,28 @@ class WikidataItemEx(WikidataItem):
             return self._entity_dict["sitelinks"][wikiname]["title"]
         else:
             return ""
+
+    def get_truthy_claims(self) -> list[dict]:
+        claim_groups = self.get_truthy_claim_groups()
+        claims = list()
+        for claim_group in claim_groups.values():
+            for claim in claim_group:
+                claim: WikidataClaim = claim
+                if claim.mainsnak.snaktype == "value" and claim.mainsnak.datavalue is not None:
+                    claims.append({"property": claim.mainsnak.property_id, "datavalue": claim.mainsnak.datavalue._datavalue_dict})
+        return claims
+
+
+class WikidataPropertyEx(WikidataProperty):
+    def get_truthy_claims(self) -> list[dict]:
+        claim_groups = self.get_truthy_claim_groups()
+        claims = list()
+        for claim_group in claim_groups.values():
+            for claim in claim_group:
+                claim: WikidataClaim = claim
+                if claim.mainsnak.snaktype == "value" and claim.mainsnak.datavalue is not None:
+                    claims.append({"property": claim.mainsnak.property_id, "datavalue": claim.mainsnak.datavalue._datavalue_dict})
+        return claims
 
 
 @dataclass
@@ -121,27 +143,48 @@ def parse(
                 continue
             if entity_dict['type'] == "item":
                 continue
-                entity = WikidataItemEx(entity_dict)
-                logger.info(entity)
-                logger.info(f"- id: {entity.entity_id}")
+                item = WikidataItemEx(entity_dict)
+                logger.info(item)
+                logger.info(f"- id: {item.entity_id}")
                 logger.info(f"- ns: {entity_dict['ns']}")
-                logger.info(f"- type: {entity.entity_type}")
+                logger.info(f"- type: {item.entity_type}")
                 logger.info(f"- time: {entity_dict['modified']}")
-                logger.info(f"- label1: {entity.get_label(args.data.lang1_code)}")
-                logger.info(f"- label2: {entity.get_label(args.data.lang2_code)}")
-                logger.info(f"- description1: {entity.get_description(args.data.lang1_code)}")
-                logger.info(f"- description2: {entity.get_description(args.data.lang2_code)}")
-                logger.info(f"- aliases1: {entity.get_aliases(args.data.lang1_code)}")
-                logger.info(f"- aliases2: {entity.get_aliases(args.data.lang2_code)}")
-                logger.info(f"- wikipedia1: {entity.get_wiki_title(args.data.lang1)}")
-                logger.info(f"- wikipedia2: {entity.get_wiki_title(args.data.lang2)}")
-                claim_groups = entity.get_truthy_claim_groups()
-                claims = list()
-                for claim_group in claim_groups.values():
-                    for claim in claim_group:
-                        claim: WikidataClaim = claim
-                        if claim.mainsnak.snaktype == "value" and claim.mainsnak.datavalue is not None:
-                            claims.append({"property": claim.mainsnak.property_id, "datavalue": claim.mainsnak.datavalue._datavalue_dict})
+                logger.info(f"- label1: {item.get_label(args.data.lang1_code)}")
+                logger.info(f"- label2: {item.get_label(args.data.lang2_code)}")
+                logger.info(f"- description1: {item.get_description(args.data.lang1_code)}")
+                logger.info(f"- description2: {item.get_description(args.data.lang2_code)}")
+                logger.info(f"- aliases1: {item.get_aliases(args.data.lang1_code)}")
+                logger.info(f"- aliases2: {item.get_aliases(args.data.lang2_code)}")
+                logger.info(f"- wikipedia1: {item.get_wiki_title(args.data.lang1)}")
+                logger.info(f"- wikipedia2: {item.get_wiki_title(args.data.lang2)}")
+                claims = item.get_truthy_claims()
+                logger.info(f"- claims({len(claims)}): {claims}")
+                logger.info("----")
+                for k, v in entity_dict.items():
+                    if k in ("claims",):
+                        continue
+                    if k in ("labels", "descriptions"):
+                        entity_dict[k] = [vv for kk, vv in v.items() if kk in ("en", "ko")]
+                    if k in ("aliases",):
+                        entity_dict[k] = [vvv for kk, vv in v.items() if kk in ("en", "ko") for vvv in vv]
+                    if k in ("sitelinks",):
+                        entity_dict[k] = [vv for kk, vv in v.items() if kk in ("enwiki", "kowiki")]
+                    logger.info("- {}: {}".format(k, entity_dict[k]))
+                logger.info("====")
+            elif entity_dict['type'] == "property":
+                property = WikidataPropertyEx(entity_dict)
+                logger.info(property)
+                logger.info(f"- id: {property.entity_id}")
+                logger.info(f"- ns: {entity_dict['ns']}")
+                logger.info(f"- type: {property.entity_type}")
+                logger.info(f"- time: {entity_dict['modified']}")
+                logger.info(f"- label1: {property.get_label(args.data.lang1_code)}")
+                logger.info(f"- label2: {property.get_label(args.data.lang2_code)}")
+                logger.info(f"- description1: {property.get_description(args.data.lang1_code)}")
+                logger.info(f"- description2: {property.get_description(args.data.lang2_code)}")
+                logger.info(f"- aliases1: {property.get_aliases(args.data.lang1_code)}")
+                logger.info(f"- aliases2: {property.get_aliases(args.data.lang2_code)}")
+                claims = property.get_truthy_claims()
                 logger.info(f"- claims({len(claims)}): {claims}")
                 logger.info("----")
                 for k, v in entity_dict.items():
@@ -158,7 +201,7 @@ def parse(
             else:
                 logger.info(f"entity_dict['type'] = {entity_dict['type']}")
                 logger.info(entity_dict)
-                exit(2)
+                exit(3)
             exit(1)
 
 
