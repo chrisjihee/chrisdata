@@ -98,7 +98,7 @@ def parse(
         # data
         input_home: str = typer.Option(default="input/Wikidata"),
         input_name: str = typer.Option(default="latest-all.json.bz2"),
-        input_limit: int = typer.Option(default=1000000),
+        input_limit: int = typer.Option(default=10_000_000),
         input_lang1: str = typer.Option(default="ko"),
         input_lang2: str = typer.Option(default="en"),
         from_scratch: bool = typer.Option(default=False),
@@ -139,12 +139,11 @@ def parse(
         for ii, entity_dict in enumerate(wikidata):
             if ii > args.data.limit:
                 break
-            if entity_dict['ns'] == 0:
-                continue
-            if entity_dict['type'] == "item":
+            if entity_dict['type'] == "item" and entity_dict['ns'] == 0:
                 continue
                 item = WikidataItemEx(entity_dict)
                 logger.info(item)
+                logger.info(f"- ii: {ii}")
                 logger.info(f"- id: {item.entity_id}")
                 logger.info(f"- ns: {entity_dict['ns']}")
                 logger.info(f"- type: {item.entity_type}")
@@ -174,6 +173,7 @@ def parse(
             elif entity_dict['type'] == "property":
                 property = WikidataPropertyEx(entity_dict)
                 logger.info(property)
+                logger.info(f"- ii: {ii}")
                 logger.info(f"- id: {property.entity_id}")
                 logger.info(f"- ns: {entity_dict['ns']}")
                 logger.info(f"- type: {property.entity_type}")
@@ -199,10 +199,11 @@ def parse(
                     logger.info("- {}: {}".format(k, entity_dict[k]))
                 logger.info("====")
             else:
+                logger.info(f"BREAK ii = {ii}")
                 logger.info(f"entity_dict['type'] = {entity_dict['type']}")
                 logger.info(entity_dict)
                 exit(3)
-            exit(1)
+        logger.info(f"FINAL ii = {ii}")
 
 
 if __name__ == "__main__":
