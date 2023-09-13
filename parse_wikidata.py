@@ -98,7 +98,7 @@ def parse(
         # data
         input_home: str = typer.Option(default="input/Wikidata"),
         input_name: str = typer.Option(default="latest-all.json.bz2"),
-        input_limit: int = typer.Option(default=10_000_000),
+        input_limit: int = typer.Option(default=-1),
         input_lang1: str = typer.Option(default="ko"),
         input_lang2: str = typer.Option(default="en"),
         from_scratch: bool = typer.Option(default=False),
@@ -137,7 +137,7 @@ def parse(
 
         wikidata = WikidataJsonDump(str(args.data.home / args.data.name))
         for ii, entity_dict in enumerate(wikidata):
-            if ii > args.data.limit:
+            if 0 <= args.data.limit < ii + 1:
                 break
             if entity_dict['type'] == "item" and entity_dict['ns'] == 0:
                 continue
@@ -150,12 +150,12 @@ def parse(
                 logger.info(f"- time: {entity_dict['modified']}")
                 logger.info(f"- label1: {item.get_label(args.data.lang1_code)}")
                 logger.info(f"- label2: {item.get_label(args.data.lang2_code)}")
-                logger.info(f"- description1: {item.get_description(args.data.lang1_code)}")
-                logger.info(f"- description2: {item.get_description(args.data.lang2_code)}")
-                logger.info(f"- aliases1: {item.get_aliases(args.data.lang1_code)}")
-                logger.info(f"- aliases2: {item.get_aliases(args.data.lang2_code)}")
-                logger.info(f"- wikipedia1: {item.get_wiki_title(args.data.lang1)}")
-                logger.info(f"- wikipedia2: {item.get_wiki_title(args.data.lang2)}")
+                logger.info(f"- descr1: {item.get_description(args.data.lang1_code)}")
+                logger.info(f"- descr2: {item.get_description(args.data.lang2_code)}")
+                logger.info(f"- alias1: {item.get_aliases(args.data.lang1_code)}")
+                logger.info(f"- alias2: {item.get_aliases(args.data.lang2_code)}")
+                logger.info(f"- title1: {item.get_wiki_title(args.data.lang1)}")
+                logger.info(f"- title2: {item.get_wiki_title(args.data.lang2)}")
                 claims = item.get_truthy_claims()
                 logger.info(f"- claims({len(claims)}): {claims}")
                 logger.info("----")
@@ -171,20 +171,20 @@ def parse(
                     logger.info("- {}: {}".format(k, entity_dict[k]))
                 logger.info("====")
             elif entity_dict['type'] == "property":
-                property = WikidataPropertyEx(entity_dict)
-                logger.info(property)
+                prop = WikidataPropertyEx(entity_dict)
+                logger.info(prop)
                 logger.info(f"- ii: {ii}")
-                logger.info(f"- id: {property.entity_id}")
+                logger.info(f"- id: {prop.entity_id}")
                 logger.info(f"- ns: {entity_dict['ns']}")
-                logger.info(f"- type: {property.entity_type}")
+                logger.info(f"- type: {prop.entity_type}")
                 logger.info(f"- time: {entity_dict['modified']}")
-                logger.info(f"- label1: {property.get_label(args.data.lang1_code)}")
-                logger.info(f"- label2: {property.get_label(args.data.lang2_code)}")
-                logger.info(f"- description1: {property.get_description(args.data.lang1_code)}")
-                logger.info(f"- description2: {property.get_description(args.data.lang2_code)}")
-                logger.info(f"- aliases1: {property.get_aliases(args.data.lang1_code)}")
-                logger.info(f"- aliases2: {property.get_aliases(args.data.lang2_code)}")
-                claims = property.get_truthy_claims()
+                logger.info(f"- label1: {prop.get_label(args.data.lang1_code)}")
+                logger.info(f"- label2: {prop.get_label(args.data.lang2_code)}")
+                logger.info(f"- descr1: {prop.get_description(args.data.lang1_code)}")
+                logger.info(f"- descr2: {prop.get_description(args.data.lang2_code)}")
+                logger.info(f"- alias1: {prop.get_aliases(args.data.lang1_code)}")
+                logger.info(f"- alias2: {prop.get_aliases(args.data.lang2_code)}")
+                claims = prop.get_truthy_claims()
                 logger.info(f"- claims({len(claims)}): {claims}")
                 logger.info("----")
                 for k, v in entity_dict.items():
