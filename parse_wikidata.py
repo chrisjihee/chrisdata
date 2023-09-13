@@ -233,11 +233,10 @@ def parse(
                     logger.info("- {}: {}".format(k, entity_dict[k]))
                 logger.info("====")
             else:
-                logger.info(f"BREAK ii = {ii}")
-                logger.info(f"entity_dict['type'] = {entity_dict['type']}")
-                logger.info(entity_dict)
-                exit(3)
-        logger.info(f"FINAL ii = {ii}")
+                logger.warning(f"- ii: {ii}")
+                logger.warning(f"- type: {entity_dict['type']}")
+                logger.warning(f"- dict: {entity_dict}")
+        logger.critical(f"FINAL ii = {ii}")
 
 
 if __name__ == "__main__":
