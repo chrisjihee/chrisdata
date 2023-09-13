@@ -76,7 +76,7 @@ def parse(
         # data
         input_home: str = typer.Option(default="input/Wikidata"),
         input_name: str = typer.Option(default="latest-all.json.bz2"),
-        input_limit: int = typer.Option(default=3),
+        input_limit: int = typer.Option(default=1000000),
         input_lang1: str = typer.Option(default="ko"),
         input_lang2: str = typer.Option(default="en"),
         from_scratch: bool = typer.Option(default=False),
@@ -115,27 +115,51 @@ def parse(
 
         wikidata = WikidataJsonDump(str(args.data.home / args.data.name))
         for ii, entity_dict in enumerate(wikidata):
-            entity = WikidataItemEx(entity_dict)
-            if 0 < args.data.limit <= ii:
+            if ii > args.data.limit:
                 break
-            logger.info(entity)
-            logger.info(f"- label1: {entity.get_label(args.data.lang1_code)}")
-            logger.info(f"- label2: {entity.get_label(args.data.lang2_code)}")
-            logger.info(f"- description1: {entity.get_description(args.data.lang1_code)}")
-            logger.info(f"- description2: {entity.get_description(args.data.lang2_code)}")
-            logger.info(f"- aliases1: {entity.get_aliases(args.data.lang1_code)}")
-            logger.info(f"- aliases2: {entity.get_aliases(args.data.lang2_code)}")
-            logger.info(f"- wikipedia1: {entity.get_wiki_title(args.data.lang1)}")
-            logger.info(f"- wikipedia2: {entity.get_wiki_title(args.data.lang2)}")
-            claim_groups = entity.get_truthy_claim_groups()
-            claims = list()
-            for claim_group in claim_groups.values():
-                for claim in claim_group:
-                    claim: WikidataClaim = claim
-                    if claim.mainsnak.snaktype == "value" and claim.mainsnak.datavalue is not None:
-                        claims.append({"property": claim.mainsnak.property_id, "datavalue": claim.mainsnak.datavalue._datavalue_dict})
-            logger.info(f"- claims({len(claims)}): {claims}")
-            logger.info("====")
+            if entity_dict['ns'] == 0:
+                continue
+            if entity_dict['type'] == "item":
+                continue
+                entity = WikidataItemEx(entity_dict)
+                logger.info(entity)
+                logger.info(f"- id: {entity.entity_id}")
+                logger.info(f"- ns: {entity_dict['ns']}")
+                logger.info(f"- type: {entity.entity_type}")
+                logger.info(f"- time: {entity_dict['modified']}")
+                logger.info(f"- label1: {entity.get_label(args.data.lang1_code)}")
+                logger.info(f"- label2: {entity.get_label(args.data.lang2_code)}")
+                logger.info(f"- description1: {entity.get_description(args.data.lang1_code)}")
+                logger.info(f"- description2: {entity.get_description(args.data.lang2_code)}")
+                logger.info(f"- aliases1: {entity.get_aliases(args.data.lang1_code)}")
+                logger.info(f"- aliases2: {entity.get_aliases(args.data.lang2_code)}")
+                logger.info(f"- wikipedia1: {entity.get_wiki_title(args.data.lang1)}")
+                logger.info(f"- wikipedia2: {entity.get_wiki_title(args.data.lang2)}")
+                claim_groups = entity.get_truthy_claim_groups()
+                claims = list()
+                for claim_group in claim_groups.values():
+                    for claim in claim_group:
+                        claim: WikidataClaim = claim
+                        if claim.mainsnak.snaktype == "value" and claim.mainsnak.datavalue is not None:
+                            claims.append({"property": claim.mainsnak.property_id, "datavalue": claim.mainsnak.datavalue._datavalue_dict})
+                logger.info(f"- claims({len(claims)}): {claims}")
+                logger.info("----")
+                for k, v in entity_dict.items():
+                    if k in ("claims",):
+                        continue
+                    if k in ("labels", "descriptions"):
+                        entity_dict[k] = [vv for kk, vv in v.items() if kk in ("en", "ko")]
+                    if k in ("aliases",):
+                        entity_dict[k] = [vvv for kk, vv in v.items() if kk in ("en", "ko") for vvv in vv]
+                    if k in ("sitelinks",):
+                        entity_dict[k] = [vv for kk, vv in v.items() if kk in ("enwiki", "kowiki")]
+                    logger.info("- {}: {}".format(k, entity_dict[k]))
+                logger.info("====")
+            else:
+                logger.info(f"entity_dict['type'] = {entity_dict['type']}")
+                logger.info(entity_dict)
+                exit(2)
+            exit(1)
 
 
 if __name__ == "__main__":
