@@ -178,7 +178,7 @@ def process_item(i: int, x: dict, lang1: str, lang2: str):
         mongo.table.insert_one(row.to_dict())
 
 
-def make_jobs(pool: ProcessPoolExecutor, input_list: Iterable[tuple[int, dict]], args: ProgramArguments):
+def make_jobs(input_list: Iterable[tuple[int, dict]], pool: ProcessPoolExecutor, args: ProgramArguments):
     for i, x in input_list:
         yield i, pool.submit(process_item, i=i, x=x, lang1=args.data.lang1, lang2=args.data.lang2)
 
@@ -199,10 +199,10 @@ def parse(
         input_home: str = typer.Option(default="input/Wikidata"),
         input_name: str = typer.Option(default="latest-all.json.bz2"),
         input_total: int = typer.Option(default=105485440),
-        input_limit: int = typer.Option(default=10000),  # TODO: change
+        input_limit: int = typer.Option(default=-1),  # TODO: change
         input_lang1: str = typer.Option(default="ko"),
         input_lang2: str = typer.Option(default="en"),
-        from_scratch: bool = typer.Option(default=True),  # TODO: change
+        from_scratch: bool = typer.Option(default=False),  # TODO: change
         prog_interval: int = typer.Option(default=1000),
 ):
     env = ProjectEnv(
@@ -242,7 +242,7 @@ def parse(
             input_size = min(args.data.total, args.data.limit) if args.data.limit > 0 else args.data.total
             logger.info(f"Use {args.env.max_workers} workers to parse {input_size} Wikidata items")
             with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
-                prog_bar = tqdm(make_jobs(pool, input_list, args), total=input_size, unit="ea", pre="*", desc="importing")
+                prog_bar = tqdm(make_jobs(input_list, pool, args), total=input_size, unit="ea", pre="*", desc="importing")
                 wait_future_jobs(prog_bar, timeout=args.net.waiting_sec, interval=args.data.prog_interval, pool=pool)
             with output_file.open("w") as out:
                 row_filter = {}
