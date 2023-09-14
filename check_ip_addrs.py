@@ -30,8 +30,8 @@ class DataOption(OptionData):
 
 @dataclass
 class NetOption(OptionData):
-    calling_sec: float = field(default=0.5)
-    waiting_sec: float = field(default=60.0),
+    calling_sec: float = field(default=0.001),
+    waiting_sec: float = field(default=300.0),
 
 
 @dataclass

@@ -145,8 +145,8 @@ class DataOption(OptionData):
 
 @dataclass
 class NetOption(OptionData):
-    calling_sec: float = field(default=0.5)
-    waiting_sec: float = field(default=60.0),
+    calling_sec: float = field(default=0.001),
+    waiting_sec: float = field(default=300.0),
     retrial_sec: float = field(default=3.0),
     max_retrial: int = field(default=10),
 
@@ -207,7 +207,6 @@ class ProcessResult(DataClassJsonMixin):
 def process_query(i: int, x: str, s: float | None = None):
     is_done = all(mongo.table.count_documents({"_id": i, "query": x}, limit=1) > 0 for mongo in mongos)
     if is_done:
-        logger.info("pass")
         return
     if s and s > 0:
         time.sleep(s)
@@ -246,8 +245,8 @@ def crawl(
         max_workers: int = typer.Option(default=10),
         debugging: bool = typer.Option(default=False),
         # net
-        calling_sec: float = typer.Option(default=0.5),
-        waiting_sec: float = typer.Option(default=60.0),
+        calling_sec: float = typer.Option(default=0.001),
+        waiting_sec: float = typer.Option(default=300.0),
         retrial_sec: float = typer.Option(default=3.0),
         max_retrial: int = typer.Option(default=10),
         # data
@@ -255,7 +254,7 @@ def crawl(
         input_name: str = typer.Option(default="kowiki-sample.txt"),
         input_lang: str = typer.Option(default="ko"),
         input_limit: int = typer.Option(default=100),
-        from_scratch: bool = typer.Option(default=True),
+        from_scratch: bool = typer.Option(default=False),
         prog_interval: int = typer.Option(default=15),
 ):
     env = ProjectEnv(

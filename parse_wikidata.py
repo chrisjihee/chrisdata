@@ -1,19 +1,24 @@
+import json
 import logging
-import os
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
+from itertools import islice
 from pathlib import Path
+from typing import List, Iterable
 
 import pandas as pd
 import typer
+from dataclasses_json import DataClassJsonMixin
 from qwikidata.claim import WikidataClaim
 from qwikidata.entity import WikidataItem, WikidataProperty, WikidataLexeme, ClaimsMixin
 from qwikidata.json_dump import WikidataJsonDump
 from qwikidata.typedefs import LanguageCode
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments
-from chrisbase.io import LoggingFormat
-from chrisbase.util import to_dataframe, mute_tqdm_cls
+from chrisbase.io import LoggingFormat, pop_keys
+from chrisbase.util import to_dataframe, mute_tqdm_cls, MongoDB, wait_future_jobs
 
+mongos: List[MongoDB] = []
 logger = logging.getLogger(__name__)
 app = AppTyper()
 
@@ -35,7 +40,6 @@ class WikidataPropertyEx(WikidataProperty, ClaimMixinEx):
 
 class WikidataItemEx(WikidataItem, ClaimMixinEx):
     def get_wiki_title(self, lang) -> str:
-        """Get english language wikipedia page title."""
         wikiname = f"{str(lang).lower()}wiki"
         if (
                 isinstance(self._entity_dict["sitelinks"], dict)
@@ -73,8 +77,15 @@ class DataOption(OptionData):
 
 
 @dataclass
+class NetOption(OptionData):
+    calling_sec: float = field(default=0.001),
+    waiting_sec: float = field(default=300.0),
+
+
+@dataclass
 class ProgramArguments(CommonArguments):
-    data: DataOption | None = field(default=None)
+    data: DataOption = field()
+    net: NetOption | None = field(default=None)
     other: str | None = field(default=None)
 
     def __post_init__(self):
@@ -84,11 +95,92 @@ class ProgramArguments(CommonArguments):
         if not columns:
             columns = [self.data_type, "value"]
         return pd.concat([
-            to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
-            to_dataframe(columns=columns, raw=self.data, data_prefix="data") if self.data else None,
             to_dataframe(columns=columns, raw=self.time, data_prefix="time"),
+            to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
+            to_dataframe(columns=columns, raw=self.net, data_prefix="net") if self.net else None,
+            to_dataframe(columns=columns, raw=self.data, data_prefix="data"),
             to_dataframe(columns=columns, raw={"other": self.other}),
         ]).reset_index(drop=True)
+
+
+@dataclass
+class WikidataUnit(DataClassJsonMixin):
+    _id: int
+    ns: int
+    eid: str
+    type: str
+    time: str
+    lang1: str
+    lang2: str
+    label1: str | None = None
+    label2: str | None = None
+    alias1: list = field(default_factory=list)
+    alias2: list = field(default_factory=list)
+    descr1: str | None = None
+    descr2: str | None = None
+    # for item only
+    title1: str | None = None
+    title2: str | None = None
+    # for lexeme only
+    lang: str | None = None
+    cate: str | None = None
+    # for all
+    claims: list[dict] = field(default_factory=list)
+
+
+def process_item(i: int, x: dict, lang1: str, lang2: str):
+    is_done = all(mongo.table.count_documents({"_id": i, "eid": x['id']}, limit=1) > 0 for mongo in mongos)
+    if is_done:
+        return
+    lang1_code = LanguageCode(lang1)
+    lang2_code = LanguageCode(lang2)
+    row = WikidataUnit(
+        _id=i,
+        ns=x['ns'],
+        eid=x['id'],
+        type=x['type'],
+        time=x['modified'],
+        lang1=lang1,
+        lang2=lang2,
+    )
+    if row.type == "item" and row.ns == 0:
+        item = WikidataItemEx(x)
+        row.label1 = item.get_label(lang1_code)
+        row.label2 = item.get_label(lang2_code)
+        row.alias1 = item.get_aliases(lang1_code)
+        row.alias2 = item.get_aliases(lang2_code)
+        row.descr1 = item.get_description(lang1_code)
+        row.descr2 = item.get_description(lang2_code)
+        row.title1 = item.get_wiki_title(lang1)
+        row.title2 = item.get_wiki_title(lang2)
+        row.claims = item.get_truthy_claims()
+    elif row.type == "property":
+        prop = WikidataPropertyEx(x)
+        row.label1 = prop.get_label(lang1_code)
+        row.label2 = prop.get_label(lang2_code)
+        row.alias1 = prop.get_aliases(lang1_code)
+        row.alias2 = prop.get_aliases(lang2_code)
+        row.descr1 = prop.get_description(lang1_code)
+        row.descr2 = prop.get_description(lang2_code)
+        row.claims = prop.get_truthy_claims()
+    elif row.type == "lexeme":
+        lexm = WikidataLexemeEx(x)
+        row.label1 = lexm.get_lemma(lang1_code)
+        row.label2 = lexm.get_lemma(lang2_code)
+        row.descr1 = lexm.get_gloss(lang1_code)
+        row.descr2 = lexm.get_gloss(lang2_code)
+        row.lang = lexm.language
+        row.cate = lexm.lexical_category
+        row.claims = lexm.get_truthy_claims()
+    for mongo in mongos:
+        if mongo.table.count_documents({"_id": i}, limit=1) > 0:
+            mongo.table.delete_one({"_id": i})
+        mongo.table.insert_one(row.to_dict())
+
+
+def make_jobs(pool: ProcessPoolExecutor, input_list: Iterable[tuple[int, dict]], args: ProgramArguments):
+    for i, x in input_list:
+        yield i, pool.submit(process_item, i=i, x=x, lang1=args.data.lang1, lang2=args.data.lang2)
 
 
 @app.command()
@@ -98,28 +190,36 @@ def parse(
         job_name: str = typer.Option(default="parse_wikidata"),
         output_home: str = typer.Option(default="output-parse_wikidata"),
         logging_file: str = typer.Option(default="logging.out"),
-        max_workers: int = typer.Option(default=os.cpu_count()),
+        max_workers: int = typer.Option(default=12),
         debugging: bool = typer.Option(default=False),
+        # net
+        calling_sec: float = typer.Option(default=0.001),
+        waiting_sec: float = typer.Option(default=300.0),
         # data
         input_home: str = typer.Option(default="input/Wikidata"),
         input_name: str = typer.Option(default="latest-all.json.bz2"),
         input_total: int = typer.Option(default=105485440),
-        input_limit: int = typer.Option(default=1),
+        input_limit: int = typer.Option(default=10000),  # TODO: change
         input_lang1: str = typer.Option(default="ko"),
         input_lang2: str = typer.Option(default="en"),
-        from_scratch: bool = typer.Option(default=False),
-        prog_interval: int = typer.Option(default=10_000),
+        from_scratch: bool = typer.Option(default=True),  # TODO: change
+        prog_interval: int = typer.Option(default=1000),
 ):
+    env = ProjectEnv(
+        project=project,
+        job_name=job_name,
+        debugging=debugging,
+        output_home=output_home,
+        logging_file=logging_file,
+        msg_level=logging.DEBUG if debugging else logging.INFO,
+        msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
+        max_workers=1 if debugging else max(max_workers, 1),
+    )
     args = ProgramArguments(
-        env=ProjectEnv(
-            project=project,
-            job_name=job_name,
-            debugging=debugging,
-            output_home=output_home,
-            logging_file=logging_file,
-            msg_level=logging.DEBUG if debugging else logging.INFO,
-            msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
-            max_workers=1 if debugging else max(max_workers, 1),
+        env=env,
+        net=NetOption(
+            calling_sec=calling_sec,
+            waiting_sec=waiting_sec,
         ),
         data=DataOption(
             home=input_home,
@@ -129,77 +229,31 @@ def parse(
             lang2=input_lang2,
             limit=input_limit,
             from_scratch=from_scratch,
-            prog_interval=prog_interval,
+            prog_interval=prog_interval if prog_interval > 0 else env.max_workers,
         ),
     )
+    tqdm = mute_tqdm_cls()
+    output_file = (args.env.output_home / f"{args.data.name.stem}.jsonl")
 
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        # from wikibaseintegrator import WikibaseIntegrator
-        # wbi = WikibaseIntegrator()
-        # p = wbi.property.get('P1376')
-        # logger.info(p.labels.values['en'])
-        # logger.info(p.labels.values['ko'])
-        # logger.info(p.descriptions.values['en'])
-        # logger.info(p.descriptions.values['ko'])
-
-        wikidata_dump = WikidataJsonDump(str(args.data.home / args.data.name))
-        prob_bar = mute_tqdm_cls()(wikidata_dump, total=args.data.total, desc="processing", unit="ea")
-        for ii, entity_dict in enumerate(prob_bar):
-            if ii > 0 == ii % args.data.prog_interval:
-                logger.info(prob_bar)
-            if 0 < args.data.limit < ii + 1:
-                break
-            if entity_dict['type'] == "item" and entity_dict['ns'] == 0:
-                item = WikidataItemEx(entity_dict)
-                logger.info(item)
-                logger.info(f"- id: {item.entity_id}")
-                logger.info(f"- ns: {entity_dict['ns']}")
-                logger.info(f"- type: {item.entity_type}")
-                logger.info(f"- time: {entity_dict['modified']}")
-                logger.info(f"- label1: {item.get_label(args.data.lang1_code)}")
-                logger.info(f"- label2: {item.get_label(args.data.lang2_code)}")
-                logger.info(f"- descr1: {item.get_description(args.data.lang1_code)}")
-                logger.info(f"- descr2: {item.get_description(args.data.lang2_code)}")
-                logger.info(f"- alias1: {item.get_aliases(args.data.lang1_code)}")
-                logger.info(f"- alias2: {item.get_aliases(args.data.lang2_code)}")
-                logger.info(f"- title1: {item.get_wiki_title(args.data.lang1)}")
-                logger.info(f"- title2: {item.get_wiki_title(args.data.lang2)}")
-                claims = item.get_truthy_claims()
-                logger.info(f"- claims({len(claims)}): {claims}")
-                logger.info("====")
-            elif entity_dict['type'] == "property":
-                prop = WikidataPropertyEx(entity_dict)
-                logger.info(prop)
-                logger.info(f"- id: {prop.entity_id}")
-                logger.info(f"- ns: {entity_dict['ns']}")
-                logger.info(f"- type: {prop.entity_type}")
-                logger.info(f"- time: {entity_dict['modified']}")
-                logger.info(f"- label1: {prop.get_label(args.data.lang1_code)}")
-                logger.info(f"- label2: {prop.get_label(args.data.lang2_code)}")
-                logger.info(f"- descr1: {prop.get_description(args.data.lang1_code)}")
-                logger.info(f"- descr2: {prop.get_description(args.data.lang2_code)}")
-                logger.info(f"- alias1: {prop.get_aliases(args.data.lang1_code)}")
-                logger.info(f"- alias2: {prop.get_aliases(args.data.lang2_code)}")
-                claims = prop.get_truthy_claims()
-                logger.info(f"- claims({len(claims)}): {claims}")
-                logger.info("====")
-            elif entity_dict['type'] == "lexeme":
-                lexm = WikidataLexemeEx(entity_dict)
-                logger.info(lexm)
-                logger.info(f"- id: {lexm.entity_id}")
-                logger.info(f"- ns: {entity_dict['ns']}")
-                logger.info(f"- type: {lexm.entity_type}")
-                logger.info(f"- time: {entity_dict['modified']}")
-                logger.info(f"- lang: {lexm.language}")
-                logger.info(f"- cate: {lexm.lexical_category}")
-                logger.info(f"- label1: {lexm.get_lemma(args.data.lang1_code)}")
-                logger.info(f"- label2: {lexm.get_lemma(args.data.lang2_code)}")
-                logger.info(f"- gloss1: {lexm.get_gloss(args.data.lang1_code)}")
-                logger.info(f"- gloss1: {lexm.get_gloss(args.data.lang2_code)}")
-                claims = prop.get_truthy_claims()
-                logger.info(f"- claims({len(claims)}): {claims}")
-                logger.info("====")
-        logger.critical(f"FINAL ii = {ii}")
+        with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=args.data.from_scratch, pool=mongos) as mongo:
+            wikidata_dump = WikidataJsonDump(str(args.data.home / args.data.name))
+            input_list = islice(enumerate(wikidata_dump, start=1), args.data.limit) if args.data.limit > 0 else enumerate(wikidata_dump, start=1)
+            input_size = min(args.data.total, args.data.limit) if args.data.limit > 0 else args.data.total
+            logger.info(f"Use {args.env.max_workers} workers to parse {input_size} Wikidata items")
+            with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
+                prog_bar = tqdm(make_jobs(pool, input_list, args), total=input_size, unit="ea", pre="*", desc="importing")
+                wait_future_jobs(prog_bar, timeout=args.net.waiting_sec, interval=args.data.prog_interval, pool=pool)
+            with output_file.open("w") as out:
+                row_filter = {}
+                num_row, rows = mongo.table.count_documents(row_filter), mongo.table.find(row_filter).sort("_id")
+                prog_bar = tqdm(rows, unit="ea", pre="*", desc="exporting", total=num_row)
+                for i, row in enumerate(prog_bar, start=1):
+                    out.write(json.dumps(pop_keys(row, ("claims", "lang1", "lang2")), ensure_ascii=False) + '\n')
+                    if i % (args.data.prog_interval * 10) == 0:
+                        logger.info(prog_bar)
+                logger.info(prog_bar)
+            logger.info(f"Export {num_row}/{input_size} rows to {output_file}")
 
 
 if __name__ == "__main__":
