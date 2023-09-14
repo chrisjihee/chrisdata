@@ -5,13 +5,14 @@ from pathlib import Path
 
 import pandas as pd
 import typer
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments
-from chrisbase.io import LoggingFormat
-from chrisbase.util import to_dataframe, mute_tqdm_cls
 from qwikidata.claim import WikidataClaim
 from qwikidata.entity import WikidataItem, WikidataProperty, WikidataLexeme, ClaimsMixin
 from qwikidata.json_dump import WikidataJsonDump
 from qwikidata.typedefs import LanguageCode
+
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments
+from chrisbase.io import LoggingFormat
+from chrisbase.util import to_dataframe, mute_tqdm_cls
 
 logger = logging.getLogger(__name__)
 app = AppTyper()
@@ -57,10 +58,12 @@ class WikidataLexemeEx(WikidataLexeme, ClaimMixinEx):
 class DataOption(OptionData):
     home: str | Path = field()
     name: str | Path = field()
+    total: int = field(default=106781030)  # https://www.wikidata.org/wiki/Wikidata:Statistics
     lang1: str = field(default="ko")
     lang2: str = field(default="en")
     limit: int = field(default=-1)
     from_scratch: bool = field(default=False)
+    prog_interval: int = field(default=10000)
 
     def __post_init__(self):
         self.home = Path(self.home)
@@ -100,12 +103,12 @@ def parse(
         # data
         input_home: str = typer.Option(default="input/Wikidata"),
         input_name: str = typer.Option(default="latest-all.json.bz2"),
-        input_limit: int = typer.Option(default=-1),
+        input_total: int = typer.Option(default=105485440),
+        input_limit: int = typer.Option(default=1),
         input_lang1: str = typer.Option(default="ko"),
         input_lang2: str = typer.Option(default="en"),
         from_scratch: bool = typer.Option(default=False),
-        # etc
-        tqdm_interval: int = typer.Option(default=10_000),
+        prog_interval: int = typer.Option(default=10_000),
 ):
     args = ProgramArguments(
         env=ProjectEnv(
@@ -115,18 +118,19 @@ def parse(
             output_home=output_home,
             logging_file=logging_file,
             msg_level=logging.DEBUG if debugging else logging.INFO,
-            msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_36,
+            msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
             max_workers=1 if debugging else max(max_workers, 1),
         ),
         data=DataOption(
             home=input_home,
             name=input_name,
+            total=input_total,
             lang1=input_lang1,
             lang2=input_lang2,
             limit=input_limit,
             from_scratch=from_scratch,
+            prog_interval=prog_interval,
         ),
-        other="other",
     )
 
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
@@ -138,18 +142,16 @@ def parse(
         # logger.info(p.descriptions.values['en'])
         # logger.info(p.descriptions.values['ko'])
 
-        wikidata_dump, wikidata_total = WikidataJsonDump(str(args.data.home / args.data.name)), 106_781_030
-        prob_bar = mute_tqdm_cls()(wikidata_dump, total=wikidata_total, desc="processing", unit="ea")
+        wikidata_dump = WikidataJsonDump(str(args.data.home / args.data.name))
+        prob_bar = mute_tqdm_cls()(wikidata_dump, total=args.data.total, desc="processing", unit="ea")
         for ii, entity_dict in enumerate(prob_bar):
-            if ii > 0 == ii % tqdm_interval:
+            if ii > 0 == ii % args.data.prog_interval:
                 logger.info(prob_bar)
             if 0 < args.data.limit < ii + 1:
                 break
             if entity_dict['type'] == "item" and entity_dict['ns'] == 0:
-                continue
                 item = WikidataItemEx(entity_dict)
                 logger.info(item)
-                logger.info(f"- ii: {ii}")
                 logger.info(f"- id: {item.entity_id}")
                 logger.info(f"- ns: {entity_dict['ns']}")
                 logger.info(f"- type: {item.entity_type}")
@@ -164,22 +166,10 @@ def parse(
                 logger.info(f"- title2: {item.get_wiki_title(args.data.lang2)}")
                 claims = item.get_truthy_claims()
                 logger.info(f"- claims({len(claims)}): {claims}")
-                logger.info("----")
-                for k, v in entity_dict.items():
-                    if k in ("claims",):
-                        continue
-                    if k in ("labels", "descriptions"):
-                        entity_dict[k] = [vv for kk, vv in v.items() if kk in ("en", "ko")]
-                    if k in ("aliases",):
-                        entity_dict[k] = [vvv for kk, vv in v.items() if kk in ("en", "ko") for vvv in vv]
-                    if k in ("sitelinks",):
-                        entity_dict[k] = [vv for kk, vv in v.items() if kk in ("enwiki", "kowiki")]
-                    logger.info("- {}: {}".format(k, entity_dict[k]))
                 logger.info("====")
             elif entity_dict['type'] == "property":
                 prop = WikidataPropertyEx(entity_dict)
                 logger.info(prop)
-                logger.info(f"- ii: {ii}")
                 logger.info(f"- id: {prop.entity_id}")
                 logger.info(f"- ns: {entity_dict['ns']}")
                 logger.info(f"- type: {prop.entity_type}")
@@ -192,22 +182,10 @@ def parse(
                 logger.info(f"- alias2: {prop.get_aliases(args.data.lang2_code)}")
                 claims = prop.get_truthy_claims()
                 logger.info(f"- claims({len(claims)}): {claims}")
-                logger.info("----")
-                for k, v in entity_dict.items():
-                    if k in ("claims",):
-                        continue
-                    if k in ("labels", "descriptions"):
-                        entity_dict[k] = [vv for kk, vv in v.items() if kk in ("en", "ko")]
-                    if k in ("aliases",):
-                        entity_dict[k] = [vvv for kk, vv in v.items() if kk in ("en", "ko") for vvv in vv]
-                    if k in ("sitelinks",):
-                        entity_dict[k] = [vv for kk, vv in v.items() if kk in ("enwiki", "kowiki")]
-                    logger.info("- {}: {}".format(k, entity_dict[k]))
                 logger.info("====")
             elif entity_dict['type'] == "lexeme":
                 lexm = WikidataLexemeEx(entity_dict)
                 logger.info(lexm)
-                logger.info(f"- ii: {ii}")
                 logger.info(f"- id: {lexm.entity_id}")
                 logger.info(f"- ns: {entity_dict['ns']}")
                 logger.info(f"- type: {lexm.entity_type}")
@@ -220,22 +198,7 @@ def parse(
                 logger.info(f"- gloss1: {lexm.get_gloss(args.data.lang2_code)}")
                 claims = prop.get_truthy_claims()
                 logger.info(f"- claims({len(claims)}): {claims}")
-                logger.info("----")
-                for k, v in entity_dict.items():
-                    if k in ("claims",):
-                        continue
-                    if k in ("labels", "descriptions"):
-                        entity_dict[k] = [vv for kk, vv in v.items() if kk in ("en", "ko")]
-                    if k in ("aliases",):
-                        entity_dict[k] = [vvv for kk, vv in v.items() if kk in ("en", "ko") for vvv in vv]
-                    if k in ("sitelinks",):
-                        entity_dict[k] = [vv for kk, vv in v.items() if kk in ("enwiki", "kowiki")]
-                    logger.info("- {}: {}".format(k, entity_dict[k]))
                 logger.info("====")
-            else:
-                logger.warning(f"- ii: {ii}")
-                logger.warning(f"- type: {entity_dict['type']}")
-                logger.warning(f"- dict: {entity_dict}")
         logger.critical(f"FINAL ii = {ii}")
 
 
