@@ -199,11 +199,11 @@ def parse(
         input_home: str = typer.Option(default="input/Wikidata"),
         input_name: str = typer.Option(default="latest-all.json.bz2"),
         input_total: int = typer.Option(default=105485440),
-        input_limit: int = typer.Option(default=-1),  # TODO: change
+        input_limit: int = typer.Option(default=-1),
         input_lang1: str = typer.Option(default="ko"),
         input_lang2: str = typer.Option(default="en"),
-        from_scratch: bool = typer.Option(default=False),  # TODO: change
-        prog_interval: int = typer.Option(default=1000),
+        from_scratch: bool = typer.Option(default=False),
+        prog_interval: int = typer.Option(default=10000),
 ):
     env = ProjectEnv(
         project=project,
