@@ -1,31 +1,39 @@
 import logging
-import os
 import time
-from concurrent.futures import ProcessPoolExecutor, Future
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
-from typing import List, Dict
+from typing import List
 
 import httpx
 import pandas as pd
 import typer
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments
-from chrisbase.io import LoggingFormat
-from chrisbase.util import MongoDB, to_dataframe, time_tqdm_cls, mute_tqdm_cls, wait_future_jobs
 from dataclasses_json import DataClassJsonMixin
 
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments
+from chrisbase.io import LoggingFormat
+from chrisbase.util import MongoDB, to_dataframe, mute_tqdm_cls, wait_future_jobs
+
+mongos: List[MongoDB] = []
 logger = logging.getLogger(__name__)
 app = AppTyper()
-mongos: List[MongoDB] = []
+
+
+@dataclass
+class DataOption(OptionData):
+    items: List[str] = field()
+    limit: int = field(default=-1)
+    prog_interval: int = field(default=1)
 
 
 @dataclass
 class NetOption(OptionData):
-    calling_sec: float = field(default=1.0)
-    waiting_sec: float = field(default=30.0),
+    calling_sec: float = field(default=0.5)
+    waiting_sec: float = field(default=60.0),
 
 
 @dataclass
 class ProgramArguments(CommonArguments):
+    data: DataOption = field()
     net: NetOption | None = field(default=None)
 
     def __post_init__(self):
@@ -35,9 +43,10 @@ class ProgramArguments(CommonArguments):
         if not columns:
             columns = [self.data_type, "value"]
         return pd.concat([
+            to_dataframe(columns=columns, raw=self.time, data_prefix="time"),
             to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
             to_dataframe(columns=columns, raw=self.net, data_prefix="net") if self.net else None,
-            to_dataframe(columns=columns, raw=self.time, data_prefix="time"),
+            to_dataframe(columns=columns, raw=self.data, data_prefix="data"),
         ]).reset_index(drop=True)
 
 
@@ -51,10 +60,10 @@ class ProcessResult(DataClassJsonMixin):
     text: str | None = None
 
 
-def process_query(i: int, x: str, s: float | None = None, log: bool = True):
+def process_query(i: int, x: str, s: float | None = None):
     if s and s > 0:
         time.sleep(s)
-    with httpx.Client(transport=httpx.HTTPTransport(local_address=x), timeout=10.0) as cli:
+    with httpx.Client(transport=httpx.HTTPTransport(local_address=x), timeout=httpx.Timeout(timeout=10.0)) as cli:
         response = cli.get("https://api64.ipify.org?format=json")
         result = ProcessResult(
             _id=i + 1,
@@ -66,14 +75,6 @@ def process_query(i: int, x: str, s: float | None = None, log: bool = True):
         )
         for mongo in mongos:
             mongo.table.insert_one(result.to_dict())
-        if log:
-            logger.info("  * " + ' ----> '.join([
-                f"[{result.query:<15s}]",
-                f"[{result.status}]",
-                f"[{result.elapsed * 1000:7,.0f}ms]",
-                f"[{result.size:7,.2f}KB]",
-                f"{result.text}",
-            ]))
 
 
 @app.command()
@@ -81,53 +82,51 @@ def check(
         # env
         project: str = typer.Option(default="WiseData"),
         job_name: str = typer.Option(default="check_ip_addrs"),
-        debugging: bool = typer.Option(default=False),
-        max_workers: int = typer.Option(default=os.cpu_count()),
         output_home: str = typer.Option(default="output-check_ip_addrs"),
+        logging_file: str = typer.Option(default="logging.out"),
+        max_workers: int = typer.Option(default=10),
+        debugging: bool = typer.Option(default=False),
         # net
-        calling_sec: float = typer.Option(default=1.0),
-        waiting_sec: float = typer.Option(default=30.0),
-        # etc
-        use_tqdm: bool = typer.Option(default=False),
+        calling_sec: float = typer.Option(default=0.5),
+        waiting_sec: float = typer.Option(default=60.0),
+        # data
+        input_limit: int = typer.Option(default=-1),
+        prog_interval: int = typer.Option(default=-1),
 ):
+    env = ProjectEnv(
+        project=project,
+        job_name=job_name,
+        debugging=debugging,
+        output_home=output_home,
+        logging_file=logging_file,
+        msg_level=logging.DEBUG if debugging else logging.INFO,
+        msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
+        max_workers=1 if debugging else max(max_workers, 1),
+    )
     args = ProgramArguments(
-        env=ProjectEnv(
-            project=project,
-            job_name=job_name,
-            debugging=debugging,
-            output_home=output_home,
-            msg_level=logging.DEBUG if debugging else logging.INFO,
-            msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
-            max_workers=1 if debugging else max(max_workers, 1),
-        ),
+        env=env,
         net=NetOption(
             calling_sec=calling_sec,
             waiting_sec=waiting_sec,
+        ),
+        data=DataOption(
+            items=env.ip_addrs,
+            limit=input_limit,
+            prog_interval=prog_interval if prog_interval > 0 else env.max_workers,
         ),
     )
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
         with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=True, pool=mongos) as mongo:
-            failed_ids: List[int] = []
             logger.info(f"Use {args.env.max_workers} workers to check {args.env.num_ip_addrs} IP addresses")
-            job_tqdm = time_tqdm_cls(bar_size=100, desc_size=9) if use_tqdm else mute_tqdm_cls()
-            if args.env.max_workers < 2:
-                for i, x in enumerate(job_tqdm(args.env.ip_addrs, pre="┇", desc="visiting", unit="job")):
-                    process_query(i=i, x=x, log=not use_tqdm)
-            else:
-                with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
-                    jobs: Dict[int, Future] = {}
-                    for i, x in enumerate(args.env.ip_addrs):
-                        jobs[i] = pool.submit(process_query, i=i, x=x, s=args.net.calling_sec, log=not use_tqdm)
-                    failed_ids = wait_future_jobs(job_tqdm(jobs.items(), pre="┇", desc="visiting", unit="job"),
-                                                  timeout=args.net.waiting_sec, pool=pool)
-            logger.info(f"Success: {mongo.num_documents}/{args.env.num_ip_addrs}")
-            logger.info(f"Failure: {len(failed_ids)}/{args.env.num_ip_addrs}")
-            mongo.export_table(to=args.env.output_home / f"{args.env.job_name}.jsonl")
-            if failed_ids:
-                logger.info(f"Failed IDs: {failed_ids}")
-                logger.info(f"Failed IPs: {[args.env.ip_addrs[i] for i in failed_ids]}")
+            with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
+                items = args.data.items[:args.data.limit] if args.data.limit > 0 else args.data.items
+                jobs = [(i, pool.submit(process_query, i=i, x=x, s=args.net.calling_sec)) for i, x in enumerate(items)]
+                prog_bar = mute_tqdm_cls()(jobs, unit="ea", pre="*")
+                wait_future_jobs(prog_bar, timeout=args.net.waiting_sec, interval=args.data.prog_interval, pool=pool)
+                logger.info(f"Success: {mongo.num_documents}/{len(items)}")
+            mongo.export_table(to=args.env.output_home / f"{args.env.job_name}-{args.env.time_stamp}.jsonl")
 
 
 if __name__ == "__main__":
