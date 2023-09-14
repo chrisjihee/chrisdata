@@ -1,33 +1,37 @@
+import json
 import logging
-import os
 import re
 import time
-from concurrent.futures import ProcessPoolExecutor, Future
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
+from itertools import islice
 from pathlib import Path
 from typing import List, Dict, Any, Tuple
 
 import httpx
 import pandas as pd
 import typer
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments
-from chrisbase.io import LoggingFormat
-from chrisbase.util import MongoDB, to_dataframe, time_tqdm_cls, mute_tqdm_cls, wait_future_jobs
 from dataclasses_json import DataClassJsonMixin
-from pymongo.errors import DuplicateKeyError
 from wikipediaapi import Wikipedia
 from wikipediaapi import WikipediaPage
 
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments
+from chrisbase.io import LoggingFormat
+from chrisbase.util import MongoDB, to_dataframe, mute_tqdm_cls, wait_future_jobs, LF
+
+mongos: List[MongoDB] = []
 logger = logging.getLogger(__name__)
 app = AppTyper()
-mongos: List[MongoDB] = []
 
 
 class WikipediaEx(Wikipedia):
     def __init__(self, *args, ip=None, max_retrial=10, retrial_sec=10.0, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         if ip:
-            self._httpx_client = httpx.Client(transport=httpx.HTTPTransport(local_address=ip))
+            self._httpx_client = httpx.Client(
+                transport=httpx.HTTPTransport(local_address=ip),
+                timeout=httpx.Timeout(timeout=120.0)
+            )
         self.max_retrial = max_retrial
         self.retrial_sec = retrial_sec
 
@@ -51,7 +55,6 @@ class WikipediaEx(Wikipedia):
                 r = self._httpx_client.get(base_url, params=params, **self._request_kwargs)
                 return r.json()
             except httpx.HTTPError as e:
-                print()
                 logger.warning(f"{type(e).__qualname__} on _query(): {e} || n={n} || title={page.title}")
                 time.sleep(self.retrial_sec)
         else:
@@ -127,6 +130,20 @@ def get_section_list_lv2(title, sections):
 
 
 @dataclass
+class DataOption(OptionData):
+    home: str | Path = field()
+    name: str | Path = field()
+    lang: str = field(default="ko")
+    limit: int = field(default=-1)
+    from_scratch: bool = field(default=False)
+    prog_interval: int = field(default=1)
+
+    def __post_init__(self):
+        self.home = Path(self.home)
+        self.name = Path(self.name)
+
+
+@dataclass
 class NetOption(OptionData):
     calling_sec: float = field(default=0.5)
     waiting_sec: float = field(default=60.0),
@@ -135,22 +152,9 @@ class NetOption(OptionData):
 
 
 @dataclass
-class DataOption(OptionData):
-    home: str | Path = field()
-    name: str | Path = field()
-    lang: str = field(default="ko")
-    limit: int = field(default=-1)
-    from_scratch: bool = field(default=False)
-
-    def __post_init__(self):
-        self.home = Path(self.home)
-        self.name = Path(self.name)
-
-
-@dataclass
 class ProgramArguments(CommonArguments):
+    data: DataOption = field()
     net: NetOption | None = field(default=None)
-    data: DataOption | None = field(default=None)
 
     def __post_init__(self):
         super().__post_init__()
@@ -159,23 +163,21 @@ class ProgramArguments(CommonArguments):
         if not columns:
             columns = [self.data_type, "value"]
         return pd.concat([
+            to_dataframe(columns=columns, raw=self.time, data_prefix="time"),
             to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
             to_dataframe(columns=columns, raw=self.net, data_prefix="net") if self.net else None,
-            to_dataframe(columns=columns, raw=self.data, data_prefix="data") if self.data else None,
-            to_dataframe(columns=columns, raw=self.time, data_prefix="time"),
+            to_dataframe(columns=columns, raw=self.data, data_prefix="data"),
         ]).reset_index(drop=True)
 
 
 def load_query_list(args: ProgramArguments) -> List[Tuple[int, str]]:
     assert (args.data.home / args.data.name).exists(), f"No input file: {args.data.home / args.data.name}"
     with open(args.data.home / args.data.name) as f:
-        if not args.data.limit or args.data.limit < 1:
-            lines = f.read().splitlines()
-        else:
-            lines = f.read().splitlines()[:args.data.limit]
+        lines = f.read().splitlines()
+        lines = islice(lines, args.data.limit) if args.data.limit > 0 else lines
     rows = [x.split("\t") for x in lines]
     if len(rows[0]) < 2:
-        return [(i, row[0]) for i, row in enumerate(rows)]
+        return [(i, row[0]) for i, row in enumerate(rows, start=1)]
     else:
         return [(int(row[0]), row[1]) for row in rows]
 
@@ -203,28 +205,30 @@ class ProcessResult(DataClassJsonMixin):
 
 
 def process_query(i: int, x: str, s: float | None = None):
+    is_done = all(mongo.table.count_documents({"_id": i, "query": x}, limit=1) > 0 for mongo in mongos)
+    if is_done:
+        logger.info("pass")
+        return
     if s and s > 0:
         time.sleep(s)
     api = api_list_per_ip[i % len(api_list_per_ip)]
     page: WikipediaPage = api.page(x)
-    result = ProcessResult(_id=i + 1, query=x)
-    is_exist = False
+    result = ProcessResult(_id=i, query=x)
+    page_exists = False
     try:
-        is_exist = page.exists()
+        page_exists = page.exists()
     except KeyError:
-        print()
         logger.warning(f"KeyError on process_query(i={i}, x={x})")
-    if is_exist:
+    if page_exists:
         result.title = page.title
         result.page_id = page.pageid
         result.section_list.append((x, '', '', page.summary))
         result.section_list += get_section_list_lv2(x, page.sections)
         result.passage_list = get_passage_list(result.section_list, page.pageid)
     for mongo in mongos:
-        try:
-            mongo.table.insert_one(result.to_dict())
-        except DuplicateKeyError:
-            logger.warning(f"DuplicateKeyError on process_query(i={i}, x={x})")
+        if mongo.table.count_documents({"_id": i}, limit=1) > 0:
+            mongo.table.delete_one({"_id": i})
+        mongo.table.insert_one(result.to_dict())
 
 
 def table_name(args: ProgramArguments) -> str:
@@ -238,7 +242,8 @@ def crawl(
         project: str = typer.Option(default="WiseData"),
         job_name: str = typer.Option(default="crawl_wikipedia"),
         output_home: str = typer.Option(default="output-crawl_wikipedia"),
-        max_workers: int = typer.Option(default=os.cpu_count()),
+        logging_file: str = typer.Option(default="logging.out"),
+        max_workers: int = typer.Option(default=10),
         debugging: bool = typer.Option(default=False),
         # net
         calling_sec: float = typer.Option(default=0.5),
@@ -249,21 +254,22 @@ def crawl(
         input_home: str = typer.Option(default="input"),
         input_name: str = typer.Option(default="kowiki-sample.txt"),
         input_lang: str = typer.Option(default="ko"),
-        input_limit: int = typer.Option(default=-1),
-        from_scratch: bool = typer.Option(default=False),
-        # etc
-        use_tqdm: bool = typer.Option(default=True),
+        input_limit: int = typer.Option(default=100),
+        from_scratch: bool = typer.Option(default=True),
+        prog_interval: int = typer.Option(default=15),
 ):
+    env = ProjectEnv(
+        project=project,
+        job_name=job_name,
+        debugging=debugging,
+        output_home=output_home,
+        logging_file=logging_file,
+        msg_level=logging.DEBUG if debugging else logging.INFO,
+        msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
+        max_workers=1 if debugging else max(max_workers, 1),
+    )
     args = ProgramArguments(
-        env=ProjectEnv(
-            project=project,
-            job_name=job_name,
-            debugging=debugging,
-            output_home=output_home,
-            msg_level=logging.DEBUG if debugging else logging.INFO,
-            msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
-            max_workers=1 if debugging else max(max_workers, 1),
-        ),
+        env=env,
         net=NetOption(
             calling_sec=calling_sec,
             waiting_sec=waiting_sec,
@@ -276,78 +282,41 @@ def crawl(
             lang=input_lang,
             limit=input_limit,
             from_scratch=from_scratch,
+            prog_interval=prog_interval if prog_interval > 0 else env.max_workers,
         ),
     )
+    tqdm = mute_tqdm_cls()
+    output_file = (args.env.output_home / f"{args.data.name.stem}.jsonl")
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("wikipediaapi").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
         with MongoDB(db_name=args.env.project, tab_name=table_name(args), clear_table=args.data.from_scratch, pool=mongos) as mongo:
-            query_list = load_query_list(args=args)
+            input_list = load_query_list(args=args)
+            input_size = len(input_list)
             num_global_api = reset_global_api(args=args)
-            logger.info(f"Use {num_global_api} apis and {args.env.max_workers} workers to crawl {len(query_list)} wikipedia queries")
-            job_tqdm = time_tqdm_cls(bar_size=100, desc_size=9) if use_tqdm else mute_tqdm_cls()
-            if args.env.max_workers < 2:
-                for i, x in job_tqdm(query_list, pre="┇", desc="visiting", unit="job"):
-                    process_query(i=i, x=x)
-            else:
-                with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
-                    jobs: Dict[int, Future] = {}
-                    for i, x in query_list:
-                        jobs[i] = pool.submit(process_query, i=i, x=x, s=args.net.calling_sec)
-                    wait_future_jobs(job_tqdm(jobs.items(), pre="┇", desc="visiting", unit="job"),
-                                     timeout=args.net.waiting_sec, pool=pool)
-            logger.info(f"#ProcessResult: {mongo.num_documents}")
-
-
-@app.command()
-def export(
-        # env
-        project: str = typer.Option(default="WiseData"),
-        job_name: str = typer.Option(default="crawl_wikipedia"),
-        output_home: str = typer.Option(default="output-crawl_wikipedia"),
-        debugging: bool = typer.Option(default=False),
-        # data
-        input_home: str = typer.Option(default="input"),
-        input_name: str = typer.Option(default="kowiki-sample.txt"),
-        input_limit: int = typer.Option(default=-1),
-        # etc
-        use_tqdm: bool = typer.Option(default=True),
-):
-    args = ProgramArguments(
-        env=ProjectEnv(
-            project=project,
-            job_name=job_name,
-            debugging=debugging,
-            output_home=output_home,
-            msg_level=logging.DEBUG if debugging else logging.INFO,
-            msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
-        ),
-        data=DataOption(
-            home=input_home,
-            name=input_name,
-            limit=input_limit,
-        ),
-    )
-
-    job_tqdm = time_tqdm_cls(bar_size=100, desc_size=9) if use_tqdm else mute_tqdm_cls()
-    with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        with MongoDB(db_name=args.env.project, tab_name=table_name(args), clear_table=False) as mongo:
-            query_list = load_query_list(args=args)
-            output_file = args.env.output_home / f"{args.data.name.stem}.jsonl"
-
-            logger.info(f"Export {mongo.num_documents}/{len(query_list)} documents to {output_file}")
-            existing_indices = mongo.export_table(to=output_file, tqdm=job_tqdm)
-
-            logger.info(f"Find failed queries among ({len(query_list)} queries, {len(existing_indices)} existing indices)")
-            failed_indices = [i for i, _ in enumerate(query_list) if i not in existing_indices]
-            if not failed_indices:
-                logger.info("No failed queries")
-            else:
-                logger.info(f"Found failed indices({len(failed_indices)}): {failed_indices}")
-                failed_query_file = args.data.home / f"{args.data.name.stem}-failed.tsv"
-                query_dict = dict(query_list)
-                failed_query_file.write_text("\n".join([f"{i}\t{query_dict[i]}" for i in failed_indices]))
+            logger.info(f"Use {num_global_api} apis and {args.env.max_workers} workers to crawl {input_size} wikipedia queries")
+            with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
+                jobs = [(i, pool.submit(process_query, i=i, x=x, s=args.net.calling_sec)) for i, x in input_list]
+                prog_bar = tqdm(jobs, unit="ea", pre="*", desc="visiting")
+                wait_future_jobs(prog_bar, timeout=args.net.waiting_sec, interval=args.data.prog_interval, pool=pool)
+            done_ids = set()
+            with output_file.open("w") as out:
+                row_filter = {}
+                num_row, rows = mongo.table.count_documents(row_filter), mongo.table.find(row_filter).sort("_id")
+                prog_bar = tqdm(rows, unit="ea", pre="*", desc="exporting", total=num_row)
+                for i, row in enumerate(prog_bar, start=1):
+                    done_ids.add(row.get("_id"))
+                    out.write(json.dumps(row, ensure_ascii=False) + '\n')
+                    if i % (args.data.prog_interval * 10) == 0:
+                        logger.info(prog_bar)
+                logger.info(prog_bar)
+            logger.info(f"Export {num_row}/{input_size} rows to {output_file}")
+            undone_inputs = [(i, x) for i, x in input_list if i not in done_ids]
+            if undone_inputs:
+                logger.info(f"Found {len(undone_inputs)} undone inputs")
+                undone_file = args.data.home / f"{args.data.name.stem}-failed.tsv"
+                undone_file.write_text(LF.join([f"{i}\t{x}" for i, x in undone_inputs]))
 
 
 if __name__ == "__main__":

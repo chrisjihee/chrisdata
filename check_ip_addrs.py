@@ -90,13 +90,13 @@ def check(
         job_name: str = typer.Option(default="check_ip_addrs"),
         output_home: str = typer.Option(default="output-check_ip_addrs"),
         logging_file: str = typer.Option(default="logging.out"),
-        max_workers: int = typer.Option(default=5),
+        max_workers: int = typer.Option(default=10),
         debugging: bool = typer.Option(default=False),
         # net
         calling_sec: float = typer.Option(default=0.001),
         waiting_sec: float = typer.Option(default=300.0),
         # data
-        input_limit: int = typer.Option(default=40),
+        input_limit: int = typer.Option(default=-1),
         prog_interval: int = typer.Option(default=10),
 ):
     env = ProjectEnv(
@@ -123,6 +123,7 @@ def check(
         ),
     )
     tqdm = mute_tqdm_cls()
+    output_file = (args.env.output_home / f"{args.env.job_name}-{args.env.time_stamp}.jsonl")
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
@@ -134,7 +135,7 @@ def check(
                 jobs = [(i, pool.submit(process_query, i=i, x=x, s=args.net.calling_sec)) for i, x in input_list]
                 prog_bar = tqdm(jobs, unit="ea", pre="*", desc="visiting")
                 wait_future_jobs(prog_bar, timeout=args.net.waiting_sec, interval=args.data.prog_interval, pool=pool)
-            with (args.env.output_home / f"{args.env.job_name}-{args.env.time_stamp}.jsonl").open("w") as out:
+            with output_file.open("w") as out:
                 row_filter = {}
                 num_row, rows = mongo.table.count_documents(row_filter), mongo.table.find(row_filter).sort("_id")
                 prog_bar = tqdm(rows, unit="ea", pre="*", desc="exporting", total=num_row)
@@ -143,7 +144,7 @@ def check(
                     if i % (args.data.prog_interval * 10) == 0:
                         logger.info(prog_bar)
                 logger.info(prog_bar)
-            logger.info(f"Success: {num_row}/{input_size}")
+            logger.info(f"Export {num_row}/{input_size} rows to {output_file}")
 
 
 if __name__ == "__main__":
