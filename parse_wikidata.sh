@@ -1,1 +1,1 @@
-python parse_wikidata.py --input-home input/Wikidata --input-name latest-all.json.bz2 --from-scratch --max-workers 12
+python parse_wikidata.py --input-home input/Wikidata --from-scratch --max-workers 12
