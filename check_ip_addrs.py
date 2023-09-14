@@ -127,7 +127,7 @@ def check(
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=True, pool=mongos) as mongo:
+        with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=True, pool=mongos, port=6382) as mongo:
             input_list = islice(args.data.items, args.data.limit) if args.data.limit > 0 else args.data.items
             input_size = min(args.data.total, args.data.limit) if args.data.limit > 0 else args.data.total
             logger.info(f"Use {args.env.max_workers} workers to check {input_size} IP addresses")
