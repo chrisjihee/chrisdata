@@ -236,7 +236,7 @@ def parse(
     output_file = (args.env.output_home / f"{args.data.name.stem}.jsonl")
 
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=args.data.from_scratch, pool=mongos) as mongo:
+        with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=args.data.from_scratch, pool=mongos, port=6382) as mongo:
             wikidata_dump = WikidataJsonDump(str(args.data.home / args.data.name))
             input_list = islice(enumerate(wikidata_dump, start=1), args.data.limit) if args.data.limit > 0 else enumerate(wikidata_dump, start=1)
             input_size = min(args.data.total, args.data.limit) if args.data.limit > 0 else args.data.total
