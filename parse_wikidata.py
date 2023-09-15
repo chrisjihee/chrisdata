@@ -4,7 +4,7 @@ from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
 from itertools import islice
 from pathlib import Path
-from typing import List, Iterable
+from typing import Iterable
 
 import pandas as pd
 import typer
@@ -14,11 +14,10 @@ from qwikidata.entity import WikidataItem, WikidataProperty, WikidataLexeme, Cla
 from qwikidata.json_dump import WikidataJsonDump
 from qwikidata.typedefs import LanguageCode
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, MongoDBOption
 from chrisbase.io import LoggingFormat, pop_keys
-from chrisbase.util import to_dataframe, mute_tqdm_cls, MongoDB, wait_future_jobs
+from chrisbase.util import to_dataframe, mute_tqdm_cls, wait_future_jobs
 
-mongos: List[MongoDB] = []
 logger = logging.getLogger(__name__)
 app = AppTyper()
 
@@ -39,8 +38,8 @@ class WikidataPropertyEx(WikidataProperty, ClaimMixinEx):
 
 
 class WikidataItemEx(WikidataItem, ClaimMixinEx):
-    def get_wiki_title(self, lang) -> str:
-        wikiname = f"{str(lang).lower()}wiki"
+    def get_wiki_title(self, lang: LanguageCode) -> str:
+        wikiname = f"{lang.lower()}wiki"
         if (
                 isinstance(self._entity_dict["sitelinks"], dict)
                 and wikiname in self._entity_dict["sitelinks"]
@@ -85,6 +84,7 @@ class NetOption(OptionData):
 @dataclass
 class ProgramArguments(CommonArguments):
     data: DataOption = field()
+    db: MongoDBOption = field()
     net: NetOption | None = field(default=None)
     other: str | None = field(default=None)
 
@@ -98,6 +98,7 @@ class ProgramArguments(CommonArguments):
             to_dataframe(columns=columns, raw=self.time, data_prefix="time"),
             to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
             to_dataframe(columns=columns, raw=self.net, data_prefix="net") if self.net else None,
+            to_dataframe(columns=columns, raw=self.db, data_prefix="db") if self.db else None,
             to_dataframe(columns=columns, raw=self.data, data_prefix="data"),
             to_dataframe(columns=columns, raw={"other": self.other}),
         ]).reset_index(drop=True)
@@ -128,59 +129,60 @@ class WikidataUnit(DataClassJsonMixin):
     claims: list[dict] = field(default_factory=list)
 
 
-def process_item(i: int, x: dict, lang1: str, lang2: str):
-    is_done = all(mongo.table.count_documents({"_id": i, "eid": x['id']}, limit=1) > 0 for mongo in mongos)
-    if is_done:
-        return
-    lang1_code = LanguageCode(lang1)
-    lang2_code = LanguageCode(lang2)
-    row = WikidataUnit(
-        _id=i,
-        ns=x['ns'],
-        eid=x['id'],
-        type=x['type'],
-        time=x['modified'],
-        lang1=lang1,
-        lang2=lang2,
-    )
-    if row.type == "item" and row.ns == 0:
-        item = WikidataItemEx(x)
-        row.label1 = item.get_label(lang1_code)
-        row.label2 = item.get_label(lang2_code)
-        row.alias1 = item.get_aliases(lang1_code)
-        row.alias2 = item.get_aliases(lang2_code)
-        row.descr1 = item.get_description(lang1_code)
-        row.descr2 = item.get_description(lang2_code)
-        row.title1 = item.get_wiki_title(lang1)
-        row.title2 = item.get_wiki_title(lang2)
-        row.claims = item.get_truthy_claims()
-    elif row.type == "property":
-        prop = WikidataPropertyEx(x)
-        row.label1 = prop.get_label(lang1_code)
-        row.label2 = prop.get_label(lang2_code)
-        row.alias1 = prop.get_aliases(lang1_code)
-        row.alias2 = prop.get_aliases(lang2_code)
-        row.descr1 = prop.get_description(lang1_code)
-        row.descr2 = prop.get_description(lang2_code)
-        row.claims = prop.get_truthy_claims()
-    elif row.type == "lexeme":
-        lexm = WikidataLexemeEx(x)
-        row.label1 = lexm.get_lemma(lang1_code)
-        row.label2 = lexm.get_lemma(lang2_code)
-        row.descr1 = lexm.get_gloss(lang1_code)
-        row.descr2 = lexm.get_gloss(lang2_code)
-        row.lang = lexm.language
-        row.cate = lexm.lexical_category
-        row.claims = lexm.get_truthy_claims()
-    for mongo in mongos:
-        if mongo.table.count_documents({"_id": i}, limit=1) > 0:
-            mongo.table.delete_one({"_id": i})
-        mongo.table.insert_one(row.to_dict())
+def process_item(i: int, x: dict, args: ProgramArguments):
+    with args.db.client() as db:
+        table = args.db.table(db)
+        if table.count_documents({"_id": i, "eid": x['id']}, limit=1) > 0:
+            return
+
+        lang1_code = LanguageCode(args.data.lang1)
+        lang2_code = LanguageCode(args.data.lang2)
+        row = WikidataUnit(
+            _id=i,
+            ns=x['ns'],
+            eid=x['id'],
+            type=x['type'],
+            time=x['modified'],
+            lang1=args.data.lang1,
+            lang2=args.data.lang2,
+        )
+        if row.type == "item" and row.ns == 0:
+            item = WikidataItemEx(x)
+            row.label1 = item.get_label(lang1_code)
+            row.label2 = item.get_label(lang2_code)
+            row.alias1 = item.get_aliases(lang1_code)
+            row.alias2 = item.get_aliases(lang2_code)
+            row.descr1 = item.get_description(lang1_code)
+            row.descr2 = item.get_description(lang2_code)
+            row.title1 = item.get_wiki_title(lang1_code)
+            row.title2 = item.get_wiki_title(lang2_code)
+            row.claims = item.get_truthy_claims()
+        elif row.type == "property":
+            prop = WikidataPropertyEx(x)
+            row.label1 = prop.get_label(lang1_code)
+            row.label2 = prop.get_label(lang2_code)
+            row.alias1 = prop.get_aliases(lang1_code)
+            row.alias2 = prop.get_aliases(lang2_code)
+            row.descr1 = prop.get_description(lang1_code)
+            row.descr2 = prop.get_description(lang2_code)
+            row.claims = prop.get_truthy_claims()
+        elif row.type == "lexeme":
+            lexm = WikidataLexemeEx(x)
+            row.label1 = lexm.get_lemma(lang1_code)
+            row.label2 = lexm.get_lemma(lang2_code)
+            row.descr1 = lexm.get_gloss(lang1_code)
+            row.descr2 = lexm.get_gloss(lang2_code)
+            row.lang = lexm.language
+            row.cate = lexm.lexical_category
+            row.claims = lexm.get_truthy_claims()
+        if table.count_documents({"_id": i}, limit=1) > 0:
+            table.delete_one({"_id": i})
+        table.insert_one(row.to_dict())
 
 
-def make_jobs(input_list: Iterable[tuple[int, dict]], pool: ProcessPoolExecutor, args: ProgramArguments):
+def make_jobs(input_list: Iterable[tuple[int, dict]], args: ProgramArguments, pool: ProcessPoolExecutor):
     for i, x in input_list:
-        yield i, pool.submit(process_item, i=i, x=x, lang1=args.data.lang1, lang2=args.data.lang2)
+        yield i, pool.submit(process_item, i=i, x=x, args=args)
 
 
 @app.command()
@@ -190,7 +192,7 @@ def parse(
         job_name: str = typer.Option(default="parse_wikidata"),
         output_home: str = typer.Option(default="output-parse_wikidata"),
         logging_file: str = typer.Option(default="logging.out"),
-        max_workers: int = typer.Option(default=12),
+        max_workers: int = typer.Option(default=1),
         debugging: bool = typer.Option(default=False),
         # net
         calling_sec: float = typer.Option(default=0.001),
@@ -199,10 +201,10 @@ def parse(
         input_home: str = typer.Option(default="input/Wikidata"),
         input_name: str = typer.Option(default="latest-all.json.bz2"),
         input_total: int = typer.Option(default=105485440),
-        input_limit: int = typer.Option(default=-1),
+        input_limit: int = typer.Option(default=10),
         input_lang1: str = typer.Option(default="ko"),
         input_lang2: str = typer.Option(default="en"),
-        from_scratch: bool = typer.Option(default=False),
+        from_scratch: bool = typer.Option(default=True),
         prog_interval: int = typer.Option(default=10000),
 ):
     env = ProjectEnv(
@@ -221,6 +223,10 @@ def parse(
             calling_sec=calling_sec,
             waiting_sec=waiting_sec,
         ),
+        db=MongoDBOption(
+            tab_name=env.job_name,
+            db_name=env.project,
+        ),
         data=DataOption(
             home=input_home,
             name=input_name,
@@ -236,24 +242,25 @@ def parse(
     output_file = (args.env.output_home / f"{args.data.name.stem}.jsonl")
 
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=args.data.from_scratch, pool=mongos, port=6382) as mongo:
-            wikidata_dump = WikidataJsonDump(str(args.data.home / args.data.name))
-            input_list = islice(enumerate(wikidata_dump, start=1), args.data.limit) if args.data.limit > 0 else enumerate(wikidata_dump, start=1)
-            input_size = min(args.data.total, args.data.limit) if args.data.limit > 0 else args.data.total
-            logger.info(f"Use {args.env.max_workers} workers to parse {input_size} Wikidata items")
-            with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
-                prog_bar = tqdm(make_jobs(input_list, pool, args), total=input_size, unit="ea", pre="*", desc="importing")
-                wait_future_jobs(prog_bar, timeout=args.net.waiting_sec, interval=args.data.prog_interval, pool=pool)
-            with output_file.open("w") as out:
-                row_filter = {}
-                num_row, rows = mongo.table.count_documents(row_filter), mongo.table.find(row_filter).sort("_id")
-                prog_bar = tqdm(rows, unit="ea", pre="*", desc="exporting", total=num_row)
-                for i, row in enumerate(prog_bar, start=1):
-                    out.write(json.dumps(pop_keys(row, ("claims", "lang1", "lang2")), ensure_ascii=False) + '\n')
-                    if i % (args.data.prog_interval * 10) == 0:
-                        logger.info(prog_bar)
-                logger.info(prog_bar)
-            logger.info(f"Export {num_row}/{input_size} rows to {output_file}")
+        if args.data.from_scratch:
+            logger.info(f"Clear database table: {args.db.clear_table()}")
+        wikidata_dump = WikidataJsonDump(str(args.data.home / args.data.name))
+        input_iter = islice(enumerate(wikidata_dump, start=1), args.data.limit) if args.data.limit > 0 else enumerate(wikidata_dump, start=1)
+        input_size = min(args.data.total, args.data.limit) if args.data.limit > 0 else args.data.total
+        logger.info(f"Use {args.env.max_workers} workers to parse {input_size} Wikidata items")
+        with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
+            prog_bar = tqdm(make_jobs(input_iter, args, pool), total=input_size, unit="ea", pre="*", desc="importing")
+            wait_future_jobs(prog_bar, timeout=args.net.waiting_sec, interval=args.data.prog_interval, pool=pool)
+        with output_file.open("w") as out, args.db.client() as db:
+            table, find_opt = args.db.table(db), {}
+            num_row, rows = table.count_documents(find_opt), table.find(find_opt).sort("_id")
+            prog_bar = tqdm(rows, unit="ea", pre="*", desc="exporting", total=num_row)
+            for i, row in enumerate(prog_bar, start=1):
+                out.write(json.dumps(pop_keys(row, ("claims", "lang1", "lang2")), ensure_ascii=False) + '\n')
+                if i % (args.data.prog_interval * 10) == 0:
+                    logger.info(prog_bar)
+            logger.info(prog_bar)
+        logger.info(f"Export {num_row}/{input_size} rows to {output_file}")
 
 
 if __name__ == "__main__":
