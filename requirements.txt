@@ -1,5 +1,4 @@
 #chrisbase==0.4.6
 Wikipedia-API==0.6.0
 wikibaseintegrator
-wikidata
 qwikidata
