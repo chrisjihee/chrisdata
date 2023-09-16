@@ -129,51 +129,55 @@ class WikidataUnit(DataClassJsonMixin):
 
 
 def process_item(i: int, x: dict, table: Collection, args: ProgramArguments):
-        if table.count_documents({"_id": i, "eid": x['id']}, limit=1) > 0:
+    if table.count_documents({"_id": i, "eid": x['id']}, limit=1) > 0:
+        return
+    lang1_code = LanguageCode(args.data.lang1)
+    lang2_code = LanguageCode(args.data.lang2)
+    row = WikidataUnit(
+        _id=i,
+        ns=x['ns'],
+        eid=x['id'],
+        type=x['type'],
+        time=x['modified'],
+        lang1=args.data.lang1,
+        lang2=args.data.lang2,
+    )
+    if row.type == "item" and row.ns == 0:
+        item = WikidataItemEx(x)
+        row.label1 = item.get_label(lang1_code)
+        row.label2 = item.get_label(lang2_code)
+        row.title1 = item.get_wiki_title(lang1_code)
+        row.title2 = item.get_wiki_title(lang2_code)
+        if not row.label1 or not row.title1:
             return
-        lang1_code = LanguageCode(args.data.lang1)
-        lang2_code = LanguageCode(args.data.lang2)
-        row = WikidataUnit(
-            _id=i,
-            ns=x['ns'],
-            eid=x['id'],
-            type=x['type'],
-            time=x['modified'],
-            lang1=args.data.lang1,
-            lang2=args.data.lang2,
-        )
-        if row.type == "item" and row.ns == 0:
-            item = WikidataItemEx(x)
-            row.label1 = item.get_label(lang1_code)
-            row.label2 = item.get_label(lang2_code)
-            row.alias1 = item.get_aliases(lang1_code)
-            row.alias2 = item.get_aliases(lang2_code)
-            row.descr1 = item.get_description(lang1_code)
-            row.descr2 = item.get_description(lang2_code)
-            row.title1 = item.get_wiki_title(lang1_code)
-            row.title2 = item.get_wiki_title(lang2_code)
-            row.claims = item.get_truthy_claims()
-        elif row.type == "property":
-            prop = WikidataPropertyEx(x)
-            row.label1 = prop.get_label(lang1_code)
-            row.label2 = prop.get_label(lang2_code)
-            row.alias1 = prop.get_aliases(lang1_code)
-            row.alias2 = prop.get_aliases(lang2_code)
-            row.descr1 = prop.get_description(lang1_code)
-            row.descr2 = prop.get_description(lang2_code)
-            row.claims = prop.get_truthy_claims()
-        elif row.type == "lexeme":
-            lexm = WikidataLexemeEx(x)
-            row.label1 = lexm.get_lemma(lang1_code)
-            row.label2 = lexm.get_lemma(lang2_code)
-            row.descr1 = lexm.get_gloss(lang1_code)
-            row.descr2 = lexm.get_gloss(lang2_code)
-            row.lang = lexm.language
-            row.cate = lexm.lexical_category
-            row.claims = lexm.get_truthy_claims()
-        if table.count_documents({"_id": i}, limit=1) > 0:
-            table.delete_one({"_id": i})
-        table.insert_one(row.to_dict())
+        row.alias1 = item.get_aliases(lang1_code)
+        row.alias2 = item.get_aliases(lang2_code)
+        row.descr1 = item.get_description(lang1_code)
+        row.descr2 = item.get_description(lang2_code)
+        row.claims = item.get_truthy_claims()
+    elif row.type == "property":
+        prop = WikidataPropertyEx(x)
+        row.label1 = prop.get_label(lang1_code)
+        row.label2 = prop.get_label(lang2_code)
+        row.alias1 = prop.get_aliases(lang1_code)
+        row.alias2 = prop.get_aliases(lang2_code)
+        row.descr1 = prop.get_description(lang1_code)
+        row.descr2 = prop.get_description(lang2_code)
+        row.claims = prop.get_truthy_claims()
+    elif row.type == "lexeme":
+        lexm = WikidataLexemeEx(x)
+        row.label1 = lexm.get_lemma(lang1_code)
+        row.label2 = lexm.get_lemma(lang2_code)
+        if not row.label1:
+            return
+        row.descr1 = lexm.get_gloss(lang1_code)
+        row.descr2 = lexm.get_gloss(lang2_code)
+        row.lang = lexm.language
+        row.cate = lexm.lexical_category
+        row.claims = lexm.get_truthy_claims()
+    if table.count_documents({"_id": i}, limit=1) > 0:
+        table.delete_one({"_id": i})
+    table.insert_one(row.to_dict())
 
 
 @app.command()
@@ -192,11 +196,11 @@ def parse(
         input_home: str = typer.Option(default="input/Wikidata"),
         input_name: str = typer.Option(default="latest-all.json.bz2"),
         input_total: int = typer.Option(default=105485440),
-        input_limit: int = typer.Option(default=100000),
+        input_limit: int = typer.Option(default=10000),
         input_lang1: str = typer.Option(default="ko"),
         input_lang2: str = typer.Option(default="en"),
         from_scratch: bool = typer.Option(default=True),
-        prog_interval: int = typer.Option(default=5000),
+        prog_interval: int = typer.Option(default=1000),
 ):
     env = ProjectEnv(
         project=project,
