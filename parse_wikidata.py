@@ -16,7 +16,7 @@ from qwikidata.entity import WikidataItem, WikidataProperty, WikidataLexeme, Cla
 from qwikidata.json_dump import WikidataJsonDump
 from qwikidata.typedefs import LanguageCode
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, TableOption
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, TableOption, MongoDBTable
 from chrisbase.io import LoggingFormat, pop_keys
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 
@@ -223,30 +223,30 @@ def parse(
     output_file = (args.env.output_home / f"{args.data.name.stem}.jsonl")
 
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        with args.table.client() as db, output_file.open("w") as out:
-            table = args.table.table(db)
+        with MongoDBTable(args.table) as out_table, output_file.open("w") as out_file:
             if args.data.from_scratch:
                 logger.info(f"Clear database table: {args.table}")
-                table.drop()
-            input_iter = WikidataJsonDump(str(args.data.home / args.data.name))
-            input_iter = islice(input_iter, args.data.limit) if args.data.limit > 0 else input_iter
+                out_table.drop()
+            inputs = WikidataJsonDump(str(args.data.home / args.data.name))
+            inputs = islice(inputs, args.data.limit) if args.data.limit > 0 else inputs
             num_input = min(args.data.total, args.data.limit) if args.data.limit > 0 else args.data.total
-            batch_iter = ichunked(input_iter, args.data.batch)
+            batches = ichunked(inputs, args.data.batch)
             num_batch = math.ceil(num_input / args.data.batch)
-            batch_interval = math.ceil(args.data.prog_interval / args.data.batch)
+            import_interval = math.ceil(args.data.prog_interval / args.data.batch)
             logger.info(f"Parse {num_input} inputs with {num_batch} batches")
-            prog_bar = tqdm(batch_iter, total=num_batch, unit="ea", pre="*", desc="importing")
+            prog_bar = tqdm(batches, total=num_batch, unit="ea", pre="*", desc="importing")
             for i, x in enumerate(prog_bar, start=1):
-                process_batches(batch=x, table=table, args=args)
-                if i % batch_interval == 0:
+                process_batches(batch=x, table=out_table, args=args)
+                if i % import_interval == 0:
                     logger.info(prog_bar)
             logger.info(prog_bar)
+            export_interval = args.data.prog_interval * 10
             find_opt = {}
-            num_row, rows = table.count_documents(find_opt), table.find(find_opt).sort("_id")
+            num_row, rows = out_table.count_documents(find_opt), out_table.find(find_opt).sort("_id")
             prog_bar = tqdm(rows, unit="ea", pre="*", desc="exporting", total=num_row)
             for i, x in enumerate(prog_bar, start=1):
-                out.write(json.dumps(pop_keys(x, ("claims", "ns")), ensure_ascii=False) + '\n')
-                if i % (args.data.prog_interval * 10) == 0:
+                out_file.write(json.dumps(pop_keys(x, ("claims", "ns")), ensure_ascii=False) + '\n')
+                if i % export_interval == 0:
                     logger.info(prog_bar)
             logger.info(prog_bar)
         logger.info(f"Export {num_row}/{num_input} rows to {output_file}")
