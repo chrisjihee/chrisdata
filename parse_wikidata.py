@@ -1,14 +1,13 @@
 import json
 import logging
-from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
 from itertools import islice
 from pathlib import Path
-from typing import Iterable
 
 import pandas as pd
 import typer
 from dataclasses_json import DataClassJsonMixin
+from pymongo.collection import Collection
 from qwikidata.claim import WikidataClaim
 from qwikidata.entity import WikidataItem, WikidataProperty, WikidataLexeme, ClaimsMixin
 from qwikidata.json_dump import WikidataJsonDump
@@ -16,7 +15,7 @@ from qwikidata.typedefs import LanguageCode
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, MongoDBOption
 from chrisbase.io import LoggingFormat, pop_keys
-from chrisbase.util import to_dataframe, mute_tqdm_cls, wait_future_jobs
+from chrisbase.util import to_dataframe, mute_tqdm_cls
 
 logger = logging.getLogger(__name__)
 app = AppTyper()
@@ -84,7 +83,7 @@ class NetOption(OptionData):
 @dataclass
 class ProgramArguments(CommonArguments):
     data: DataOption = field()
-    db: MongoDBOption = field()
+    table: MongoDBOption = field()
     net: NetOption | None = field(default=None)
     other: str | None = field(default=None)
 
@@ -98,8 +97,8 @@ class ProgramArguments(CommonArguments):
             to_dataframe(columns=columns, raw=self.time, data_prefix="time"),
             to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
             to_dataframe(columns=columns, raw=self.net, data_prefix="net") if self.net else None,
-            to_dataframe(columns=columns, raw=self.db, data_prefix="db") if self.db else None,
             to_dataframe(columns=columns, raw=self.data, data_prefix="data"),
+            to_dataframe(columns=columns, raw=self.table, data_prefix="table") if self.table else None,
             to_dataframe(columns=columns, raw={"other": self.other}),
         ]).reset_index(drop=True)
 
@@ -129,12 +128,9 @@ class WikidataUnit(DataClassJsonMixin):
     claims: list[dict] = field(default_factory=list)
 
 
-def process_item(i: int, x: dict, args: ProgramArguments):
-    with args.db.client() as db:
-        table = args.db.table(db)
+def process_item(i: int, x: dict, table: Collection, args: ProgramArguments):
         if table.count_documents({"_id": i, "eid": x['id']}, limit=1) > 0:
             return
-
         lang1_code = LanguageCode(args.data.lang1)
         lang2_code = LanguageCode(args.data.lang2)
         row = WikidataUnit(
@@ -180,11 +176,6 @@ def process_item(i: int, x: dict, args: ProgramArguments):
         table.insert_one(row.to_dict())
 
 
-def make_jobs(input_list: Iterable[tuple[int, dict]], args: ProgramArguments, pool: ProcessPoolExecutor):
-    for i, x in input_list:
-        yield i, pool.submit(process_item, i=i, x=x, args=args)
-
-
 @app.command()
 def parse(
         # env
@@ -201,11 +192,11 @@ def parse(
         input_home: str = typer.Option(default="input/Wikidata"),
         input_name: str = typer.Option(default="latest-all.json.bz2"),
         input_total: int = typer.Option(default=105485440),
-        input_limit: int = typer.Option(default=10),
+        input_limit: int = typer.Option(default=100000),
         input_lang1: str = typer.Option(default="ko"),
         input_lang2: str = typer.Option(default="en"),
         from_scratch: bool = typer.Option(default=True),
-        prog_interval: int = typer.Option(default=10000),
+        prog_interval: int = typer.Option(default=5000),
 ):
     env = ProjectEnv(
         project=project,
@@ -223,10 +214,6 @@ def parse(
             calling_sec=calling_sec,
             waiting_sec=waiting_sec,
         ),
-        db=MongoDBOption(
-            tab_name=env.job_name,
-            db_name=env.project,
-        ),
         data=DataOption(
             home=input_home,
             name=input_name,
@@ -237,22 +224,31 @@ def parse(
             from_scratch=from_scratch,
             prog_interval=prog_interval if prog_interval > 0 else env.max_workers,
         ),
+        table=MongoDBOption(
+            db_name=env.project,
+            tab_name=env.job_name,
+        ),
     )
     tqdm = mute_tqdm_cls()
     output_file = (args.env.output_home / f"{args.data.name.stem}.jsonl")
 
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        if args.data.from_scratch:
-            logger.info(f"Clear database table: {args.db.clear_table()}")
-        wikidata_dump = WikidataJsonDump(str(args.data.home / args.data.name))
-        input_iter = islice(enumerate(wikidata_dump, start=1), args.data.limit) if args.data.limit > 0 else enumerate(wikidata_dump, start=1)
-        input_size = min(args.data.total, args.data.limit) if args.data.limit > 0 else args.data.total
-        logger.info(f"Use {args.env.max_workers} workers to parse {input_size} Wikidata items")
-        with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
-            prog_bar = tqdm(make_jobs(input_iter, args, pool), total=input_size, unit="ea", pre="*", desc="importing")
-            wait_future_jobs(prog_bar, timeout=args.net.waiting_sec, interval=args.data.prog_interval, pool=pool)
-        with output_file.open("w") as out, args.db.client() as db:
-            table, find_opt = args.db.table(db), {}
+        with args.table.client() as db, output_file.open("w") as out:
+            table = args.table.table(db)
+            if args.data.from_scratch:
+                logger.info(f"Clear database table: {args.table}")
+                table.drop()
+            input_iter = WikidataJsonDump(str(args.data.home / args.data.name))
+            input_iter = islice(input_iter, args.data.limit) if args.data.limit > 0 else input_iter
+            input_size = min(args.data.total, args.data.limit) if args.data.limit > 0 else args.data.total
+            logger.info(f"Use {args.env.max_workers} workers to parse {input_size} Wikidata items")
+            prog_bar = tqdm(input_iter, total=input_size, unit="ea", pre="*", desc="importing")
+            for i, x in enumerate(prog_bar, start=1):
+                process_item(i=i, x=x, table=table, args=args)
+                if i % args.data.prog_interval == 0:
+                    logger.info(prog_bar)
+            logger.info(prog_bar)
+            find_opt = {}
             num_row, rows = table.count_documents(find_opt), table.find(find_opt).sort("_id")
             prog_bar = tqdm(rows, unit="ea", pre="*", desc="exporting", total=num_row)
             for i, row in enumerate(prog_bar, start=1):
