@@ -218,7 +218,7 @@ def parse(
         ),
     )
     tqdm = mute_tqdm_cls()
-    output_file = (args.env.output_home / f"{args.data.name.stem}.jsonl")
+    output_file = (args.env.output_home / f"{args.data.name.stem}-{args.env.time_stamp}.jsonl")
 
     with (JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='=')):
         with MongoDBTable(args.table) as out_table, output_file.open("w") as out_file:
@@ -232,19 +232,19 @@ def parse(
             logger.info(f"Parse {num_input} inputs with {num_batch} batches")
             progress, interval = (tqdm(batches, total=num_batch, unit="batch", pre="*", desc="importing"),
                                   math.ceil(args.data.prog_interval / args.data.batch))
-            for i, x in enumerate(progress, start=1):
-                process_many(batch=x, table=out_table, args=args)
-                if i % interval == 0:
+            for i, x in enumerate(progress):
+                if i > 0 and i % interval == 0:
                     logger.info(progress)
+                process_many(batch=x, table=out_table, args=args)
             logger.info(progress)
             find_opt = {}
             num_row, rows = out_table.count_documents(find_opt), out_table.find(find_opt).sort("_id")
             progress, interval = (tqdm(rows, total=num_row, unit="row", pre="*", desc="exporting"),
                                   args.data.prog_interval * 10)
-            for i, x in enumerate(progress, start=1):
-                out_file.write(json.dumps(pop_keys(x, ("claims", "ns")), ensure_ascii=False) + '\n')
-                if i % interval == 0:
+            for i, x in enumerate(progress):
+                if i > 0 and i % interval == 0:
                     logger.info(progress)
+                out_file.write(json.dumps(pop_keys(x, ("claims", "ns")), ensure_ascii=False) + '\n')
             logger.info(progress)
         logger.info(f"Export {num_row}/{num_input} rows to {output_file}")
 
