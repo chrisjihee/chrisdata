@@ -74,8 +74,6 @@ class DataOption(OptionData):
     def __post_init__(self):
         self.home = Path(self.home)
         self.name = Path(self.name)
-        self.lang1_code = LanguageCode(self.lang1)
-        self.lang2_code = LanguageCode(self.lang2)
 
 
 @dataclass
@@ -116,7 +114,7 @@ class WikidataUnit(DataClassJsonMixin):
     claims: list[dict] = field(default_factory=list)
 
 
-def process_item(x: dict, args: ProgramArguments):
+def process_one(x: dict, args: ProgramArguments):
     lang1_code = LanguageCode(args.data.lang1)
     lang2_code = LanguageCode(args.data.lang2)
     row = WikidataUnit(
@@ -162,9 +160,9 @@ def process_item(x: dict, args: ProgramArguments):
     return None
 
 
-def process_batches(batch: Iterable[dict], table: Collection, args: ProgramArguments):
+def process_many(batch: Iterable[dict], table: Collection, args: ProgramArguments):
     rows = [None if table.count_documents({"_id": x['id']}, limit=1) > 0
-            else process_item(x, args) for x in batch]
+            else process_one(x, args) for x in batch]
     rows = [row.to_dict() for row in rows if row]
     if len(rows) > 0:
         table.insert_many(rows)
@@ -232,22 +230,22 @@ def parse(
                 num_input, inputs = min(args.data.total, args.data.limit), islice(inputs, args.data.limit)
             num_batch, batches = math.ceil(num_input / args.data.batch), ichunked(inputs, args.data.batch)
             logger.info(f"Parse {num_input} inputs with {num_batch} batches")
-            prog_bar, interval = (tqdm(batches, total=num_batch, unit="batch", pre="*", desc="importing"),
+            progress, interval = (tqdm(batches, total=num_batch, unit="batch", pre="*", desc="importing"),
                                   math.ceil(args.data.prog_interval / args.data.batch))
-            for i, x in enumerate(prog_bar, start=1):
-                process_batches(batch=x, table=out_table, args=args)
+            for i, x in enumerate(progress, start=1):
+                process_many(batch=x, table=out_table, args=args)
                 if i % interval == 0:
-                    logger.info(prog_bar)
-            logger.info(prog_bar)
+                    logger.info(progress)
+            logger.info(progress)
             find_opt = {}
             num_row, rows = out_table.count_documents(find_opt), out_table.find(find_opt).sort("_id")
-            prog_bar, interval = (tqdm(rows, total=num_row, unit="row", pre="*", desc="exporting"),
+            progress, interval = (tqdm(rows, total=num_row, unit="row", pre="*", desc="exporting"),
                                   args.data.prog_interval * 10)
-            for i, x in enumerate(prog_bar, start=1):
+            for i, x in enumerate(progress, start=1):
                 out_file.write(json.dumps(pop_keys(x, ("claims", "ns")), ensure_ascii=False) + '\n')
                 if i % interval == 0:
-                    logger.info(prog_bar)
-            logger.info(prog_bar)
+                    logger.info(progress)
+            logger.info(progress)
         logger.info(f"Export {num_row}/{num_input} rows to {output_file}")
 
 
