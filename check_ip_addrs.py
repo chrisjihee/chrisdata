@@ -63,7 +63,7 @@ class ProcessResult(DataClassJsonMixin):
     text: str | None = None
 
 
-def process_query(i: int, x: str, s: float | None = None):
+def process_one(i: int, x: str, s: float | None = None):
     if s and s > 0:
         time.sleep(s)
     with httpx.Client(
@@ -132,7 +132,7 @@ def check(
             input_size = min(args.data.total, args.data.limit) if args.data.limit > 0 else args.data.total
             logger.info(f"Use {args.env.max_workers} workers to check {input_size} IP addresses")
             with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
-                jobs = [(i, pool.submit(process_query, i=i, x=x, s=args.net.calling_sec)) for i, x in input_list]
+                jobs = [(i, pool.submit(process_one, i=i, x=x, s=args.net.calling_sec)) for i, x in input_list]
                 prog_bar = tqdm(jobs, unit="ea", pre="*", desc="visiting")
                 wait_future_jobs(prog_bar, timeout=args.net.waiting_sec, interval=args.data.prog_interval, pool=pool)
             with output_file.open("w") as out:

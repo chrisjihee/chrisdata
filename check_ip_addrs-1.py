@@ -18,14 +18,13 @@ from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArg
 from chrisbase.io import LoggingFormat
 from chrisbase.util import MongoDB, to_dataframe, mute_tqdm_cls, wait_future_jobs, terminate_processes
 
-mongos: List[MongoDB] = []
 logger = logging.getLogger(__name__)
 app = AppTyper()
 
 
 @dataclass
 class DataOption(OptionData):
-    items: enumerate = field()
+    items: Iterable[str] = field()
     total: int = field(default=0)
     limit: int = field(default=-1)
     batch: int = field(default=1)
