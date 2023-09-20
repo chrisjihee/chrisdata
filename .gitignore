@@ -128,5 +128,6 @@ chrisbase/
 chrislab/
 output*/
 mongodb*/
+elasticsearch*/
 input/Wikidata
 input/Wikipedia
