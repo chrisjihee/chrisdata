@@ -1,0 +1,56 @@
+[09.20 18:18:45] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[09.20 18:18:45] ┇ INFO     ┇           chrisbase.data ┇ [INIT] python parse_wikidata.py 
+[09.20 18:18:45] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇ -----+--------------------+----------------------------------------------------------
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇    # | ProgramArguments   | value
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇ -----+--------------------+----------------------------------------------------------
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇    1 | time.started       | [09.20 18:18:46]
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇    2 | time.settled       |
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇    3 | time.elapsed       |
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇    4 | env.project        | WiseData
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇    5 | env.job_name       | parse_wikidata
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇    6 | env.hostname       | ChrisBookPro.local
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇    7 | env.hostaddr       | 192.168.0.8
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇    8 | env.python_path    | /Users/chris/miniforge3/envs/WiseData-2023.08/bin/python
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇    9 | env.working_path   | /Users/chris/proj/WiseData-2023.08
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   10 | env.running_file   | parse_wikidata.py
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   11 | env.command_args   | []
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   12 | env.num_ip_addrs   | 0
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   13 | env.max_workers    | 1
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   14 | env.output_home    | output-parse_wikidata
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   15 | env.logging_file   | logging-0920.181844.out
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   16 | env.argument_file  | arguments-0920.181844.json
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   17 | env.debugging      | False
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   18 | env.msg_level      | 20
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   19 | env.msg_format     | %(asctime)s ┇ %(levelname)-8s ┇ %(name)24s ┇ %(message)s
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   20 | env.date_format    | [%m.%d %H:%M:%S]
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   21 | env.time_stamp     | 0920.181844
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   22 | data.home          | input/Wikidata
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   23 | data.name          | latest-all.json.bz2
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   24 | data.total         | 105485440
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   25 | data.lang1         | ko
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   26 | data.lang2         | en
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   27 | data.limit         | -1
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   28 | data.batch         | 100
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   29 | data.from_scratch  | False
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   30 | data.prog_interval | 10000
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   31 | table.db_host      | localhost:6382
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   32 | table.db_name      | WiseData
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   33 | table.tab_name     | parse_wikidata
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇   34 | other              |
+[09.20 18:18:46] ┇ INFO     ┇           chrisbase.data ┇ -----+--------------------+----------------------------------------------------------
+[09.20 18:18:52] ┇ INFO     ┇                 __main__ ┇ *  exporting:  10%|████▊                                             | 98026/1018174 [00:06<01:00, 15299.76row/s]
+[09.20 18:18:57] ┇ INFO     ┇                 __main__ ┇ *  exporting:  20%|█████████▊                                        | 199743/1018174 [00:11<01:16, 10643.40row/s]
+[09.20 18:19:04] ┇ INFO     ┇                 __main__ ┇ *  exporting:  29%|██████████████▋                                   | 297891/1018174 [00:18<01:05, 11070.79row/s]
+[09.20 18:19:12] ┇ INFO     ┇                 __main__ ┇ *  exporting:  39%|███████████████████▌                              | 398234/1018174 [00:25<01:08, 9016.42row/s]
+[09.20 18:19:19] ┇ INFO     ┇                 __main__ ┇ *  exporting:  49%|████████████████████████▍                         | 496973/1018174 [00:33<00:57, 9138.73row/s]
+[09.20 18:19:29] ┇ INFO     ┇                 __main__ ┇ *  exporting:  59%|█████████████████████████████▎                    | 597920/1018174 [00:43<00:48, 8694.97row/s]
+[09.20 18:19:35] ┇ INFO     ┇                 __main__ ┇ *  exporting:  69%|██████████████████████████████████▎               | 698341/1018174 [00:48<00:16, 19277.79row/s]
+[09.20 18:19:40] ┇ INFO     ┇                 __main__ ┇ *  exporting:  78%|███████████████████████████████████████▏          | 798065/1018174 [00:54<00:14, 15262.35row/s]
+[09.20 18:19:44] ┇ INFO     ┇                 __main__ ┇ *  exporting:  88%|████████████████████████████████████████████      | 896742/1018174 [00:58<00:04, 27201.76row/s]
+[09.20 18:19:48] ┇ INFO     ┇                 __main__ ┇ *  exporting:  98%|█████████████████████████████████████████████████ | 998630/1018174 [01:02<00:00, 22442.56row/s]
+[09.20 18:19:49] ┇ INFO     ┇                 __main__ ┇ *  exporting: 100%|██████████████████████████████████████████████████| 1018174/1018174 [01:03<00:00, 16128.78row/s]
+[09.20 18:19:49] ┇ INFO     ┇                 __main__ ┇ Export 1018174/105485440 rows to output-parse_wikidata/latest-all.json-0920.181844.jsonl
+[09.20 18:19:49] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[09.20 18:19:49] ┇ INFO     ┇           chrisbase.data ┇ [EXIT] python parse_wikidata.py  ($=00:01:03.353)
+[09.20 18:19:49] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
