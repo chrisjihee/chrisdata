@@ -12,14 +12,25 @@ git clone https://github.com/chrisjihee/chrislab.git
 pip install --editable chrisbase
 pip install --editable chrislab
 
-# MongoDB
+# for mongodb
 mkdir mongodb
 cd mongodb || exit
 mkdir data log
-if [ "$(uname)" = "Darwin" ]; then
-  wget https://fastdl.mongodb.org/osx/mongodb-macos-arm64-7.0.1.tgz
-elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+if [ "$(uname)" = "Linux" ]; then
   wget https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2004-7.0.1.tgz
+elif [ "$(uname)" = "Darwin" ]; then
+  wget https://fastdl.mongodb.org/osx/mongodb-macos-arm64-7.0.1.tgz
 fi
 tar zxvf mongodb-*.tgz --strip-components 1
+cd ..
+
+# for elasticsearch
+mkdir elasticsearch
+cd elasticsearch || exit
+if [ "$(uname)" = "Linux" ]; then
+  wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.10.1-linux-x86_64.tar.gz
+elif [ "$(uname)" = "Darwin" ]; then
+  wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.10.1-darwin-aarch64.tar.gz
+fi
+tar zxvf elasticsearch-*.tar.gz --strip-components 1
 cd ..
