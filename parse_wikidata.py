@@ -17,7 +17,7 @@ from qwikidata.json_dump import WikidataJsonDump
 from qwikidata.typedefs import LanguageCode
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, TableOption, MongoDBTable
-from chrisbase.io import LoggingFormat, pop_keys
+from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 
 logger = logging.getLogger(__name__)
@@ -244,7 +244,7 @@ def parse(
             for i, x in enumerate(progress):
                 if i > 0 and i % interval == 0:
                     logger.info(progress)
-                out_file.write(json.dumps(pop_keys(x, ("ns",)), ensure_ascii=False) + '\n')
+                out_file.write(json.dumps(x, ensure_ascii=False) + '\n')
             logger.info(progress)
         logger.info(f"Export {num_row}/{num_input} rows to {output_file}")
 
