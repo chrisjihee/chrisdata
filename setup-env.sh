@@ -1,4 +1,3 @@
-#!/bin/bash
 # for running program
 conda create -n WiseData-2023.08 python=3.10 -y
 conda activate WiseData-2023.08

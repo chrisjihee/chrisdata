@@ -184,7 +184,7 @@ def parse(
         input_batch: int = typer.Option(default=100),
         input_lang1: str = typer.Option(default="ko"),
         input_lang2: str = typer.Option(default="en"),
-        from_scratch: bool = typer.Option(default=True),
+        from_scratch: bool = typer.Option(default=False),
         prog_interval: int = typer.Option(default=10000),
         # table
         db_host: str = typer.Option(default="localhost:6382"),
@@ -244,7 +244,7 @@ def parse(
             for i, x in enumerate(progress):
                 if i > 0 and i % interval == 0:
                     logger.info(progress)
-                out_file.write(json.dumps(pop_keys(x, ("claims", "ns")), ensure_ascii=False) + '\n')
+                out_file.write(json.dumps(pop_keys(x, ("ns",)), ensure_ascii=False) + '\n')
             logger.info(progress)
         logger.info(f"Export {num_row}/{num_input} rows to {output_file}")
 
