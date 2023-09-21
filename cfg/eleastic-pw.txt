@@ -1,0 +1,2 @@
+ℹ️  Password for the elastic user (reset with `bin/elasticsearch-reset-password -u elastic`):
+  rb9ItcDRMN0OmDa1ftnw
