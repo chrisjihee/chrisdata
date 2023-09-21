@@ -14,15 +14,18 @@ input_documents = "input/CHOSUN_2000.small.jsonl"
 total_documents = 50
 
 
-def _document_generator(documents_path, title_concat=False):
+def _document_generator(documents_path):
     with open(documents_path) as fp:
         documents = list(map(lambda x: json.loads(x), fp.readlines()))
         for i, document in enumerate(documents):
             yield dict(
-                id=document["id"],
                 index=i,
+                id=document["id"],
+                lang=document["lang"],
+                date=document["date"],
                 title=document["title"],
-                body=f"{document['title']} {document['body']}" if title_concat else document['body']
+                body=document['body'],
+                both=f"{document['title']} {document['body']}"
             )
 
 
@@ -45,7 +48,7 @@ def main():
         settings={
             "analysis": {
                 "analyzer": {"my_analyzer": {"tokenizer": "my_tokenizer"}},
-                "tokenizer": {"my_tokenizer": {"type": "ngram", "min_gram": "2", "max_gram": "2", }}
+                "tokenizer": {"my_tokenizer": {"type": "ngram", "min_gram": "2", "max_gram": "2", }},
             },
             "index": {
                 "number_of_shards": 1,
@@ -54,10 +57,13 @@ def main():
         },
         mappings={
             "properties": {
-                "id": {"type": "keyword"},
                 "index": {"type": "integer"},
+                "id": {"type": "keyword"},
+                "lang": {"type": "keyword"},
+                "date": {"type": "keyword"},
                 "title": {"type": "keyword"},
-                "body": {"type": "text", "analyzer": "my_analyzer"}
+                "body": {"type": "text", "analyzer": "my_analyzer"},
+                "both": {"type": "text", "analyzer": "my_analyzer"},
             },
         },
         # ignore=400
@@ -67,8 +73,7 @@ def main():
     successes = 0
     pbar = tqdm(unit="docs", total=total_documents, desc="Indexing")
     for ok, action in streaming_bulk(client=es,
-                                     actions=_document_generator(documents_path=input_documents,
-                                                                 title_concat=True),
+                                     actions=_document_generator(documents_path=input_documents),
                                      index=elastic_index_name,
                                      chunk_size=256, ):
         pbar.update(1)
@@ -79,27 +84,30 @@ def main():
     es.indices.refresh(index=elastic_index_name)
     print(es.cat.indices(index=elastic_index_name, v=True).body.strip())
 
-    query = "대통령"
+    query = "도쿄"
+    nbest = 2
     response: ObjectApiResponse = es.search(
         index=elastic_index_name,
-        explain=True,
         query={
-            "match": {"body": {"query": query}}
+            "match": {
+                "both": {"query": query}
+            },
         },
-        _source=("id", "body"),
-        size=10,
+        _source=("id", "title", "body"),
+        size=nbest,
     )
-    print(response)
+    print(json.dumps(dict(response), ensure_ascii=False))
     response: ObjectApiResponse = es.search(
         index=elastic_index_name,
-        explain=False,
         query={
-            "match": {"body": {"query": query}}
+            "match": {
+                "both": {"query": query}
+            },
         },
-        _source=("id",),
-        size=10,
+        _source=("index", "id", "lang", "date", "title"),
+        size=nbest,
     )
-    print(response)
+    print(json.dumps(dict(response), ensure_ascii=False))
 
 
 if __name__ == "__main__":
