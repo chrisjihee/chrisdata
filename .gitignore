@@ -129,5 +129,5 @@ chrislab/
 output*/
 mongodb*/
 elasticsearch*/
-input/Wikidata
-input/Wikipedia
+input/Wikidata*
+input/Wikipedia*
