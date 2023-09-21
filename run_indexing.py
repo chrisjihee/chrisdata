@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+from elastic_transport import ObjectApiResponse
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import streaming_bulk
 from tqdm import tqdm
@@ -75,9 +76,30 @@ def main():
     pbar.close()
 
     print("Indexed %d/%d documents" % (successes, total_documents))
-
     es.indices.refresh(index=elastic_index_name)
-    print(es.cat.indices(index=elastic_index_name, v=True))
+    print(es.cat.indices(index=elastic_index_name, v=True).body.strip())
+
+    query = "대통령"
+    response: ObjectApiResponse = es.search(
+        index=elastic_index_name,
+        explain=True,
+        query={
+            "match": {"body": {"query": query}}
+        },
+        _source=("id", "body"),
+        size=10,
+    )
+    print(response)
+    response: ObjectApiResponse = es.search(
+        index=elastic_index_name,
+        explain=False,
+        query={
+            "match": {"body": {"query": query}}
+        },
+        _source=("id",),
+        size=10,
+    )
+    print(response)
 
 
 if __name__ == "__main__":
