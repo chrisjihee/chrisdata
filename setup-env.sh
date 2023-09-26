@@ -30,4 +30,3 @@ elif [ "$(uname)" = "Darwin" ]; then
   wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.10.1-darwin-aarch64.tar.gz
 fi
 tar zxvf elasticsearch-*.tar.gz
-cd ..
