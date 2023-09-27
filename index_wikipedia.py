@@ -25,7 +25,7 @@ app = AppTyper()
 class DataOption(OptionData):
     home: str | Path = field()
     name: str | Path = field()
-    total: int = field(default=1410203)  # wc -l Wikipedia-20230920-crawl-kowiki.jsonl
+    total: int = field(default=9740173)  # wc -l Wikipedia-20230920-parse-kowiki.jsonl
     start: int = field(default=0)
     limit: int = field(default=-1)
     batch: int = field(default=1)

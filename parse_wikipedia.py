@@ -38,21 +38,9 @@ class DataOption(OptionData):
 
 
 @dataclass
-class IndexOption(OptionData):
-    host: str = field()
-    cert: str = field()
-    pswd: str = field()
-    name: str = field()
-
-    def __repr__(self):
-        return f"{self.host}/{self.name}"
-
-
-@dataclass
 class ProgramArguments(CommonArguments):
     data: DataOption = field()
     table: TableOption = field()
-    index: IndexOption = field()
     other: str | None = field(default=None)
 
     def __post_init__(self):
@@ -65,7 +53,6 @@ class ProgramArguments(CommonArguments):
             to_dataframe(columns=columns, raw=self.time, data_prefix="time"),
             to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
             to_dataframe(columns=columns, raw=self.data, data_prefix="data"),
-            to_dataframe(columns=columns, raw=self.index, data_prefix="index"),
             to_dataframe(columns=columns, raw={"other": self.other}),
         ]).reset_index(drop=True)
 
@@ -79,12 +66,10 @@ class PassageUnit(DataClassJsonMixin):
     body_text: str
 
 
-def process_one(x: str, processed: set[str]) -> Iterable[PassageUnit]:
+def process_one(x: str, processed: set[int]) -> Iterable[PassageUnit]:
     doc: WikipediaProcessResult = WikipediaProcessResult.from_json(x)
-    if not doc.title or not doc.page_id or not doc.section_list:
-        return None
-    doc.title = doc.title.strip()
-    if doc.title in processed:
+    doc.title = doc.title.strip() if doc.title else ""
+    if not doc.page_id or doc.page_id in processed or not doc.title or not doc.section_list:
         return None
     sect_ids: tuple[int, int] = (1, 1)
     sect_heads: tuple[str, str] = ("", "")
@@ -108,12 +93,12 @@ def process_one(x: str, processed: set[str]) -> Iterable[PassageUnit]:
             continue
         for text_id, text in enumerate(sect_texts, start=1):
             path_ids = sect_ids + (text_id,)
-            _id = f"{doc.title}-{'-'.join([f'{i:03d}' for i in path_ids])}"
+            _id = f"{doc.page_id:07d}-{'-'.join([f'{i:03d}' for i in path_ids])}"
             yield PassageUnit(_id=_id, title=doc.title, subtitle1=h1, subtitle2=h2, body_text=text)
-    processed.add(doc.title)
+    processed.add(doc.page_id)
 
 
-def process_many(batch: Iterable[str], table: Collection, processed: set[str]):
+def process_many(batch: Iterable[str], table: Collection, processed: set[int]):
     batch_units = [x for x in [process_one(x, processed) for x in batch] if x]
     all_units = [unit for batch in batch_units for unit in batch]
     rows = [row.to_dict() for row in all_units if row]
@@ -125,15 +110,13 @@ def process_many(batch: Iterable[str], table: Collection, processed: set[str]):
 def parse(
         # env
         project: str = typer.Option(default="WiseData"),
-        job_name: str = typer.Option(default="index_wikipedia"),
-        output_home: str = typer.Option(default="output-index_wikipedia"),
+        job_name: str = typer.Option(default="parse_wikipedia"),
+        output_home: str = typer.Option(default="output-parse_wikipedia"),
         logging_file: str = typer.Option(default="logging.out"),
         debugging: bool = typer.Option(default=False),
         # data
         input_home: str = typer.Option(default="input/Wikidata-parse"),
         input_name: str = typer.Option(default="Wikipedia-20230920-crawl-kowiki.jsonl.bz2"),
-        # input_name: str = typer.Option(default="Wikipedia-20230920-crawl-kowiki.jsonl"),
-        # input_name: str = typer.Option(default="Wikipedia-704365.jsonl"),
         input_total: int = typer.Option(default=1410203),
         input_start: int = typer.Option(default=0),
         input_limit: int = typer.Option(default=-1),
@@ -142,11 +125,6 @@ def parse(
         prog_interval: int = typer.Option(default=10000),
         # table
         db_host: str = typer.Option(default="localhost:6382"),
-        # index
-        index_host: str = typer.Option(default="localhost:9200"),
-        index_cert: str = typer.Option(default="cfg/http_ca.crt"),
-        index_pass: str = typer.Option(default="cfg/eleastic-pw.txt"),
-        index_name: str = typer.Option(default="Wikipedia-20230920-crawl-kowiki"),
 ):
     env = ProjectEnv(
         project=project,
@@ -173,12 +151,6 @@ def parse(
             db_host=db_host,
             db_name=env.project,
             tab_name=env.job_name,
-        ),
-        index=IndexOption(
-            host=index_host,
-            cert=index_cert,
-            pswd=index_pass,
-            name=index_name,
         ),
     )
     tqdm = mute_tqdm_cls()
