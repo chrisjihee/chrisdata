@@ -6,10 +6,10 @@ from elasticsearch import Elasticsearch
 from elasticsearch.helpers import streaming_bulk
 from tqdm import tqdm
 
-elastic_password = Path("cfg/eleastic-pw.txt").read_text().strip().splitlines()[-1].strip()
+elastic_password = Path("cfg/elastic-pw.txt").read_text().strip().splitlines()[-1].strip()
 elastic_index_name = "example_index"
 elastic_host_info = "https://localhost:9200"
-elastic_ca_certs = "cfg/http_ca.crt"
+elastic_ca_certs = "elasticsearch/config/certs/http_ca.crt"
 input_documents = "input/CHOSUN_2000.small.jsonl"
 total_documents = 50
 
