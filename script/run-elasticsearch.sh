@@ -1,1 +1,1 @@
-elasticsearch-*/bin/elasticsearch
+elasticsearch/bin/elasticsearch
