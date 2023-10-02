@@ -27,9 +27,9 @@ cd ..
 mkdir elasticsearch8
 cd elasticsearch8 || exit
 if [ "$(uname)" = "Linux" ]; then
-  wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.10.1-linux-x86_64.tar.gz
+  wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.10.2-linux-x86_64.tar.gz
 elif [ "$(uname)" = "Darwin" ]; then
-  wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.10.1-darwin-aarch64.tar.gz
+  wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.10.2-darwin-x86_64.tar.gz
 fi
 tar zxvf elasticsearch-*.tar.gz --strip-components 1
 cd ..

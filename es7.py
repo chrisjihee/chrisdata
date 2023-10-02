@@ -2,9 +2,7 @@ from elasticsearch import Elasticsearch, helpers
 
 # Establish a connection to the Elasticsearch cluster.
 # If Elasticsearch is running on a different host or port, modify the line below accordingly.
-es = Elasticsearch("http://localhost:9200"
-                   # , basic_auth=("elastic", "viygZnjDVBegPHgFXk2Y")
-                   )
+es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
 
 # Define an index name
 index_name = "test_index"
