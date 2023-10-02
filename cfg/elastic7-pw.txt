@@ -1,0 +1,26 @@
+(WiseData-2023.08) chris@chrisBookPro elasticsearch7 % ./bin/elasticsearch-setup-passwords auto
+Initiating the setup of passwords for reserved users elastic,apm_system,kibana,kibana_system,logstash_system,beats_system,remote_monitoring_user.
+The passwords will be randomly generated and printed to the console.
+Please confirm that you would like to continue [y/N]y
+
+
+Changed password for user apm_system
+PASSWORD apm_system = 9HkS9FLYAe7G5CgJJxxc
+
+Changed password for user kibana_system
+PASSWORD kibana_system = UfTDYzYiiK9ny2SJpC7K
+
+Changed password for user kibana
+PASSWORD kibana = UfTDYzYiiK9ny2SJpC7K
+
+Changed password for user logstash_system
+PASSWORD logstash_system = Ywamoj5XI6a7TCGuMu7b
+
+Changed password for user beats_system
+PASSWORD beats_system = LczYlYwU0gr5SgpH91Qc
+
+Changed password for user remote_monitoring_user
+PASSWORD remote_monitoring_user = fKnD1oIotiygpHn8Bx3X
+
+Changed password for user elastic
+PASSWORD elastic = RGzYkwogSi2jg9oE1oI6

@@ -31,7 +31,8 @@ if [ "$(uname)" = "Linux" ]; then
 elif [ "$(uname)" = "Darwin" ]; then
   wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.10.2-darwin-aarch64.tar.gz
 fi
-tar zxvf elasticsearch-*.tar.gz --strip-components 1
+tar zxf elasticsearch-*.tar.gz --strip-components 1
+sed -i '' 's/#http.port: 9200/http.port: 9810/g' ./config/elasticsearch.yml
 cd ..
 
 # for elasticsearch7
@@ -42,9 +43,9 @@ if [ "$(uname)" = "Linux" ]; then
 elif [ "$(uname)" = "Darwin" ]; then
   wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.17.10-darwin-aarch64.tar.gz
 fi
-tar zxvf elasticsearch-*.tar.gz --strip-components 1
+tar zxf elasticsearch-*.tar.gz --strip-components 1
+sed -i '' 's/#http.port: 9200/http.port: 9717/g' ./config/elasticsearch.yml
 echo "xpack.security.enabled: true" >> ./config/elasticsearch.yml
-echo "discovery.type: single-node" >> ./config/elasticsearch.yml
 ./bin/elasticsearch
 ./bin/elasticsearch-setup-passwords auto
 cd ..

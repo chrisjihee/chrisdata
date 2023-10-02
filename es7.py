@@ -2,7 +2,7 @@ from elasticsearch import Elasticsearch, helpers
 
 # Establish a connection to the Elasticsearch cluster.
 # If Elasticsearch is running on a different host or port, modify the line below accordingly.
-es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
+es = Elasticsearch("http://localhost:9717", basic_auth=("elastic", "RGzYkwogSi2jg9oE1oI6"))
 
 # Define an index name
 index_name = "test_index"
@@ -20,7 +20,7 @@ doc = {
     "age": 30,
     "interests": ["coding", "hiking"]
 }
-es.index(index=index_name, id=1, document=doc)
+print(es.index(index=index_name, document=doc))
 
 # Refresh the index to make sure the document is searchable.
 es.indices.refresh(index=index_name)

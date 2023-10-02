@@ -2,7 +2,7 @@ from datetime import datetime
 from elasticsearch import Elasticsearch
 
 # Create a connection
-es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
+es = Elasticsearch("http://localhost:9717", basic_auth=("elastic", "RGzYkwogSi2jg9oE1oI6"))
 
 # Ping the Elasticsearch Cluster
 if not es.ping():
@@ -10,8 +10,9 @@ if not es.ping():
 
 # Create an index
 index_name = "my_index"
-if not es.indices.exists(index_name):
-    es.indices.create(index=index_name)
+if es.indices.exists(index=index_name):
+    es.indices.delete(index=index_name)
+es.indices.create(index=index_name)
 
 # Index a document
 doc = {
@@ -19,11 +20,11 @@ doc = {
     'text': 'Elasticsearch: cool. bonsai cool.',
     'timestamp': datetime.now(),
 }
-res = es.index(index=index_name, doc_type='_doc', body=doc)
-print(res['result'])
+print(es.index(index=index_name, document=doc))
+es.indices.refresh(index=index_name)
 
 # Search for the document
-res = es.search(index=index_name, body={"query": {"match_all": {}}})
+res = es.search(index=index_name, query={"match_all": {}})
 print("Got %d Hits:" % res['hits']['total']['value'])
 for hit in res['hits']['hits']:
     print(hit["_source"])
