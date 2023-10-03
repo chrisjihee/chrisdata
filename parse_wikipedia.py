@@ -121,8 +121,8 @@ def parse(
         input_start: int = typer.Option(default=0),
         input_limit: int = typer.Option(default=-1),
         input_batch: int = typer.Option(default=1000),
-        from_scratch: bool = typer.Option(default=True),
         prog_interval: int = typer.Option(default=10000),
+        from_scratch: bool = typer.Option(default=True),
         # table
         db_host: str = typer.Option(default="localhost:6382"),
 ):
@@ -135,27 +135,29 @@ def parse(
         msg_level=logging.DEBUG if debugging else logging.INFO,
         msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
     )
+    data_opt = DataOption(
+        home=input_home,
+        name=input_name,
+        total=input_total,
+        start=input_start,
+        limit=input_limit,
+        batch=input_batch,
+        from_scratch=from_scratch,
+        prog_interval=prog_interval,
+    )
+    table_name = data_opt.name.stem.replace("-crawl-", "-parse-").replace(".jsonl", "")
+    table_opt = TableOption(
+        db_host=db_host,
+        db_name=env.project,
+        tab_name=table_name,
+    )
     args = ProgramArguments(
         env=env,
-        data=DataOption(
-            home=input_home,
-            name=input_name,
-            total=input_total,
-            start=input_start,
-            limit=input_limit,
-            batch=input_batch,
-            from_scratch=from_scratch,
-            prog_interval=prog_interval,
-        ),
-        table=TableOption(
-            db_host=db_host,
-            db_name=env.project,
-            tab_name=env.job_name,
-        ),
+        data=data_opt,
+        table=table_opt,
     )
     tqdm = mute_tqdm_cls()
-    output_name = args.data.name.stem.replace("-crawl-", "-parse-").replace(".jsonl", "")
-    output_file = (args.env.output_home / f"{output_name}-{args.env.time_stamp}.jsonl")
+    output_file = (env.output_home / f"{table_name}-{env.time_stamp}.jsonl")
 
     with (JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='=')):
         with MongoDBTable(args.table) as out_table, output_file.open("w") as out_file:
@@ -171,6 +173,7 @@ def parse(
             logger.info(f"Parse {num_input} inputs with {num_batch} batches")
             progress, interval = (tqdm(batches, total=num_batch, unit="batch", pre="*", desc="importing"),
                                   math.ceil(args.data.prog_interval / args.data.batch))
+
             processed = set()
             for i, x in enumerate(progress):
                 if i > 0 and i % interval == 0:

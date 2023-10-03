@@ -1,23 +1,21 @@
-import json
 import logging
 import math
 from dataclasses import dataclass, field
 from itertools import islice
 from pathlib import Path
 from typing import Iterable
-from elastic_transport import ObjectApiResponse
-from elasticsearch.helpers import streaming_bulk
 
 import pandas as pd
 import typer
 from dataclasses_json import DataClassJsonMixin
+from elastic_transport import ObjectApiResponse
+from elasticsearch import Elasticsearch
+from elasticsearch.helpers import streaming_bulk
 from more_itertools import ichunked
-from pymongo.collection import Collection
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, TableOption, IndexOption, MongoDBTable, ElasticSearchClient
 from chrisbase.io import LoggingFormat, iter_compressed
 from chrisbase.util import to_dataframe, mute_tqdm_cls
-from crawl_wikipedia import ProcessResult as WikipediaProcessResult
 
 logger = logging.getLogger(__name__)
 app = AppTyper()
@@ -70,46 +68,14 @@ class PassageUnit(DataClassJsonMixin):
     body_text: str
 
 
-def process_one(x: str, processed: set[str]) -> Iterable[PassageUnit]:
-    doc: WikipediaProcessResult = WikipediaProcessResult.from_json(x)
-    if not doc.title or not doc.page_id or not doc.section_list:
-        return None
-    doc.title = doc.title.strip()
-    if doc.title in processed:
-        return None
-    sect_ids: tuple[int, int] = (1, 1)
-    sect_heads: tuple[str, str] = ("", "")
-    sect_texts_prev: list[str] = []
-    for (_, h1, h2, sect_body) in doc.section_list:
-        h1, h2 = h1.strip(), h2.strip()
-        sect_texts = [x for x in [x.strip() for x in sect_body.strip().splitlines()] if len(x) > 0]
-        if sect_heads[0] != h1.strip():
-            sect_ids = (sect_ids[0] + 1, 1)
-            sect_heads = (h1, h2)
-            sect_texts_prev = sect_texts
-        elif sect_heads[1] != h2.strip():
-            sect_ids = (sect_ids[0], sect_ids[1] + 1)
-            sect_heads = (h1, h2)
-            sect_texts_prev = sect_texts
-        elif sect_texts_prev != sect_texts:
-            sect_ids = (sect_ids[0], sect_ids[1] + 1)
-            sect_heads = (h1, h2)
-            sect_texts_prev = sect_texts
-        else:
-            continue
-        for text_id, text in enumerate(sect_texts, start=1):
-            path_ids = sect_ids + (text_id,)
-            _id = f"{doc.title}-{'-'.join([f'{i:03d}' for i in path_ids])}"
-            yield PassageUnit(_id=_id, title=doc.title, subtitle1=h1, subtitle2=h2, body_text=text)
-    processed.add(doc.title)
-
-
-def process_many(batch: Iterable[str], table: Collection, processed: set[str]):
-    batch_units = [x for x in [process_one(x, processed) for x in batch] if x]
-    all_units = [unit for batch in batch_units for unit in batch]
-    rows = [row.to_dict() for row in all_units if row]
-    if len(rows) > 0:
-        table.insert_many(rows)
+def process_many(batch: Iterable[dict], batch_size: int, index_name: str, client: Elasticsearch):
+    for ok, action in streaming_bulk(client=client,
+                                     index=index_name,
+                                     actions=batch,
+                                     # actions=_batch_iter(batch=x),
+                                     chunk_size=batch_size,
+                                     yield_ok=False):
+        logger.warning(f"ok={ok}, action={action}")
 
 
 @app.command()
@@ -127,16 +93,15 @@ def index(
         input_start: int = typer.Option(default=0),
         input_limit: int = typer.Option(default=10),
         input_batch: int = typer.Option(default=3),
-        from_table: bool = typer.Option(default=False),
         prog_interval: int = typer.Option(default=10),
+        from_table: bool = typer.Option(default=False),
         # table
         db_host: str = typer.Option(default="localhost:6382"),
-        tab_name: str = typer.Option(default="parse_wikipedia"),
         # index
         index_host: str = typer.Option(default="localhost:9810"),
         index_user: str = typer.Option(default="elastic"),
         index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
-        index_name: str = typer.Option(default="wikipedia-20230920-index-kowiki"),
+        index_create_opt: str = typer.Option(default="input/Wikidata-parse/Wikipedia-20230920-parse-kowiki-index_create_opt.json"),
 ):
     env = ProjectEnv(
         project=project,
@@ -147,33 +112,37 @@ def index(
         msg_level=logging.DEBUG if debugging else logging.INFO,
         msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_36,
     )
+    data_opt = DataOption(
+        home=input_home,
+        name=input_name,
+        total=input_total,
+        start=input_start,
+        limit=input_limit,
+        batch=input_batch,
+        from_table=from_table,
+        prog_interval=prog_interval,
+    )
+    table_name = data_opt.name.stem.replace(".jsonl", "")
+    table_opt = TableOption(
+        db_host=db_host,
+        db_name=env.project,
+        tab_name=table_name,
+    )
+    index_name = data_opt.name.stem.replace("-parse-", "-index-").replace(".jsonl", "").lower()
+    index_opt = IndexOption(
+        host=index_host,
+        user=index_user,
+        pswd=index_pswd,
+        name=index_name,
+        create_opt=index_create_opt,
+    )
     args = ProgramArguments(
         env=env,
-        data=DataOption(
-            home=input_home,
-            name=input_name,
-            total=input_total,
-            start=input_start,
-            limit=input_limit,
-            batch=input_batch,
-            from_table=from_table,
-            prog_interval=prog_interval,
-        ),
-        table=TableOption(
-            db_host=db_host,
-            db_name=env.project,
-            tab_name=tab_name,
-        ),
-        index=IndexOption(
-            host=index_host,
-            user=index_user,
-            pswd=index_pswd,
-            name=index_name,
-        ),
+        data=data_opt,
+        table=table_opt,
+        index=index_opt,
     )
     tqdm = mute_tqdm_cls()
-    # output_name = args.data.name.stem.replace("-parse-", "-index-").replace(".jsonl", "")
-    # output_file = (args.env.output_home / f"{output_name}-{args.env.time_stamp}.jsonl")
 
     logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
     with (JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='=')):
@@ -195,48 +164,15 @@ def index(
                                   math.ceil(args.data.prog_interval / args.data.batch))
 
             if out_client.indices.exists(index=args.index.name):
-                logger.info(f"Delete existing index: {args.index}")
+                logger.info(f"Delete an existing index: {args.index}")
                 out_client.indices.delete(index=args.index.name)
-            logger.info(f"Creating an index: {args.index}")
-            out_client.indices.create(
-                index=args.index.name,
-                settings={
-                    "analysis": {
-                        "analyzer": {"my_analyzer": {"tokenizer": "my_tokenizer"}},
-                        "tokenizer": {"my_tokenizer": {"type": "ngram", "min_gram": "2", "max_gram": "2", }},
-                    },
-                    "index": {
-                        "number_of_shards": 1,
-                        "blocks": {"read_only_allow_delete": "false"},
-                    }
-                },
-                mappings={
-                    "properties": {
-                        "title": {"type": "keyword"},
-                        "subtitle1": {"type": "keyword"},
-                        "subtitle2": {"type": "keyword"},
-                        "body_text": {"type": "text", "analyzer": "my_analyzer"},
-                    },
-                },
-            )
-            logger.info(f"Created an index: {args.index}")
-
-            def _batch_iter(batch):
-                for doc in batch:
-                    # logger.info(f"Index a document: {doc}")
-                    yield doc
+            out_client.indices.create(index=args.index.name, **args.index.create_opt)
+            logger.info(f"Created a new index: {args.index}")
 
             for i, x in enumerate(progress):
                 if i > 0 and i % interval == 0:
                     logger.info(progress)
-                # process_many(batch=x, table=out_table, processed=processed)
-                for ok, action in streaming_bulk(client=out_client,
-                                                 actions=x,
-                                                 # actions=_batch_iter(batch=x),
-                                                 index=args.index.name,
-                                                 chunk_size=256, ):
-                    pass
-                    #logger.info(f"ok={ok}, action={action}")
+                process_many(batch=x, batch_size=args.data.batch, index_name=args.index.name, client=out_client)
             logger.info(progress)
             out_client.indices.refresh(index=args.index.name)
             for line in str(out_client.cat.indices(index=args.index.name, v=True).body.strip()).splitlines():
@@ -258,7 +194,6 @@ def index(
                 logger.info("Got %d Hits (Max=%.3f):", res['hits']['total']['value'], res['hits']['max_score'])
                 for hit in res["hits"]["hits"]:
                     logger.info(f"  - {hit}")
-                logger.info(json.dumps(res, ensure_ascii=False))
 
 
 if __name__ == "__main__":
