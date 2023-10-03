@@ -98,9 +98,9 @@ def index(
         # table
         db_host: str = typer.Option(default="localhost:6382"),
         # index
-        index_host: str = typer.Option(default="localhost:9717"),
+        index_host: str = typer.Option(default="localhost:9810"),
         index_user: str = typer.Option(default="elastic"),
-        index_pswd: str = typer.Option(default="HOExBs8qAzdL3gUEdEq2"),
+        index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
         index_create_opt: str = typer.Option(default="input/Wikidata-parse/Wikipedia-20230920-parse-kowiki-index_create_opt.json"),
 ):
     env = ProjectEnv(
