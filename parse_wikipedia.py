@@ -30,7 +30,7 @@ class DataOption(OptionData):
     limit: int = field(default=-1)
     batch: int = field(default=1)
     from_scratch: bool = field(default=False)
-    prog_interval: int = field(default=10000)
+    logging: int = field(default=10000)
 
     def __post_init__(self):
         self.home = Path(self.home)
@@ -38,10 +38,36 @@ class DataOption(OptionData):
 
 
 @dataclass
+class FilterOption:
+    min_char: int = field(default=40)
+    min_word: int = field(default=5)
+    black_subtitle: str | Path = field(default="input/Wikidata-parse/Wikipedia-black-subtitles.txt")
+    black_subtitle_set = None
+
+    def __post_init__(self):
+        self.black_subtitle = Path(self.black_subtitle)
+        if self.black_subtitle.exists():
+            lines = (x.strip() for x in self.black_subtitle.read_text().splitlines())
+            self.black_subtitle_set = {x for x in lines if x}
+        else:
+            self.black_subtitle_set = set()
+
+    def invalid_subtitle(self, x: str) -> bool:
+        return x in self.black_subtitle_set
+
+    def valid_text(self, x: str) -> bool:
+        return all((
+            '다.' in x,
+            len(x) > self.min_char,
+            len(str(x).split()) >= self.min_word,
+        ))
+
+
+@dataclass
 class ProgramArguments(CommonArguments):
     data: DataOption = field()
     table: TableOption = field()
-    other: str | None = field(default=None)
+    filter: FilterOption = field(default=FilterOption())
 
     def __post_init__(self):
         super().__post_init__()
@@ -50,10 +76,10 @@ class ProgramArguments(CommonArguments):
         if not columns:
             columns = [self.data_type, "value"]
         return pd.concat([
-            to_dataframe(columns=columns, raw=self.time, data_prefix="time"),
             to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
             to_dataframe(columns=columns, raw=self.data, data_prefix="data"),
-            to_dataframe(columns=columns, raw={"other": self.other}),
+            to_dataframe(columns=columns, raw=self.table, data_prefix="table"),
+            to_dataframe(columns=columns, raw=self.filter, data_prefix="filter"),
         ]).reset_index(drop=True)
 
 
@@ -66,7 +92,7 @@ class PassageUnit(DataClassJsonMixin):
     body_text: str
 
 
-def process_one(x: str, processed: set[int]) -> Iterable[PassageUnit]:
+def process_one(x: str, processed: set[int], opt: FilterOption = FilterOption()) -> Iterable[PassageUnit]:
     doc: WikipediaProcessResult = WikipediaProcessResult.from_json(x)
     doc.title = doc.title.strip() if doc.title else ""
     if not doc.page_id or doc.page_id in processed or not doc.title or not doc.section_list:
@@ -76,7 +102,12 @@ def process_one(x: str, processed: set[int]) -> Iterable[PassageUnit]:
     sect_texts_prev: list[str] = []
     for (_, h1, h2, sect_body) in doc.section_list:
         h1, h2 = h1.strip(), h2.strip()
-        sect_texts = [x for x in [x.strip() for x in sect_body.strip().splitlines()] if len(x) > 0]
+        if opt.invalid_subtitle(h1) or opt.invalid_subtitle(h2):
+            continue
+        sect_lines = [x.strip() for x in sect_body.strip().splitlines()]
+        sect_texts = [x for x in sect_lines if opt.valid_text(x)]
+        if not sect_texts:
+            continue
         if sect_heads[0] != h1.strip():
             sect_ids = (sect_ids[0] + 1, 1)
             sect_heads = (h1, h2)
@@ -115,16 +146,20 @@ def parse(
         logging_file: str = typer.Option(default="logging.out"),
         debugging: bool = typer.Option(default=False),
         # data
-        input_home: str = typer.Option(default="input/Wikidata-parse"),
-        input_name: str = typer.Option(default="Wikipedia-20230920-crawl-kowiki.jsonl.bz2"),
-        input_total: int = typer.Option(default=1410203),
-        input_start: int = typer.Option(default=0),
-        input_limit: int = typer.Option(default=-1),
-        input_batch: int = typer.Option(default=1000),
-        prog_interval: int = typer.Option(default=10000),
-        from_scratch: bool = typer.Option(default=True),
+        data_home: str = typer.Option(default="input/Wikidata-parse"),
+        data_name: str = typer.Option(default="Wikipedia-20230920-crawl-kowiki.jsonl.bz2"),
+        data_total: int = typer.Option(default=1410203),
+        data_start: int = typer.Option(default=0),
+        data_limit: int = typer.Option(default=100),
+        data_batch: int = typer.Option(default=1000),
+        data_logging: int = typer.Option(default=10000),
         # table
-        db_host: str = typer.Option(default="localhost:6382"),
+        table_host: str = typer.Option(default="localhost:6382"),
+        table_reset: bool = typer.Option(default=True),
+        # filter
+        filter_min_char: int = typer.Option(default=40),
+        filter_min_word: int = typer.Option(default=5),
+        filter_black_subtitle: str = typer.Option(default="input/Wikidata-parse/Wikipedia-black-subtitles.txt"),
 ):
     env = ProjectEnv(
         project=project,
@@ -136,60 +171,72 @@ def parse(
         msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
     )
     data_opt = DataOption(
-        home=input_home,
-        name=input_name,
-        total=input_total,
-        start=input_start,
-        limit=input_limit,
-        batch=input_batch,
-        from_scratch=from_scratch,
-        prog_interval=prog_interval,
+        home=data_home,
+        name=data_name,
+        total=data_total,
+        start=data_start,
+        limit=data_limit,
+        batch=data_batch,
+        logging=data_logging,
+        from_scratch=table_reset,
     )
-    table_name = data_opt.name.stem.replace("-crawl-", "-parse-").replace(".jsonl", "")
+    table_name = data_opt.name.stem.replace("-crawl-", "-parse-").removesuffix(".jsonl").lower()
     table_opt = TableOption(
-        db_host=db_host,
+        db_host=table_host,
         db_name=env.project,
         tab_name=table_name,
+        tab_reset=table_reset,
+    )
+    filter_opt = FilterOption(
+        min_char=filter_min_char,
+        min_word=filter_min_word,
+        black_subtitle=filter_black_subtitle,
     )
     args = ProgramArguments(
         env=env,
         data=data_opt,
         table=table_opt,
+        filter=filter_opt,
     )
     tqdm = mute_tqdm_cls()
     output_file = (env.output_home / f"{table_name}-{env.time_stamp}.jsonl")
 
     with (JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='=')):
         with MongoDBTable(args.table) as out_table, output_file.open("w") as out_file:
-            if args.data.from_scratch:
-                logger.info(f"Clear database table: {args.table}")
+            # Prepare a table
+            if args.table.tab_reset:
                 out_table.drop()
+                logger.info(f"Cleard a database table: {args.table}")
+
+            # Parse and Save to a table
             num_input, inputs = args.data.total, iter_compressed(args.data.home / args.data.name)
             if args.data.start > 0:
                 num_input, inputs = max(0, min(num_input, num_input - args.data.start)), islice(inputs, args.data.start, num_input)
             if args.data.limit > 0:
                 num_input, inputs = min(num_input, args.data.limit), islice(inputs, args.data.limit)
             num_batch, batches = math.ceil(num_input / args.data.batch), ichunked(inputs, args.data.batch)
-            logger.info(f"Parse {num_input} inputs with {num_batch} batches")
+            logger.info(f"Parse {num_input} inputs with {num_batch} batches to {args.table}")
+            logger.info(f"- Filter: num_black_subtitle={len(args.filter.black_subtitle_set)}, min_char={args.filter.min_char}, min_word={args.filter.min_word}")
             progress, interval = (tqdm(batches, total=num_batch, unit="batch", pre="*", desc="importing"),
-                                  math.ceil(args.data.prog_interval / args.data.batch))
-
+                                  math.ceil(args.data.logging / args.data.batch))
             processed = set()
             for i, x in enumerate(progress):
                 if i > 0 and i % interval == 0:
                     logger.info(progress)
                 process_many(batch=x, table=out_table, processed=processed)
             logger.info(progress)
+
+            # Load and Save to a file
             find_opt = {}
             num_row, rows = out_table.count_documents(find_opt), out_table.find(find_opt).sort("_id")
             progress, interval = (tqdm(rows, total=num_row, unit="row", pre="*", desc="exporting"),
-                                  args.data.prog_interval * 100)
+                                  args.data.logging * 100)
             for i, x in enumerate(progress):
                 if i > 0 and i % interval == 0:
                     logger.info(progress)
                 out_file.write(json.dumps(x, ensure_ascii=False) + '\n')
             logger.info(progress)
-        logger.info(f"Export {num_row} rows to {output_file}")
+            logger.info(f"Export {num_row} rows to {output_file}")
 
 
 if __name__ == "__main__":

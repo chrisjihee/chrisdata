@@ -30,7 +30,7 @@ class DataOption(OptionData):
     limit: int = field(default=-1)
     batch: int = field(default=1)
     from_table: bool = field(default=False)
-    prog_interval: int = field(default=10000)
+    logging: int = field(default=10000)
 
     def __post_init__(self):
         self.home = Path(self.home)
@@ -42,7 +42,6 @@ class ProgramArguments(CommonArguments):
     data: DataOption = field()
     table: TableOption = field()
     index: IndexOption = field()
-    other: str | None = field(default=None)
 
     def __post_init__(self):
         super().__post_init__()
@@ -51,11 +50,10 @@ class ProgramArguments(CommonArguments):
         if not columns:
             columns = [self.data_type, "value"]
         return pd.concat([
-            to_dataframe(columns=columns, raw=self.time, data_prefix="time"),
             to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
             to_dataframe(columns=columns, raw=self.data, data_prefix="data"),
+            to_dataframe(columns=columns, raw=self.table, data_prefix="table"),
             to_dataframe(columns=columns, raw=self.index, data_prefix="index"),
-            to_dataframe(columns=columns, raw={"other": self.other}),
         ]).reset_index(drop=True)
 
 
@@ -87,21 +85,22 @@ def index(
         logging_file: str = typer.Option(default="logging.out"),
         debugging: bool = typer.Option(default=False),
         # data
-        input_home: str = typer.Option(default="input/Wikidata-parse"),
-        input_name: str = typer.Option(default="Wikipedia-20230920-parse-kowiki.jsonl"),
-        input_total: int = typer.Option(default=9740173),
-        input_start: int = typer.Option(default=0),
-        input_limit: int = typer.Option(default=-1),
-        input_batch: int = typer.Option(default=10000),
-        prog_interval: int = typer.Option(default=100000),
-        from_table: bool = typer.Option(default=False),
+        data_home: str = typer.Option(default="input/Wikidata-parse"),
+        data_name: str = typer.Option(default="Wikipedia-20230920-parse-kowiki.jsonl"),
+        data_total: int = typer.Option(default=9740173),
+        data_start: int = typer.Option(default=0),
+        data_limit: int = typer.Option(default=-1),
+        data_batch: int = typer.Option(default=10000),
+        data_logging: int = typer.Option(default=100000),
+        from_table: bool = typer.Option(default=True),
         # table
-        db_host: str = typer.Option(default="localhost:6382"),
+        table_host: str = typer.Option(default="localhost:6382"),
         # index
         index_host: str = typer.Option(default="localhost:9810"),
         index_user: str = typer.Option(default="elastic"),
         index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
-        index_create_opt: str = typer.Option(default="input/Wikidata-parse/Wikipedia-20230920-parse-kowiki-index_create_opt.json"),
+        index_reset: bool = typer.Option(default=True),
+        index_create: str = typer.Option(default="input/Wikidata-parse/Wikipedia-index_create_opt.json"),
 ):
     env = ProjectEnv(
         project=project,
@@ -113,18 +112,18 @@ def index(
         msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_36,
     )
     data_opt = DataOption(
-        home=input_home,
-        name=input_name,
-        total=input_total,
-        start=input_start,
-        limit=input_limit,
-        batch=input_batch,
+        home=data_home,
+        name=data_name,
+        total=data_total,
+        start=data_start,
+        limit=data_limit,
+        batch=data_batch,
+        logging=data_logging,
         from_table=from_table,
-        prog_interval=prog_interval,
     )
-    table_name = data_opt.name.stem.replace(".jsonl", "")
+    table_name = data_opt.name.stem.removesuffix(".jsonl").lower()
     table_opt = TableOption(
-        db_host=db_host,
+        db_host=table_host,
         db_name=env.project,
         tab_name=table_name,
     )
@@ -134,7 +133,8 @@ def index(
         user=index_user,
         pswd=index_pswd,
         name=index_name,
-        create_opt=index_create_opt,
+        reset=index_reset,
+        create=index_create,
     )
     args = ProgramArguments(
         env=env,
@@ -147,6 +147,15 @@ def index(
     logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
     with (JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='=')):
         with MongoDBTable(args.table) as inp_table, ElasticSearchClient(args.index) as out_client:
+            # Prepare an index
+            if args.index.reset:
+                if out_client.indices.exists(index=args.index.name):
+                    out_client.indices.delete(index=args.index.name)
+                out_client.indices.create(index=args.index.name, **args.index.create_opt)
+                logger.info(f"Created a new index: {args.index}")
+                logger.info(f"- Option: keys={list(args.index.create_opt.keys())}")
+
+            # Load and Indexing documents
             if args.data.from_table:
                 logger.info(f"Use database table: {args.table}")
                 find_opt = {}
@@ -161,14 +170,7 @@ def index(
             num_batch, batches = math.ceil(num_input / args.data.batch), ichunked(inputs, args.data.batch)
             logger.info(f"Index {num_input} inputs with {num_batch} batches to {args.index}")
             progress, interval = (tqdm(batches, total=num_batch, unit="batch", pre="*", desc="indexing"),
-                                  math.ceil(args.data.prog_interval / args.data.batch))
-
-            if out_client.indices.exists(index=args.index.name):
-                logger.info(f"Delete an existing index: {args.index}")
-                out_client.indices.delete(index=args.index.name)
-            out_client.indices.create(index=args.index.name, **args.index.create_opt)
-            logger.info(f"Created a new index: {args.index}")
-
+                                  math.ceil(args.data.logging / args.data.batch))
             for i, x in enumerate(progress):
                 if i > 0 and i % interval == 0:
                     logger.info(progress)
@@ -178,12 +180,14 @@ def index(
             for line in str(out_client.cat.indices(index=args.index.name, v=True).body.strip()).splitlines():
                 logger.info(line)
 
-            query, nbest = '카터 * 대한민국', 10
+            # Search a query
+            query1, query2, nbest = '지미 카터', '대한민국', 100
             response: ObjectApiResponse = out_client.search(
                 index=args.index.name,
                 query={
-                    "match": {
-                        "body_text": {"query": query}
+                    "query_string": {
+                        "default_field": "body_text",
+                        "query": f'"{query1}" AND "{query2}"'
                     },
                 },
                 _source=("_id", "title", "subtitle1", "subtitle2", "body_text"),
@@ -191,7 +195,7 @@ def index(
             )
             if response.meta.status:
                 res = response.body
-                logger.info("Got %d Hits (Max=%.3f):", res['hits']['total']['value'], res['hits']['max_score'])
+                logger.info(f"Got {res['hits']['total']['value']} hits (Max={res['hits']['max_score']}):" )
                 for hit in res["hits"]["hits"]:
                     logger.info(f"  - {hit}")
 
