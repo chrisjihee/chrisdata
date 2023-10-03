@@ -2,7 +2,7 @@ from datetime import datetime
 from elasticsearch import Elasticsearch
 
 # Create a connection
-es = Elasticsearch("http://localhost:9717",
+es = Elasticsearch(hosts="http://localhost:9717",
                    basic_auth=("elastic", "HOExBs8qAzdL3gUEdEq2"))
 if not es.ping():
     raise ValueError("Connection failed")

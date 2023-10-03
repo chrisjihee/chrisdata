@@ -125,7 +125,7 @@ def index(
         input_name: str = typer.Option(default="Wikipedia-20230920-parse-kowiki.jsonl.bz2"),
         input_total: int = typer.Option(default=9740173),
         input_start: int = typer.Option(default=0),
-        input_limit: int = typer.Option(default=50),
+        input_limit: int = typer.Option(default=10),
         input_batch: int = typer.Option(default=3),
         from_table: bool = typer.Option(default=False),
         prog_interval: int = typer.Option(default=10),
@@ -133,10 +133,9 @@ def index(
         db_host: str = typer.Option(default="localhost:6382"),
         tab_name: str = typer.Option(default="parse_wikipedia"),
         # index
-        index_host: str = typer.Option(default="localhost:9200"),
+        index_host: str = typer.Option(default="localhost:9810"),
         index_user: str = typer.Option(default="elastic"),
-        index_pswd: str = typer.Option(default="cfg/elastic-pw.txt"),
-        index_cert: str = typer.Option(default="elasticsearch/config/certs/http_ca.crt"),
+        index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
         index_name: str = typer.Option(default="wikipedia-20230920-index-kowiki"),
 ):
     env = ProjectEnv(
@@ -169,7 +168,6 @@ def index(
             host=index_host,
             user=index_user,
             pswd=index_pswd,
-            cert=index_cert,
             name=index_name,
         ),
     )
@@ -177,6 +175,7 @@ def index(
     # output_name = args.data.name.stem.replace("-parse-", "-index-").replace(".jsonl", "")
     # output_file = (args.env.output_home / f"{output_name}-{args.env.time_stamp}.jsonl")
 
+    logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
     with (JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='=')):
         with MongoDBTable(args.table) as inp_table, ElasticSearchClient(args.index) as out_client:
             if args.data.from_table:
@@ -213,48 +212,31 @@ def index(
                 },
                 mappings={
                     "properties": {
-                        "index": {"type": "integer"},
-                        "id": {"type": "keyword"},
-                        "lang": {"type": "keyword"},
-                        "date": {"type": "keyword"},
                         "title": {"type": "keyword"},
-                        "body": {"type": "text", "analyzer": "my_analyzer"},
-                        "both": {"type": "text", "analyzer": "my_analyzer"},
+                        "subtitle1": {"type": "keyword"},
+                        "subtitle2": {"type": "keyword"},
+                        "body_text": {"type": "text", "analyzer": "my_analyzer"},
                     },
                 },
             )
             logger.info(f"Created an index: {args.index}")
 
-            def _document_generator(documents_path):
-                with open(documents_path) as fp:
-                    documents = list(map(lambda x: json.loads(x), fp.readlines()))
-                    for i, document in enumerate(documents):
-                        yield dict(
-                            # index=i,
-                            id=document["id"],
-                            lang=document["lang"],
-                            date=document["date"],
-                            title=document["title"],
-                            body=document['body'],
-                            both=f"{document['title']} {document['body']}"
-                        )
-
-            def _input_generator(batch):
-                for xxx in batch:
-                    logger.info(f"Index a document: {xxx}")
-                    yield xxx
+            def _batch_iter(batch):
+                for doc in batch:
+                    # logger.info(f"Index a document: {doc}")
+                    yield doc
 
             for i, x in enumerate(progress):
                 if i > 0 and i % interval == 0:
                     logger.info(progress)
                 # process_many(batch=x, table=out_table, processed=processed)
                 for ok, action in streaming_bulk(client=out_client,
-                                                 # actions=x,
-                                                 actions=_input_generator(batch=x),
-                                                 # actions=_document_generator(documents_path="input/CHOSUN_2000.small.jsonl"),
+                                                 actions=x,
+                                                 # actions=_batch_iter(batch=x),
                                                  index=args.index.name,
                                                  chunk_size=256, ):
-                    logger.info(f"ok={ok}, action={action}")
+                    pass
+                    #logger.info(f"ok={ok}, action={action}")
             logger.info(progress)
             out_client.indices.refresh(index=args.index.name)
             for line in str(out_client.cat.indices(index=args.index.name, v=True).body.strip()).splitlines():
@@ -271,25 +253,12 @@ def index(
                 _source=("_id", "title", "subtitle1", "subtitle2", "body_text"),
                 size=nbest,
             )
-            response = dict(response)
-            logger.info(response["hits"])
-            logger.info(response["hits"]["total"])
-            logger.info(response["hits"]["max_score"])
-            for hit in response["hits"]["hits"]:
-                logger.info(f"Retrieve a document: {hit}")
-            logger.info(response["hits"].keys())
-            # logger.info(json.dumps(response, ensure_ascii=False))
-
-        #     find_opt = {}
-        #     num_row, rows = out_table.count_documents(find_opt), out_table.find(find_opt).sort("_id")
-        #     progress, interval = (tqdm(rows, total=num_row, unit="row", pre="*", desc="exporting"),
-        #                           args.data.prog_interval * 100)
-        #     for i, x in enumerate(progress):
-        #         if i > 0 and i % interval == 0:
-        #             logger.info(progress)
-        #         out_file.write(json.dumps(x, ensure_ascii=False) + '\n')
-        #     logger.info(progress)
-        # logger.info(f"Export {num_row} rows to {output_file}")
+            if response.meta.status:
+                res = response.body
+                logger.info("Got %d Hits (Max=%.3f):", res['hits']['total']['value'], res['hits']['max_score'])
+                for hit in res["hits"]["hits"]:
+                    logger.info(f"  - {hit}")
+                logger.info(json.dumps(res, ensure_ascii=False))
 
 
 if __name__ == "__main__":
