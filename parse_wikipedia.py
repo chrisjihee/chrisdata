@@ -150,7 +150,7 @@ def parse(
         data_name: str = typer.Option(default="Wikipedia-20230920-crawl-kowiki.jsonl.bz2"),
         data_total: int = typer.Option(default=1410203),
         data_start: int = typer.Option(default=0),
-        data_limit: int = typer.Option(default=100),
+        data_limit: int = typer.Option(default=-1),
         data_batch: int = typer.Option(default=1000),
         data_logging: int = typer.Option(default=10000),
         # table
