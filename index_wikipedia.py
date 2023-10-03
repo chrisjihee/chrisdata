@@ -91,16 +91,16 @@ def index(
         input_name: str = typer.Option(default="Wikipedia-20230920-parse-kowiki.jsonl.bz2"),
         input_total: int = typer.Option(default=9740173),
         input_start: int = typer.Option(default=0),
-        input_limit: int = typer.Option(default=10),
-        input_batch: int = typer.Option(default=3),
-        prog_interval: int = typer.Option(default=10),
-        from_table: bool = typer.Option(default=False),
+        input_limit: int = typer.Option(default=-1),
+        input_batch: int = typer.Option(default=10000),
+        prog_interval: int = typer.Option(default=100000),
+        from_table: bool = typer.Option(default=True),
         # table
         db_host: str = typer.Option(default="localhost:6382"),
         # index
-        index_host: str = typer.Option(default="localhost:9810"),
+        index_host: str = typer.Option(default="localhost:9717"),
         index_user: str = typer.Option(default="elastic"),
-        index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
+        index_pswd: str = typer.Option(default="HOExBs8qAzdL3gUEdEq2"),
         index_create_opt: str = typer.Option(default="input/Wikidata-parse/Wikipedia-20230920-parse-kowiki-index_create_opt.json"),
 ):
     env = ProjectEnv(
