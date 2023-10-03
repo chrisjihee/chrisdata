@@ -88,7 +88,7 @@ def index(
         debugging: bool = typer.Option(default=False),
         # data
         input_home: str = typer.Option(default="input/Wikidata-parse"),
-        input_name: str = typer.Option(default="Wikipedia-20230920-parse-kowiki.jsonl.bz2"),
+        input_name: str = typer.Option(default="Wikipedia-20230920-parse-kowiki.jsonl"),
         input_total: int = typer.Option(default=9740173),
         input_start: int = typer.Option(default=0),
         input_limit: int = typer.Option(default=-1),
@@ -198,4 +198,3 @@ def index(
 
 if __name__ == "__main__":
     app()
-logging-1003.180159.out
