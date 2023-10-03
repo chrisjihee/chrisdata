@@ -2,23 +2,24 @@ from datetime import datetime
 from elasticsearch import Elasticsearch
 
 # Create a connection
-es = Elasticsearch("http://localhost:9810", basic_auth=("elastic", "RiiehgCmqXP3stKkCYoo"))
-
-# Ping the Elasticsearch Cluster
+es = Elasticsearch("http://localhost:9810",
+                   basic_auth=("elastic", "cIrEP5OCwTLn0QIQwnsA"))
 if not es.ping():
     raise ValueError("Connection failed")
+print(es.info())
 
 # Create an index
-index_name = "my_index"
+index_name = "es8_test"
 if es.indices.exists(index=index_name):
     es.indices.delete(index=index_name)
 es.indices.create(index=index_name)
+print(es.indices.get_alias(index="e*"))
 
 # Index a document
 doc = {
-    'author': 'john doe',
-    'text': 'Elasticsearch: cool. bonsai cool.',
-    'timestamp': datetime.now(),
+    "agency": "연합뉴스",
+    "text": "보리스 옐친(68) 러시아 대통령은 31일 사임을 발표하고 블라디미르 푸틴 총리를 대통령 직무대행으로 임명했다.",
+    "date": "1999.12.31.",
 }
 print(es.index(index=index_name, document=doc))
 es.indices.refresh(index=index_name)

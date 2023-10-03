@@ -9,6 +9,7 @@ fi
 tar zxf elasticsearch-*.tar.gz --strip-components 1
 sed -i '' 's/#http.port: 9200/http.port: 9717/g' ./config/elasticsearch.yml
 echo "xpack.security.enabled: true" >> ./config/elasticsearch.yml
-#./bin/elasticsearch
-#./bin/elasticsearch-setup-passwords auto
 cd ..
+
+#bash script/run-elasticsearch7.sh
+#bash script/setup-elasticsearch7-pw.sh

@@ -1,38 +1,31 @@
-from elasticsearch import Elasticsearch, helpers
+from datetime import datetime
+from elasticsearch import Elasticsearch
 
-# Establish a connection to the Elasticsearch cluster.
-# If Elasticsearch is running on a different host or port, modify the line below accordingly.
-es = Elasticsearch("http://localhost:9717", basic_auth=("elastic", "RGzYkwogSi2jg9oE1oI6"))
-
-# Define an index name
-index_name = "test_index"
-
-# Delete the index if it exists
-if es.indices.exists(index=index_name):
-    es.indices.delete(index=index_name)
+# Create a connection
+es = Elasticsearch("http://localhost:9717",
+                   basic_auth=("elastic", "HOExBs8qAzdL3gUEdEq2"))
+if not es.ping():
+    raise ValueError("Connection failed")
+print(es.info())
 
 # Create an index
+index_name = "es7_test"
+if es.indices.exists(index=index_name):
+    es.indices.delete(index=index_name)
 es.indices.create(index=index_name)
+print(es.indices.get_alias(index="e*"))
 
 # Index a document
 doc = {
-    "name": "John Doe",
-    "age": 30,
-    "interests": ["coding", "hiking"]
+    "agency": "연합뉴스",
+    "text": "보리스 옐친(68) 러시아 대통령은 31일 사임을 발표하고 블라디미르 푸틴 총리를 대통령 직무대행으로 임명했다.",
+    "date": "1999.12.31.",
 }
 print(es.index(index=index_name, document=doc))
-
-# Refresh the index to make sure the document is searchable.
 es.indices.refresh(index=index_name)
 
 # Search for the document
-response = es.search(index=index_name, query={
-    "match": {
-        "interests": "coding"
-    }
-})
-
-# Output the search results
-print("Search Results:")
-for hit in response['hits']['hits']:
+res = es.search(index=index_name, query={"match_all": {}})
+print("Got %d Hits:" % res['hits']['total']['value'])
+for hit in res['hits']['hits']:
     print(hit['_source'])

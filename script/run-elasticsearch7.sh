@@ -1,3 +1,3 @@
-cd elasticsearch7
-bin/elasticsearch
+cd elasticsearch7 || exit
+./bin/elasticsearch
 cd ..
