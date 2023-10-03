@@ -94,7 +94,7 @@ def index(
         input_limit: int = typer.Option(default=-1),
         input_batch: int = typer.Option(default=10000),
         prog_interval: int = typer.Option(default=100000),
-        from_table: bool = typer.Option(default=True),
+        from_table: bool = typer.Option(default=False),
         # table
         db_host: str = typer.Option(default="localhost:6382"),
         # index
