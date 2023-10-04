@@ -147,7 +147,7 @@ def parse(
         debugging: bool = typer.Option(default=False),
         # data
         data_home: str = typer.Option(default="input/Wikidata-parse"),
-        data_name: str = typer.Option(default="Wikipedia-20230920-crawl-kowiki.jsonl.bz2"),
+        data_name: str = typer.Option(default="wikipedia-20230920-crawl-kowiki.jsonl.bz2"),
         data_total: int = typer.Option(default=1410203),
         data_start: int = typer.Option(default=0),
         data_limit: int = typer.Option(default=-1),
@@ -159,7 +159,7 @@ def parse(
         # filter
         filter_min_char: int = typer.Option(default=40),
         filter_min_word: int = typer.Option(default=5),
-        filter_black_subtitle: str = typer.Option(default="input/Wikidata-parse/Wikipedia-black-subtitles.txt"),
+        filter_black_subtitle: str = typer.Option(default="input/Wikidata-parse/wikipedia-black-subtitles.txt"),
 ):
     env = ProjectEnv(
         project=project,
@@ -180,7 +180,7 @@ def parse(
         logging=data_logging,
         from_scratch=table_reset,
     )
-    table_name = data_opt.name.stem.replace("-crawl-", "-parse-").removesuffix(".jsonl").lower()
+    table_name = data_opt.name.stem.replace("-crawl-", "-parse-").removesuffix(".jsonl")
     table_opt = TableOption(
         db_host=table_host,
         db_name=env.project,

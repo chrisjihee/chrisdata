@@ -25,12 +25,12 @@ app = AppTyper()
 class DataOption(OptionData):
     home: str | Path = field()
     name: str | Path = field()
-    total: int = field(default=9740173)  # wc -l Wikipedia-20230920-parse-kowiki.jsonl
+    total: int = field(default=-1)
     start: int = field(default=0)
     limit: int = field(default=-1)
     batch: int = field(default=1)
-    from_table: bool = field(default=False)
     logging: int = field(default=10000)
+    from_table: bool = field(default=False)
 
     def __post_init__(self):
         self.home = Path(self.home)
@@ -86,8 +86,8 @@ def index(
         debugging: bool = typer.Option(default=False),
         # data
         data_home: str = typer.Option(default="input/Wikidata-parse"),
-        data_name: str = typer.Option(default="Wikipedia-20230920-parse-kowiki.jsonl"),
-        data_total: int = typer.Option(default=9740173),
+        data_name: str = typer.Option(default="wikipedia-20230920-parse-kowiki.jsonl.bz2"),
+        data_total: int = typer.Option(default=2009624),
         data_start: int = typer.Option(default=0),
         data_limit: int = typer.Option(default=-1),
         data_batch: int = typer.Option(default=10000),
@@ -100,7 +100,7 @@ def index(
         index_user: str = typer.Option(default="elastic"),
         index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
         index_reset: bool = typer.Option(default=True),
-        index_create: str = typer.Option(default="input/Wikidata-parse/Wikipedia-index_create_opt.json"),
+        index_create: str = typer.Option(default="input/Wikidata-parse/wikipedia-index_create_opt.json"),
 ):
     env = ProjectEnv(
         project=project,
@@ -121,13 +121,13 @@ def index(
         logging=data_logging,
         from_table=from_table,
     )
-    table_name = data_opt.name.stem.removesuffix(".jsonl").lower()
+    table_name = data_opt.name.stem.removesuffix(".jsonl")
     table_opt = TableOption(
         db_host=table_host,
         db_name=env.project,
         tab_name=table_name,
     )
-    index_name = data_opt.name.stem.replace("-parse-", "-index-").replace(".jsonl", "").lower()
+    index_name = data_opt.name.stem.replace("-parse-", "-index-").replace(".jsonl", "")
     index_opt = IndexOption(
         host=index_host,
         user=index_user,
