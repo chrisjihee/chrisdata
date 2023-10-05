@@ -54,7 +54,7 @@ def index(
         output_home: str = typer.Option(default="output-index_wikipedia"),
         logging_file: str = typer.Option(default="logging.out"),
         debugging: bool = typer.Option(default=False),
-        # data
+        # input
         input_start: int = typer.Option(default=0),
         input_limit: int = typer.Option(default=-1),
         input_batch: int = typer.Option(default=10000),
@@ -64,6 +64,7 @@ def index(
         input_file_name: str = typer.Option(default="wikipedia-20230920-parse-kowiki.jsonl"),
         input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
         input_table_name: str = typer.Option(default="wikipedia-20230920-parse-kowiki"),
+        # output
         output_index_home: str = typer.Option(default="localhost:9810"),
         output_index_name: str = typer.Option(default="wikipedia-20230920-index-kowiki"),
         output_index_user: str = typer.Option(default="elastic"),

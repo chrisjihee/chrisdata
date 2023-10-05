@@ -28,7 +28,7 @@ class FilterOption(OptionData):
     num_black_prop: int = 0
     set_black_prop = set()
     parenth_ending = re.compile(r" \(.+?\)$")
-    korean_starting = re.compile(r"^[ㄱ-ㅎㅏ-ㅣ가-힣].+")
+    korean_starting = re.compile(r"^[가-힣].+")
 
     def __post_init__(self):
         self.black_prop = Path(self.black_prop)
