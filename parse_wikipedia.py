@@ -10,7 +10,7 @@ import typer
 from dataclasses_json import DataClassJsonMixin
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, OptionData
-from chrisbase.data import DataOption, FileOption, TableOption
+from chrisbase.data import InputOption, FileOption, TableOption
 from chrisbase.data import LineFileWrapper, MongoDBWrapper
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
@@ -48,7 +48,7 @@ class FilterOption(OptionData):
 
 @dataclass
 class ParseArguments(CommonArguments):
-    data: DataOption = field()
+    data: InputOption = field()
     filter: FilterOption = field(default=FilterOption())
 
     def __post_init__(self):
@@ -154,7 +154,7 @@ def parse(
         msg_level=logging.DEBUG if debugging else logging.INFO,
         msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
     )
-    data_opt = DataOption(
+    data_opt = InputOption(
         start=data_start,
         limit=data_limit,
         batch=data_batch,
@@ -192,7 +192,7 @@ def parse(
         save_file.open("w") as writer,
     ):
         # parse crawled data
-        batches, num_batch, num_input = args.data.input_batches(data_file, args.data.total)
+        batches, num_batch, num_input = args.data.load_batches(data_file, args.data.total)
         logger.info(f"Parse from [{args.data.file}] to [{args.data.table}]")
         logger.info(f"- amount: inputs={num_input}, batches={num_batch}")
         logger.info(f"- filter: num_black_sect={args.filter.num_black_sect}, min_char={args.filter.min_char}, min_word={args.filter.min_word}")
