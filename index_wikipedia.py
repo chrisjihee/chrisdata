@@ -13,8 +13,8 @@ from elasticsearch.helpers import streaming_bulk
 from more_itertools import ichunked
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments
-from chrisbase.data import DataOption, FileOption, TableOption, IndexOption, MongoDBTable, ElasticSearchClient
-from chrisbase.io import LoggingFormat, iter_compressed
+from chrisbase.data import DataOption, FileOption, TableOption, IndexOption, MongoDBWrapper, ElasticSearchWrapper
+from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,6 @@ def index(
         file_name: str = typer.Option(default="wikipedia-20230920-parse-kowiki.jsonl.bz2"),
         table_home: str = typer.Option(default="localhost:6382/wikimedia"),
         table_name: str = typer.Option(default="wikipedia-20230920-parse-kowiki"),
-        # index
         index_home: str = typer.Option(default="localhost:9810"),
         index_name: str = typer.Option(default="wikipedia-20230920-index-kowiki"),
         index_user: str = typer.Option(default="elastic"),
@@ -91,6 +90,11 @@ def index(
         msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_36,
     )
     data_opt = DataOption(
+        start=data_start,
+        limit=data_limit,
+        batch=data_batch,
+        inter=data_inter,
+        total=data_total,
         file=FileOption(
             home=file_home,
             name=file_name,
@@ -107,11 +111,6 @@ def index(
             reset=index_reset,
             create=index_create,
         ) if index_home and index_name else None,
-        total=data_total,
-        start=data_start,
-        limit=data_limit,
-        batch=data_batch,
-        inter=data_inter,
     )
     args = ProgramArguments(
         env=env,
@@ -121,9 +120,9 @@ def index(
 
     logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
     with (
-        MongoDBTable(args.data.table) as data_table,
-        ElasticSearchClient(args.data.index) as data_index,
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+        ElasticSearchWrapper(args.data.index) as data_index,
+        MongoDBWrapper(args.data.table) as data_table,
     ):
         # Prepare an index
         if args.data.index.reset:

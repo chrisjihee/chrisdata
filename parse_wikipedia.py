@@ -2,19 +2,16 @@ import json
 import logging
 import math
 from dataclasses import dataclass, field
-from itertools import islice
 from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
 import typer
 from dataclasses_json import DataClassJsonMixin
-from more_itertools import ichunked
-from pymongo.collection import Collection
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments
-from chrisbase.data import DataOption, FileOption, TableOption, IndexOption, MongoDBTable, ElasticSearchClient
-from chrisbase.io import LoggingFormat, iter_compressed
+from chrisbase.data import DataOption, FileOption, TableOption, LineFileWrapper, MongoDBWrapper
+from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 from crawl_wikipedia import ProcessResult as WikipediaProcessResult
 
@@ -22,39 +19,23 @@ logger = logging.getLogger(__name__)
 app = AppTyper()
 
 
-# @dataclass
-# class DataOption(OptionData):
-#     home: str | Path = field()
-#     name: str | Path = field()
-#     total: int = field(default=-1)
-#     start: int = field(default=0)
-#     limit: int = field(default=-1)
-#     batch: int = field(default=1)
-#     logging: int = field(default=10000)
-#     from_table: bool = field(default=False)
-#
-#     def __post_init__(self):
-#         self.home = Path(self.home)
-#         self.name = Path(self.name)
-
-
 @dataclass
 class FilterOption:
     min_char: int = field(default=40)
     min_word: int = field(default=5)
-    black_sect: str | Path = field(default="input/wikimedia/wikipedia-black-subtitles.txt")
-    black_sect_set = None
+    black_sect: str | Path = field(default="black_sect.txt")
+    num_black_sect: int = 0
+    set_black_sect = set()
 
     def __post_init__(self):
         self.black_sect = Path(self.black_sect)
-        if self.black_sect.exists():
+        if self.black_sect.exists() and self.black_sect.is_file():
             lines = (x.strip() for x in self.black_sect.read_text().splitlines())
-            self.black_sect_set = {x for x in lines if x}
-        else:
-            self.black_sect_set = set()
+            self.set_black_sect = {x for x in lines if x}
+            self.num_black_sect = len(self.set_black_sect)
 
     def invalid_sect(self, x: str) -> bool:
-        return x in self.black_sect_set
+        return x in self.set_black_sect
 
     def valid_text(self, x: str) -> bool:
         return all((
@@ -67,7 +48,6 @@ class FilterOption:
 @dataclass
 class ProgramArguments(CommonArguments):
     data: DataOption = field()
-    table: TableOption = field()
     filter: FilterOption = field(default=FilterOption())
 
     def __post_init__(self):
@@ -78,8 +58,10 @@ class ProgramArguments(CommonArguments):
             columns = [self.data_type, "value"]
         return pd.concat([
             to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
-            to_dataframe(columns=columns, raw=self.data, data_prefix="data"),
-            to_dataframe(columns=columns, raw=self.table, data_prefix="table"),
+            to_dataframe(columns=columns, raw=self.data, data_prefix="data", data_exclude=["file", "table", "index"]),
+            to_dataframe(columns=columns, raw=self.data.file, data_prefix="data.file") if self.data.file else None,
+            to_dataframe(columns=columns, raw=self.data.table, data_prefix="data.table") if self.data.table else None,
+            to_dataframe(columns=columns, raw=self.data.index, data_prefix="data.index") if self.data.index else None,
             to_dataframe(columns=columns, raw=self.filter, data_prefix="filter"),
         ]).reset_index(drop=True)
 
@@ -103,7 +85,7 @@ def process_one(x: str, processed: set[int], opt: FilterOption = FilterOption())
     sect_texts_prev: list[str] = []
     for (_, h1, h2, sect_body) in doc.section_list:
         h1, h2 = h1.strip(), h2.strip()
-        if opt.invalid_sect(h1) or opt.invalid_sect(h2):
+        if opt.invalid_sect(h1):
             continue
         sect_lines = [x.strip() for x in sect_body.strip().splitlines()]
         sect_texts = [x for x in sect_lines if opt.valid_text(x)]
@@ -130,12 +112,12 @@ def process_one(x: str, processed: set[int], opt: FilterOption = FilterOption())
     processed.add(doc.page_id)
 
 
-def process_many(batch: Iterable[str], table: Collection, processed: set[int]):
+def process_many(batch: Iterable[str], wrapper: MongoDBWrapper, processed: set[int]):
     batch_units = [x for x in [process_one(x, processed) for x in batch] if x]
     all_units = [unit for batch in batch_units for unit in batch]
     rows = [row.to_dict() for row in all_units if row]
     if len(rows) > 0:
-        table.insert_many(rows)
+        wrapper.table.insert_many(rows)
 
 
 @app.command()
@@ -147,20 +129,22 @@ def parse(
         logging_file: str = typer.Option(default="logging.out"),
         debugging: bool = typer.Option(default=False),
         # data
-        data_home: str = typer.Option(default="input/Wikidata-parse"),
-        data_name: str = typer.Option(default="wikipedia-20230920-crawl-kowiki.jsonl.bz2"),
-        data_total: int = typer.Option(default=1410203),
         data_start: int = typer.Option(default=0),
         data_limit: int = typer.Option(default=-1),
+        # data_limit: int = typer.Option(default=100),
         data_batch: int = typer.Option(default=1000),
-        data_logging: int = typer.Option(default=10000),
-        # table
-        table_host: str = typer.Option(default="localhost:6382"),
+        data_inter: int = typer.Option(default=10000),
+        data_total: int = typer.Option(default=1410203),
+        file_home: str = typer.Option(default="input/wikimedia"),
+        # file_name: str = typer.Option(default="wikipedia-20230920-crawl-kowiki.jsonl"),
+        file_name: str = typer.Option(default="wikipedia-20230920-crawl-kowiki.jsonl.bz2"),
+        table_home: str = typer.Option(default="localhost:6382/wikimedia"),
+        table_name: str = typer.Option(default="wikipedia-20230920-parse-kowiki"),
         table_reset: bool = typer.Option(default=True),
         # filter
         filter_min_char: int = typer.Option(default=40),
         filter_min_word: int = typer.Option(default=5),
-        filter_black_subtitle: str = typer.Option(default="input/Wikidata-parse/wikipedia-black-subtitles.txt"),
+        filter_black_subtitle: str = typer.Option(default="input/wikimedia/wikipedia-black_sect.txt"),
 ):
     env = ProjectEnv(
         project=project,
@@ -172,20 +156,20 @@ def parse(
         msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
     )
     data_opt = DataOption(
-        home=data_home,
-        name=data_name,
-        total=data_total,
         start=data_start,
         limit=data_limit,
         batch=data_batch,
-        logging=data_logging,
-    )
-    table_name = data_opt.name.stem.replace("-crawl-", "-parse-").removesuffix(".jsonl")
-    table_opt = TableOption(
-        home=table_host,
-        sect=env.project,
-        name=table_name,
-        reset=table_reset,
+        inter=data_inter,
+        total=data_total,
+        file=FileOption(
+            home=file_home,
+            name=file_name,
+        ) if file_home and file_name else None,
+        table=TableOption(
+            home=table_home,
+            name=table_name,
+            reset=table_reset,
+        ) if table_home and table_name else None,
     )
     filter_opt = FilterOption(
         min_char=filter_min_char,
@@ -195,48 +179,45 @@ def parse(
     args = ProgramArguments(
         env=env,
         data=data_opt,
-        table=table_opt,
         filter=filter_opt,
     )
     tqdm = mute_tqdm_cls()
-    output_file = (env.output_home / f"{table_name}-{env.time_stamp}.jsonl")
+    save_file = (env.output_home / f"{table_name}-{env.time_stamp}.jsonl")
 
-    with (JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='=')):
-        with MongoDBTable(args.table) as out_table, output_file.open("w") as out_file:
-            # Prepare a table
-            if args.table.reset:
-                out_table.drop()
-                logger.info(f"Cleard a database table: {args.table}")
+    with (
+        JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+        LineFileWrapper(args.data.file) as data_file,
+        MongoDBWrapper(args.data.table) as data_table,
+        save_file.open("w") as writer,
+    ):
+        # parse crawled data
+        batches, num_batch, num_input = args.data.make_batches(data_file, args.data.total)
+        logger.info(f"Parse from [{args.data.file}] to [{args.data.table}]")
+        logger.info(f"- amount: inputs={num_input}, batches={num_batch}")
+        logger.info(f"- filter: num_black_sect={args.filter.num_black_sect}, min_char={args.filter.min_char}, min_word={args.filter.min_word}")
+        progress, interval = (
+            tqdm(batches, total=num_batch, unit="batch", pre="*", desc="importing"),
+            math.ceil(args.data.inter / args.data.batch),
+        )
+        processed = set()
+        for i, x in enumerate(progress):
+            if i > 0 and i % interval == 0:
+                logger.info(progress)
+            process_many(batch=x, wrapper=data_table, processed=processed)
+        logger.info(progress)
 
-            # Parse and Save to a table
-            num_input, inputs = args.data.total, iter_compressed(args.data.home / args.data.name)
-            if args.data.start > 0:
-                num_input, inputs = max(0, min(num_input, num_input - args.data.start)), islice(inputs, args.data.start, num_input)
-            if args.data.limit > 0:
-                num_input, inputs = min(num_input, args.data.limit), islice(inputs, args.data.limit)
-            num_batch, batches = math.ceil(num_input / args.data.batch), ichunked(inputs, args.data.batch)
-            logger.info(f"Parse {num_input} inputs with {num_batch} batches to {args.table}")
-            logger.info(f"- Filter: num_black_subtitle={len(args.filter.black_sect_set)}, min_char={args.filter.min_char}, min_word={args.filter.min_word}")
-            progress, interval = (tqdm(batches, total=num_batch, unit="batch", pre="*", desc="importing"),
-                                  math.ceil(args.data.logging / args.data.batch))
-            processed = set()
-            for i, x in enumerate(progress):
-                if i > 0 and i % interval == 0:
-                    logger.info(progress)
-                process_many(batch=x, table=out_table, processed=processed)
-            logger.info(progress)
-
-            # Load and Save to a file
-            find_opt = {}
-            num_row, rows = out_table.count_documents(find_opt), out_table.find(find_opt).sort("_id")
-            progress, interval = (tqdm(rows, total=num_row, unit="row", pre="*", desc="exporting"),
-                                  args.data.logging * 100)
-            for i, x in enumerate(progress):
-                if i > 0 and i % interval == 0:
-                    logger.info(progress)
-                out_file.write(json.dumps(x, ensure_ascii=False) + '\n')
-            logger.info(progress)
-            logger.info(f"Export {num_row} rows to {output_file}")
+        # save parsed data
+        rows, num_row = data_table, len(data_table)
+        progress, interval = (
+            tqdm(rows, total=num_row, unit="row", pre="*", desc="exporting"),
+            args.data.inter * 100,
+        )
+        for i, x in enumerate(progress):
+            if i > 0 and i % interval == 0:
+                logger.info(progress)
+            writer.write(json.dumps(x, ensure_ascii=False) + '\n')
+        logger.info(progress)
+        logger.info(f"Export {num_row} rows to {save_file}")
 
 
 if __name__ == "__main__":

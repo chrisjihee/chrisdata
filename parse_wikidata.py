@@ -16,7 +16,7 @@ from qwikidata.entity import WikidataItem, WikidataProperty, WikidataLexeme, Cla
 from qwikidata.json_dump import WikidataJsonDump
 from qwikidata.typedefs import LanguageCode
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, TableOption, MongoDBTable
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, TableOption, MongoDBWrapper
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 
@@ -221,7 +221,7 @@ def parse(
     output_file = (args.env.output_home / f"{args.data.name.stem}-{args.env.time_stamp}.jsonl")
 
     with (JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='=')):
-        with MongoDBTable(args.table) as out_table, output_file.open("w") as out_file:
+        with MongoDBWrapper(args.table) as out_table, output_file.open("w") as out_file:
             if args.data.from_scratch:
                 logger.info(f"Clear database table: {args.table}")
                 out_table.drop()
