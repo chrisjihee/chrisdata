@@ -130,13 +130,13 @@ def search(
     )
     table_name = data_opt.name.stem.removesuffix(".jsonl")
     table_opt = TableOption(
-        db_host=table_host,
-        db_name=env.project,
-        tab_name=table_name,
+        home=table_host,
+        sect=env.project,
+        name=table_name,
     )
     index_name = data_opt.name.stem.replace("-parse-", "-index-").replace(".jsonl", "")
     index_opt = IndexOption(
-        host=index_host,
+        home=index_host,
         user=index_user,
         pswd=index_pswd,
         name=index_name,

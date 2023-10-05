@@ -12,7 +12,8 @@ from dataclasses_json import DataClassJsonMixin
 from more_itertools import ichunked
 from pymongo.collection import Collection
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, TableOption, MongoDBTable
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments
+from chrisbase.data import DataOption, FileOption, TableOption, IndexOption, MongoDBTable, ElasticSearchClient
 from chrisbase.io import LoggingFormat, iter_compressed
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 from crawl_wikipedia import ProcessResult as WikipediaProcessResult
@@ -21,39 +22,39 @@ logger = logging.getLogger(__name__)
 app = AppTyper()
 
 
-@dataclass
-class DataOption(OptionData):
-    home: str | Path = field()
-    name: str | Path = field()
-    total: int = field(default=-1)
-    start: int = field(default=0)
-    limit: int = field(default=-1)
-    batch: int = field(default=1)
-    logging: int = field(default=10000)
-    from_table: bool = field(default=False)
-
-    def __post_init__(self):
-        self.home = Path(self.home)
-        self.name = Path(self.name)
+# @dataclass
+# class DataOption(OptionData):
+#     home: str | Path = field()
+#     name: str | Path = field()
+#     total: int = field(default=-1)
+#     start: int = field(default=0)
+#     limit: int = field(default=-1)
+#     batch: int = field(default=1)
+#     logging: int = field(default=10000)
+#     from_table: bool = field(default=False)
+#
+#     def __post_init__(self):
+#         self.home = Path(self.home)
+#         self.name = Path(self.name)
 
 
 @dataclass
 class FilterOption:
     min_char: int = field(default=40)
     min_word: int = field(default=5)
-    black_subtitle: str | Path = field(default="input/Wikidata-parse/Wikipedia-black-subtitles.txt")
-    black_subtitle_set = None
+    black_sect: str | Path = field(default="input/wikimedia/wikipedia-black-subtitles.txt")
+    black_sect_set = None
 
     def __post_init__(self):
-        self.black_subtitle = Path(self.black_subtitle)
-        if self.black_subtitle.exists():
-            lines = (x.strip() for x in self.black_subtitle.read_text().splitlines())
-            self.black_subtitle_set = {x for x in lines if x}
+        self.black_sect = Path(self.black_sect)
+        if self.black_sect.exists():
+            lines = (x.strip() for x in self.black_sect.read_text().splitlines())
+            self.black_sect_set = {x for x in lines if x}
         else:
-            self.black_subtitle_set = set()
+            self.black_sect_set = set()
 
-    def invalid_subtitle(self, x: str) -> bool:
-        return x in self.black_subtitle_set
+    def invalid_sect(self, x: str) -> bool:
+        return x in self.black_sect_set
 
     def valid_text(self, x: str) -> bool:
         return all((
@@ -102,7 +103,7 @@ def process_one(x: str, processed: set[int], opt: FilterOption = FilterOption())
     sect_texts_prev: list[str] = []
     for (_, h1, h2, sect_body) in doc.section_list:
         h1, h2 = h1.strip(), h2.strip()
-        if opt.invalid_subtitle(h1) or opt.invalid_subtitle(h2):
+        if opt.invalid_sect(h1) or opt.invalid_sect(h2):
             continue
         sect_lines = [x.strip() for x in sect_body.strip().splitlines()]
         sect_texts = [x for x in sect_lines if opt.valid_text(x)]
@@ -181,15 +182,15 @@ def parse(
     )
     table_name = data_opt.name.stem.replace("-crawl-", "-parse-").removesuffix(".jsonl")
     table_opt = TableOption(
-        db_host=table_host,
-        db_name=env.project,
-        tab_name=table_name,
-        tab_reset=table_reset,
+        home=table_host,
+        sect=env.project,
+        name=table_name,
+        reset=table_reset,
     )
     filter_opt = FilterOption(
         min_char=filter_min_char,
         min_word=filter_min_word,
-        black_subtitle=filter_black_subtitle,
+        black_sect=filter_black_subtitle,
     )
     args = ProgramArguments(
         env=env,
@@ -203,7 +204,7 @@ def parse(
     with (JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='=')):
         with MongoDBTable(args.table) as out_table, output_file.open("w") as out_file:
             # Prepare a table
-            if args.table.tab_reset:
+            if args.table.reset:
                 out_table.drop()
                 logger.info(f"Cleard a database table: {args.table}")
 
@@ -215,7 +216,7 @@ def parse(
                 num_input, inputs = min(num_input, args.data.limit), islice(inputs, args.data.limit)
             num_batch, batches = math.ceil(num_input / args.data.batch), ichunked(inputs, args.data.batch)
             logger.info(f"Parse {num_input} inputs with {num_batch} batches to {args.table}")
-            logger.info(f"- Filter: num_black_subtitle={len(args.filter.black_subtitle_set)}, min_char={args.filter.min_char}, min_word={args.filter.min_word}")
+            logger.info(f"- Filter: num_black_subtitle={len(args.filter.black_sect_set)}, min_char={args.filter.min_char}, min_word={args.filter.min_word}")
             progress, interval = (tqdm(batches, total=num_batch, unit="batch", pre="*", desc="importing"),
                                   math.ceil(args.data.logging / args.data.batch))
             processed = set()

@@ -63,13 +63,13 @@ class WikidataLexemeEx(WikidataLexeme, ClaimMixinEx):
 class DataOption(OptionData):
     home: str | Path = field()
     name: str | Path = field()
-    total: int = field(default=106781030)  # https://www.wikidata.org/wiki/Wikidata:Statistics
+    total: int = field(default=-1)
     lang1: str = field(default="ko")
     lang2: str = field(default="en")
     limit: int = field(default=-1)
     batch: int = field(default=1)
+    logging: int = field(default=10000)
     from_scratch: bool = field(default=False)
-    prog_interval: int = field(default=10000)
 
     def __post_init__(self):
         self.home = Path(self.home)
@@ -179,7 +179,7 @@ def parse(
         # data
         data_home: str = typer.Option(default="input/Wikidata"),
         data_name: str = typer.Option(default="latest-all.json.bz2"),
-        data_total: int = typer.Option(default=105485440),
+        data_total: int = typer.Option(default=105485440),  # https://www.wikidata.org/wiki/Wikidata:Statistics
         data_limit: int = typer.Option(default=-1),
         data_batch: int = typer.Option(default=100),
         data_lang1: str = typer.Option(default="ko"),
@@ -209,12 +209,12 @@ def parse(
             limit=data_limit,
             batch=data_batch,
             from_scratch=table_reset,
-            prog_interval=data_logging,
+            logging=data_logging,
         ),
         table=TableOption(
-            db_host=table_host,
-            db_name=env.project,
-            tab_name=env.job_name,
+            home=table_host,
+            sect=env.project,
+            name=env.job_name,
         ),
     )
     tqdm = mute_tqdm_cls()
@@ -231,7 +231,7 @@ def parse(
             num_batch, batches = math.ceil(num_input / args.data.batch), ichunked(inputs, args.data.batch)
             logger.info(f"Parse {num_input} inputs with {num_batch} batches")
             progress, interval = (tqdm(batches, total=num_batch, unit="batch", pre="*", desc="importing"),
-                                  math.ceil(args.data.prog_interval / args.data.batch))
+                                  math.ceil(args.data.logging / args.data.batch))
             for i, x in enumerate(progress):
                 if i > 0 and i % interval == 0:
                     logger.info(progress)
@@ -240,7 +240,7 @@ def parse(
             find_opt = {}
             num_row, rows = out_table.count_documents(find_opt), out_table.find(find_opt).sort("_id")
             progress, interval = (tqdm(rows, total=num_row, unit="row", pre="*", desc="exporting"),
-                                  args.data.prog_interval * 10)
+                                  args.data.logging * 10)
             for i, x in enumerate(progress):
                 if i > 0 and i % interval == 0:
                     logger.info(progress)

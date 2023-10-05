@@ -6,7 +6,7 @@ from concurrent.futures import Future
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
 from itertools import islice
-from typing import List, Iterable
+from typing import Iterable
 
 import httpx
 import pandas as pd
@@ -16,7 +16,7 @@ from more_itertools import ichunked
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, TableOption, MongoDBTable
 from chrisbase.io import LoggingFormat
-from chrisbase.util import MongoDB, to_dataframe, mute_tqdm_cls, wait_future_jobs, terminate_processes
+from chrisbase.util import to_dataframe, mute_tqdm_cls, terminate_processes
 
 logger = logging.getLogger(__name__)
 app = AppTyper()
@@ -118,7 +118,7 @@ def check(
         input_batch: int = typer.Option(default=5),
         prog_interval: int = typer.Option(default=1),
         # table
-        db_host: str = typer.Option(default="localhost:27017"),
+        table_home: str = typer.Option(default="localhost:6382/check"),
 ):
     env = ProjectEnv(
         project=project,
@@ -144,9 +144,8 @@ def check(
             prog_interval=prog_interval,
         ),
         table=TableOption(
-            db_host=db_host,
-            db_name=env.project,
-            tab_name=env.job_name,
+            home=table_home,
+            name=env.job_name,
         ),
     )
     tqdm = mute_tqdm_cls()
