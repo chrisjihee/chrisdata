@@ -1,0 +1,258 @@
+{
+  "_id": "Q22968",
+  "ns": 0,
+  "type": "item",
+  "time": "2023-06-04T07:45:59Z",
+  "label1": "63빌딩",
+  "label2": "63 Building",
+  "title1": "63빌딩",
+  "title2": "63 Building",
+  "alias1": [],
+  "alias2": [
+    "Hanhwa 63 City",
+    "63 SQUARE"
+  ],
+  "descr1": "대한민국 서울특별시 영등포구의 여의도에 있는 마천루",
+  "descr2": "skyscraper in South Korea",
+  "claims": [
+    {
+      "property": "P373",
+      "datavalue": {
+        "value": "63 Building",
+        "type": "string"
+      }
+    },
+    {
+      "property": "P625",
+      "datavalue": {
+        "value": {
+          "latitude": 37.51972222222222,
+          "longitude": 126.94,
+          "altitude": null,
+          "precision": 0.0002777777777777778,
+          "globe": "http://www.wikidata.org/entity/Q2"
+        },
+        "type": "globecoordinate"
+      }
+    },
+    {
+      "property": "P646",
+      "datavalue": {
+        "value": "/m/06rbgx",
+        "type": "string"
+      }
+    },
+    {
+      "property": "P31",
+      "datavalue": {
+        "value": {
+          "entity-type": "item",
+          "numeric-id": 11303,
+          "id": "Q11303"
+        },
+        "type": "wikibase-entityid"
+      }
+    },
+    {
+      "property": "P17",
+      "datavalue": {
+        "value": {
+          "entity-type": "item",
+          "numeric-id": 884,
+          "id": "Q884"
+        },
+        "type": "wikibase-entityid"
+      }
+    },
+    {
+      "property": "P84",
+      "datavalue": {
+        "value": {
+          "entity-type": "item",
+          "numeric-id": 459464,
+          "id": "Q459464"
+        },
+        "type": "wikibase-entityid"
+      }
+    },
+    {
+      "property": "P1305",
+      "datavalue": {
+        "value": "891",
+        "type": "string"
+      }
+    },
+    {
+      "property": "P856",
+      "datavalue": {
+        "value": "http://www.63.co.kr/",
+        "type": "string"
+      }
+    },
+    {
+      "property": "P466",
+      "datavalue": {
+        "value": {
+          "entity-type": "item",
+          "numeric-id": 491990,
+          "id": "Q491990"
+        },
+        "type": "wikibase-entityid"
+      }
+    },
+    {
+      "property": "P131",
+      "datavalue": {
+        "value": {
+          "entity-type": "item",
+          "numeric-id": 11259935,
+          "id": "Q11259935"
+        },
+        "type": "wikibase-entityid"
+      }
+    },
+    {
+      "property": "P454",
+      "datavalue": {
+        "value": "20035146",
+        "type": "string"
+      }
+    },
+    {
+      "property": "P455",
+      "datavalue": {
+        "value": "106770",
+        "type": "string"
+      }
+    },
+    {
+      "property": "P18",
+      "datavalue": {
+        "value": "Seoul Building63.jpg",
+        "type": "string"
+      }
+    },
+    {
+      "property": "P1301",
+      "datavalue": {
+        "value": {
+          "amount": "+6",
+          "unit": "1"
+        },
+        "type": "quantity"
+      }
+    },
+    {
+      "property": "P2001",
+      "datavalue": {
+        "value": "Yuksam Bilding",
+        "type": "string"
+      }
+    },
+    {
+      "property": "P1942",
+      "datavalue": {
+        "value": "Yuksam Pilting",
+        "type": "string"
+      }
+    },
+    {
+      "property": "P1101",
+      "datavalue": {
+        "value": {
+          "amount": "+60",
+          "unit": "1"
+        },
+        "type": "quantity"
+      }
+    },
+    {
+      "property": "P127",
+      "datavalue": {
+        "value": {
+          "entity-type": "item",
+          "numeric-id": 489202,
+          "id": "Q489202"
+        },
+        "type": "wikibase-entityid"
+      }
+    },
+    {
+      "property": "P2048",
+      "datavalue": {
+        "value": {
+          "amount": "+249",
+          "unit": "http://www.wikidata.org/entity/Q11573"
+        },
+        "type": "quantity"
+      }
+    },
+    {
+      "property": "P571",
+      "datavalue": {
+        "value": {
+          "time": "+1985-00-00T00:00:00Z",
+          "timezone": 0,
+          "before": 0,
+          "after": 0,
+          "precision": 9,
+          "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+        },
+        "type": "time"
+      }
+    },
+    {
+      "property": "P1139",
+      "datavalue": {
+        "value": {
+          "amount": "+3",
+          "unit": "1"
+        },
+        "type": "quantity"
+      }
+    },
+    {
+      "property": "P149",
+      "datavalue": {
+        "value": {
+          "entity-type": "item",
+          "numeric-id": 245188,
+          "id": "Q245188"
+        },
+        "type": "wikibase-entityid"
+      }
+    },
+    {
+      "property": "P1619",
+      "datavalue": {
+        "value": {
+          "time": "+1985-07-27T00:00:00Z",
+          "timezone": 0,
+          "before": 0,
+          "after": 0,
+          "precision": 11,
+          "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+        },
+        "type": "time"
+      }
+    },
+    {
+      "property": "P1699",
+      "datavalue": {
+        "value": "1610",
+        "type": "string"
+      }
+    },
+    {
+      "property": "P8933",
+      "datavalue": {
+        "value": {
+          "entity-type": "item",
+          "numeric-id": 104432957,
+          "id": "Q104432957"
+        },
+        "type": "wikibase-entityid"
+      }
+    }
+  ]
+}
