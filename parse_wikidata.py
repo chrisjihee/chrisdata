@@ -224,12 +224,12 @@ def parse(
         save_file.open("w") as writer,
     ):
         # parse dump data
-        batches, num_batch, num_input = args.data.load_batches(WikidataJsonDump(str(data_file.path)), args.data.total)
+        inputs = args.data.load_batches(WikidataJsonDump(str(data_file.path)), args.data.total)
         logger.info(f"Parse from [{args.data.file}] to [{args.data.table}]")
-        logger.info(f"- amount: inputs={num_input}, batches={num_batch}")
+        logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.num_batch}")
         logger.info(f"- filter: lang1={args.filter.lang1}, lang2={args.filter.lang2}")
         progress, interval = (
-            tqdm(batches, total=num_batch, unit="batch", pre="*", desc="parsing"),
+            tqdm(inputs.batches, total=inputs.num_batch, unit="batch", pre="*", desc="parsing"),
             math.ceil(args.data.inter / args.data.batch),
         )
         for i, x in enumerate(progress):
@@ -332,11 +332,11 @@ def restore(
         save_file.open("w") as writer,
     ):
         # restore parsed data
-        batches, num_batch, num_input = args.data.load_batches(data_file, args.data.total)
+        inputs = args.data.load_batches(data_file, args.data.total)
         logger.info(f"Restore from [{args.data.file}] to [{args.data.table}]")
-        logger.info(f"- amount: inputs={num_input}, batches={num_batch}")
+        logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.num_batch}")
         progress, interval = (
-            tqdm(batches, total=num_batch, unit="batch", pre="*", desc="restoring"),
+            tqdm(inputs.batches, total=inputs.num_batch, unit="batch", pre="*", desc="restoring"),
             math.ceil(args.data.inter / args.data.batch),
         )
         for i, x in enumerate(progress):

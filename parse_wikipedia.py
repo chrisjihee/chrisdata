@@ -192,12 +192,12 @@ def parse(
         save_file.open("w") as writer,
     ):
         # parse crawled data
-        batches, num_batch, num_input = args.data.load_batches(data_file, args.data.total)
+        inputs = args.data.load_batches(data_file, args.data.total)
         logger.info(f"Parse from [{args.data.file}] to [{args.data.table}]")
-        logger.info(f"- amount: inputs={num_input}, batches={num_batch}")
+        logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.num_batch}")
         logger.info(f"- filter: num_black_sect={args.filter.num_black_sect}, min_char={args.filter.min_char}, min_word={args.filter.min_word}")
         progress, interval = (
-            tqdm(batches, total=num_batch, unit="batch", pre="*", desc="parsing"),
+            tqdm(inputs.batches, total=inputs.num_batch, unit="batch", pre="*", desc="parsing"),
             math.ceil(args.data.inter / args.data.batch),
         )
         parsed_ids = set()
