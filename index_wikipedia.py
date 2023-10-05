@@ -37,7 +37,7 @@ class IndexArguments(CommonArguments):
         ]).reset_index(drop=True)
 
 
-def process_many(batch: Iterable[dict], wrapper: ElasticSearchWrapper, batch_size: int):
+def index_many(batch: Iterable[dict], wrapper: ElasticSearchWrapper, batch_size: int):
     for ok, action in streaming_bulk(client=wrapper.cli,
                                      index=wrapper.opt.name,
                                      actions=batch,
@@ -131,7 +131,7 @@ def index(
         for i, x in enumerate(progress):
             if i > 0 and i % interval == 0:
                 logger.info(progress)
-            process_many(batch=x, wrapper=output_index, batch_size=args.input.batch)
+            index_many(batch=x, wrapper=output_index, batch_size=args.input.batch)
         logger.info(progress)
         output_index.refresh(verbose=True)
         logger.info(f"Indexed {len(output_index)} documents to [{args.output.index}]")
