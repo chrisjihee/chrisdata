@@ -25,12 +25,12 @@ app = AppTyper()
 class DataOption(OptionData):
     home: str | Path = field()
     name: str | Path = field()
-    total: int = field(default=1410203)  # wc -l Wikipedia-20230920-crawl-kowiki.jsonl
+    total: int = field(default=-1)
     start: int = field(default=0)
     limit: int = field(default=-1)
     batch: int = field(default=1)
-    from_scratch: bool = field(default=False)
     logging: int = field(default=10000)
+    from_table: bool = field(default=False)
 
     def __post_init__(self):
         self.home = Path(self.home)
@@ -178,7 +178,6 @@ def parse(
         limit=data_limit,
         batch=data_batch,
         logging=data_logging,
-        from_scratch=table_reset,
     )
     table_name = data_opt.name.stem.replace("-crawl-", "-parse-").removesuffix(".jsonl")
     table_opt = TableOption(

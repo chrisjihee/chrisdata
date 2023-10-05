@@ -177,17 +177,17 @@ def parse(
         logging_file: str = typer.Option(default="logging.out"),
         debugging: bool = typer.Option(default=False),
         # data
-        input_home: str = typer.Option(default="input/Wikidata"),
-        input_name: str = typer.Option(default="latest-all.json.bz2"),
-        input_total: int = typer.Option(default=105485440),
-        input_limit: int = typer.Option(default=-1),
-        input_batch: int = typer.Option(default=100),
-        input_lang1: str = typer.Option(default="ko"),
-        input_lang2: str = typer.Option(default="en"),
-        from_scratch: bool = typer.Option(default=False),
-        prog_interval: int = typer.Option(default=10000),
+        data_home: str = typer.Option(default="input/Wikidata"),
+        data_name: str = typer.Option(default="latest-all.json.bz2"),
+        data_total: int = typer.Option(default=105485440),
+        data_limit: int = typer.Option(default=-1),
+        data_batch: int = typer.Option(default=100),
+        data_lang1: str = typer.Option(default="ko"),
+        data_lang2: str = typer.Option(default="en"),
+        data_logging: int = typer.Option(default=10000),
         # table
-        db_host: str = typer.Option(default="localhost:6382"),
+        table_host: str = typer.Option(default="localhost:6382"),
+        table_reset: bool = typer.Option(default=False),
 ):
     env = ProjectEnv(
         project=project,
@@ -201,18 +201,18 @@ def parse(
     args = ProgramArguments(
         env=env,
         data=DataOption(
-            home=input_home,
-            name=input_name,
-            total=input_total,
-            lang1=input_lang1,
-            lang2=input_lang2,
-            limit=input_limit,
-            batch=input_batch,
-            from_scratch=from_scratch,
-            prog_interval=prog_interval,
+            home=data_home,
+            name=data_name,
+            total=data_total,
+            lang1=data_lang1,
+            lang2=data_lang2,
+            limit=data_limit,
+            batch=data_batch,
+            from_scratch=table_reset,
+            prog_interval=data_logging,
         ),
         table=TableOption(
-            db_host=db_host,
+            db_host=table_host,
             db_name=env.project,
             tab_name=env.job_name,
         ),
@@ -247,6 +247,34 @@ def parse(
                 out_file.write(json.dumps(x, ensure_ascii=False) + '\n')
             logger.info(progress)
         logger.info(f"Export {num_row}/{num_input} rows to {output_file}")
+
+
+@app.command()
+def restore(
+        # env
+        project: str = typer.Option(default="WiseData"),
+        job_name: str = typer.Option(default="restore_wikidata"),
+        output_home: str = typer.Option(default="output-restore_wikidata"),
+        logging_file: str = typer.Option(default="logging.out"),
+        debugging: bool = typer.Option(default=False),
+        # data
+        data_home: str = typer.Option(default="input/Wikidata-parse"),
+        data_name: str = typer.Option(default="wikipedia-20230920-crawl-kowiki.jsonl.bz2"),
+        data_total: int = typer.Option(default=1410203),
+        data_start: int = typer.Option(default=0),
+        data_limit: int = typer.Option(default=-1),
+        data_batch: int = typer.Option(default=1000),
+        data_logging: int = typer.Option(default=10000),
+):
+    env = ProjectEnv(
+        project=project,
+        job_name=job_name,
+        debugging=debugging,
+        output_home=output_home,
+        logging_file=logging_file,
+        msg_level=logging.DEBUG if debugging else logging.INFO,
+        msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_36,
+    )
 
 
 if __name__ == "__main__":
