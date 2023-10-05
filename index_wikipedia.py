@@ -1,19 +1,15 @@
 import logging
 import math
 from dataclasses import dataclass, field
-from itertools import islice
 from typing import Iterable
 
 import pandas as pd
 import typer
-from dataclasses_json import DataClassJsonMixin
-from elastic_transport import ObjectApiResponse
-from elasticsearch import Elasticsearch
 from elasticsearch.helpers import streaming_bulk
-from more_itertools import ichunked
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments
-from chrisbase.data import DataOption, FileOption, TableOption, IndexOption, MongoDBWrapper, ElasticSearchWrapper
+from chrisbase.data import DataOption, FileOption, TableOption, IndexOption
+from chrisbase.data import LineFileWrapper, MongoDBWrapper, ElasticSearchWrapper
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 
@@ -33,22 +29,16 @@ class ProgramArguments(CommonArguments):
             columns = [self.data_type, "value"]
         return pd.concat([
             to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
-            to_dataframe(columns=columns, raw=self.data, data_prefix="data"),
+            to_dataframe(columns=columns, raw=self.data, data_prefix="data", data_exclude=["file", "table", "index"]),
+            to_dataframe(columns=columns, raw=self.data.file, data_prefix="data.file") if self.data.file else None,
+            to_dataframe(columns=columns, raw=self.data.table, data_prefix="data.table") if self.data.table else None,
+            to_dataframe(columns=columns, raw=self.data.index, data_prefix="data.index") if self.data.index else None,
         ]).reset_index(drop=True)
 
 
-@dataclass
-class PassageUnit(DataClassJsonMixin):
-    _id: str
-    title: str
-    subtitle1: str
-    subtitle2: str
-    body_text: str
-
-
-def process_many(batch: Iterable[dict], batch_size: int, index_name: str, client: Elasticsearch):
-    for ok, action in streaming_bulk(client=client,
-                                     index=index_name,
+def process_many(batch: Iterable[dict], wrapper: ElasticSearchWrapper, batch_size: int):
+    for ok, action in streaming_bulk(client=wrapper.cli,
+                                     index=wrapper.opt.name,
                                      actions=batch,
                                      chunk_size=batch_size,
                                      yield_ok=False):
@@ -66,11 +56,12 @@ def index(
         # data
         data_start: int = typer.Option(default=0),
         data_limit: int = typer.Option(default=-1),
+        # data_limit: int = typer.Option(default=100),
         data_batch: int = typer.Option(default=10000),
         data_inter: int = typer.Option(default=100000),
-        data_total: int = typer.Option(default=2009624),
+        data_total: int = typer.Option(default=2013506),
         file_home: str = typer.Option(default="input/wikimedia"),
-        file_name: str = typer.Option(default="wikipedia-20230920-parse-kowiki.jsonl.bz2"),
+        file_name: str = typer.Option(default="wikipedia-20230920-parse-kowiki.jsonl"),
         table_home: str = typer.Option(default="localhost:6382/wikimedia"),
         table_name: str = typer.Option(default="wikipedia-20230920-parse-kowiki"),
         index_home: str = typer.Option(default="localhost:9810"),
@@ -117,66 +108,38 @@ def index(
         data=data_opt,
     )
     tqdm = mute_tqdm_cls()
-
     logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
+    assert args.data.file or args.data.table, "data.file or data.table is required"
+    assert args.data.index, "data.index is required"
+
     with (
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
         ElasticSearchWrapper(args.data.index) as data_index,
         MongoDBWrapper(args.data.table) as data_table,
+        LineFileWrapper(args.data.file) as data_file,
     ):
-        # Prepare an index
-        if args.data.index.reset:
-            if data_index.indices.exists(index=args.data.index.name):
-                data_index.indices.delete(index=args.data.index.name)
-            data_index.indices.create(index=args.data.index.name, **args.data.index.create_args)
-            logger.info(f"Created a new index: {args.data.index}")
-            logger.info(f"- Option: keys={list(args.data.index.create_args.keys())}")
-
-        exit(1)
-
-        # Load and Indexing documents
-        if args.data.from_table:
-            logger.info(f"Use database table: {args.table}")
-            find_opt = {}
-            num_input, inputs = data_table.count_documents(find_opt), data_table.find(find_opt).sort("_id")
+        # index parsed data
+        if data_table and data_table.usable():
+            data_source = args.data.table
+            batches, num_batch, num_input = args.data.make_batches(data_table, args.data.total)
+        elif data_file and data_file.usable():
+            data_source = args.data.file
+            batches, num_batch, num_input = args.data.make_batches(data_file, args.data.total)
         else:
-            num_input, inputs = args.data.total, iter_compressed(args.data.home / args.data.name)
-            inputs = map(PassageUnit.to_dict, map(PassageUnit.from_json, inputs))
-        if args.data.start > 0:
-            num_input, inputs = max(0, min(num_input, num_input - args.data.start)), islice(inputs, args.data.start, num_input)
-        if args.data.limit > 0:
-            num_input, inputs = min(num_input, args.data.limit), islice(inputs, args.data.limit)
-        num_batch, batches = math.ceil(num_input / args.data.batch), ichunked(inputs, args.data.batch)
-        logger.info(f"Index {num_input} inputs with {num_batch} batches to {args.data.index}")
-        progress, interval = (tqdm(batches, total=num_batch, unit="batch", pre="*", desc="indexing"),
-                              math.ceil(args.data.inter / args.data.batch))
+            assert False, "No data source"
+        logger.info(f"Index from [{data_source}] to [{args.data.index}]")
+        logger.info(f"- amount: inputs={num_input}, batches={num_batch}")
+        progress, interval = (
+            tqdm(batches, total=num_batch, unit="batch", pre="*", desc="indexing"),
+            math.ceil(args.data.inter / args.data.batch)
+        )
         for i, x in enumerate(progress):
             if i > 0 and i % interval == 0:
                 logger.info(progress)
-            process_many(batch=x, batch_size=args.data.batch, index_name=args.data.index.name, client=data_index)
+            process_many(batch=x, wrapper=data_index, batch_size=args.data.batch)
         logger.info(progress)
-        data_index.indices.refresh(index=args.data.index.name)
-        for line in str(data_index.cat.indices(index=args.data.index.name, v=True).body.strip()).splitlines():
-            logger.info(line)
-
-        # Search a query
-        query1, query2, nbest = '지미 카터', '대한민국', 100
-        response: ObjectApiResponse = data_index.search(
-            index=args.data.index.name,
-            query={
-                "query_string": {
-                    "default_field": "body_text",
-                    "query": f'"{query1}" AND "{query2}"'
-                },
-            },
-            _source=("_id", "title", "subtitle1", "subtitle2", "body_text"),
-            size=nbest,
-        )
-        if response.meta.status:
-            res = response.body
-            logger.info(f"Got {res['hits']['total']['value']} hits (Max={res['hits']['max_score']}):")
-            for hit in res["hits"]["hits"]:
-                logger.info(f"  - {hit}")
+        data_index.refresh(verbose=True)
+        logger.info(f"Indexed {len(data_index)} documents to [{args.data.index}]")
 
 
 if __name__ == "__main__":

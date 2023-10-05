@@ -10,7 +10,8 @@ import typer
 from dataclasses_json import DataClassJsonMixin
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments
-from chrisbase.data import DataOption, FileOption, TableOption, LineFileWrapper, MongoDBWrapper
+from chrisbase.data import DataOption, FileOption, TableOption
+from chrisbase.data import LineFileWrapper, MongoDBWrapper
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 from crawl_wikipedia import ProcessResult as WikipediaProcessResult
@@ -186,8 +187,8 @@ def parse(
 
     with (
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        LineFileWrapper(args.data.file) as data_file,
         MongoDBWrapper(args.data.table) as data_table,
+        LineFileWrapper(args.data.file) as data_file,
         save_file.open("w") as writer,
     ):
         # parse crawled data
@@ -196,7 +197,7 @@ def parse(
         logger.info(f"- amount: inputs={num_input}, batches={num_batch}")
         logger.info(f"- filter: num_black_sect={args.filter.num_black_sect}, min_char={args.filter.min_char}, min_word={args.filter.min_word}")
         progress, interval = (
-            tqdm(batches, total=num_batch, unit="batch", pre="*", desc="importing"),
+            tqdm(batches, total=num_batch, unit="batch", pre="*", desc="parsing"),
             math.ceil(args.data.inter / args.data.batch),
         )
         processed = set()
@@ -209,7 +210,7 @@ def parse(
         # save parsed data
         rows, num_row = data_table, len(data_table)
         progress, interval = (
-            tqdm(rows, total=num_row, unit="row", pre="*", desc="exporting"),
+            tqdm(rows, total=num_row, unit="row", pre="*", desc="saving"),
             args.data.inter * 100,
         )
         for i, x in enumerate(progress):
@@ -217,7 +218,7 @@ def parse(
                 logger.info(progress)
             writer.write(json.dumps(x, ensure_ascii=False) + '\n')
         logger.info(progress)
-        logger.info(f"Export {num_row} rows to {save_file}")
+        logger.info(f"Saved {num_row} rows to [{save_file}]")
 
 
 if __name__ == "__main__":
