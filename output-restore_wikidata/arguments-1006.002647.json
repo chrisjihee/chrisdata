@@ -1,0 +1,48 @@
+{
+  "env": {
+    "project": "WiseData",
+    "job_name": "restore_wikidata",
+    "hostname": "chrisBookPro.local",
+    "hostaddr": "192.168.0.2",
+    "python_path": "/Users/chris/miniforge3/envs/WiseData-2023.08/bin/python",
+    "working_path": "/Users/chris/proj/WiseData-2023.08",
+    "running_file": "parse_wikidata.py",
+    "command_args": [
+      "restore"
+    ],
+    "num_ip_addrs": 0,
+    "max_workers": 1,
+    "output_home": "output-restore_wikidata",
+    "logging_file": "logging-1006.002647.out",
+    "argument_file": "arguments-1006.002647.json",
+    "debugging": false,
+    "msg_level": 20,
+    "msg_format": "%(asctime)s ┇ %(levelname)-8s ┇ %(name)36s ┇ %(message)s",
+    "date_format": "[%m.%d %H:%M:%S]",
+    "time_stamp": "1006.002647"
+  },
+  "data": {
+    "start": 0,
+    "limit": -1,
+    "batch": 10000,
+    "inter": 100000,
+    "total": 1018174,
+    "file": {
+      "home": "input/wikimedia",
+      "name": "wikidata-20230920-parse-kowiki.jsonl",
+      "mode": "rb",
+      "strict": false,
+      "encoding": "utf-8"
+    },
+    "table": {
+      "home": "localhost:6382/wikimedia",
+      "name": "wikidata-20230920-parse-kowiki",
+      "sort": "_id",
+      "find": {},
+      "reset": true,
+      "strict": false,
+      "timeout": 5000
+    },
+    "index": null
+  }
+}

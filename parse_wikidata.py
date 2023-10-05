@@ -281,8 +281,7 @@ def restore(
         debugging: bool = typer.Option(default=False),
         # data
         data_start: int = typer.Option(default=0),
-        # data_limit: int = typer.Option(default=-1),
-        data_limit: int = typer.Option(default=260000),
+        data_limit: int = typer.Option(default=-1),
         data_batch: int = typer.Option(default=10000),
         data_inter: int = typer.Option(default=100000),
         data_total: int = typer.Option(default=1018174),
@@ -343,7 +342,6 @@ def restore(
         for i, x in enumerate(progress):
             if i > 0 and i % interval == 0:
                 logger.info(progress)
-            # restore_many(batch=x, wrapper=data_table)
             data_table.table.insert_many(x)
         logger.info(progress)
 
@@ -351,7 +349,7 @@ def restore(
         rows, num_row = data_table, len(data_table)
         progress, interval = (
             tqdm(rows, total=num_row, unit="row", pre="*", desc="saving"),
-            args.data.inter * 10,
+            args.data.inter,
         )
         for i, x in enumerate(progress):
             if i > 0 and i % interval == 0:
