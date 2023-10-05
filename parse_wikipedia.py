@@ -9,7 +9,7 @@ import pandas as pd
 import typer
 from dataclasses_json import DataClassJsonMixin
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, OptionData
 from chrisbase.data import DataOption, FileOption, TableOption
 from chrisbase.data import LineFileWrapper, MongoDBWrapper
 from chrisbase.io import LoggingFormat
@@ -21,7 +21,7 @@ app = AppTyper()
 
 
 @dataclass
-class FilterOption:
+class FilterOption(OptionData):
     min_char: int = field(default=40)
     min_word: int = field(default=5)
     black_sect: str | Path = field(default="black_sect.txt")
@@ -192,7 +192,7 @@ def parse(
         save_file.open("w") as writer,
     ):
         # parse crawled data
-        batches, num_batch, num_input = args.data.make_batches(data_file, args.data.total)
+        batches, num_batch, num_input = args.data.input_batches(data_file, args.data.total)
         logger.info(f"Parse from [{args.data.file}] to [{args.data.table}]")
         logger.info(f"- amount: inputs={num_input}, batches={num_batch}")
         logger.info(f"- filter: num_black_sect={args.filter.num_black_sect}, min_char={args.filter.min_char}, min_word={args.filter.min_word}")

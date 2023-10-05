@@ -46,30 +46,29 @@ def process_many(batch: Iterable[dict], wrapper: ElasticSearchWrapper, batch_siz
 
 
 @app.command()
-def index(
+def search(
         # env
         project: str = typer.Option(default="WiseData"),
-        job_name: str = typer.Option(default="index_wikipedia"),
-        output_home: str = typer.Option(default="output-index_wikipedia"),
+        job_name: str = typer.Option(default="search_wikidata"),
+        output_home: str = typer.Option(default="output-search_wikidata"),
         logging_file: str = typer.Option(default="logging.out"),
         debugging: bool = typer.Option(default=False),
         # data
         data_start: int = typer.Option(default=0),
-        data_limit: int = typer.Option(default=-1),
-        # data_limit: int = typer.Option(default=100),
+        # data_limit: int = typer.Option(default=-1),
+        data_limit: int = typer.Option(default=1),
         data_batch: int = typer.Option(default=10000),
         data_inter: int = typer.Option(default=100000),
-        data_total: int = typer.Option(default=2013506),
+        data_total: int = typer.Option(default=1018174),
         file_home: str = typer.Option(default="input/wikimedia"),
-        file_name: str = typer.Option(default="wikipedia-20230920-parse-kowiki.jsonl"),
+        file_name: str = typer.Option(default="wikidata-20230920-parse-kowiki.jsonl"),
         table_home: str = typer.Option(default="localhost:6382/wikimedia"),
-        table_name: str = typer.Option(default="wikipedia-20230920-parse-kowiki"),
+        table_name: str = typer.Option(default="wikidata-20230920-parse-kowiki"),
+        # table_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
         index_home: str = typer.Option(default="localhost:9810"),
         index_name: str = typer.Option(default="wikipedia-20230920-index-kowiki"),
         index_user: str = typer.Option(default="elastic"),
         index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
-        index_reset: bool = typer.Option(default=True),
-        index_create: str = typer.Option(default="input/wikimedia/wikipedia-index_create_args.json"),
 ):
     env = ProjectEnv(
         project=project,
@@ -99,8 +98,6 @@ def index(
             user=index_user,
             pswd=index_pswd,
             name=index_name,
-            reset=index_reset,
-            create=index_create,
         ) if index_home and index_name else None,
     )
     args = ProgramArguments(
@@ -109,8 +106,9 @@ def index(
     )
     tqdm = mute_tqdm_cls()
     logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
-    assert args.data.file or args.data.table, "data.file or data.table is required"
+    assert args.data.file, "data.file is required"
     assert args.data.index, "data.index is required"
+    assert args.data.table, "data.table is required"
 
     with (
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
@@ -118,28 +116,21 @@ def index(
         MongoDBWrapper(args.data.table) as data_table,
         LineFileWrapper(args.data.file) as data_file,
     ):
-        # index parsed data
-        if data_table and data_table.usable():
-            data_source = args.data.table
-            batches, num_batch, num_input = args.data.make_batches(data_table, args.data.total)
-        elif data_file and data_file.usable():
-            data_source = args.data.file
-            batches, num_batch, num_input = args.data.make_batches(data_file, args.data.total)
-        else:
-            assert False, "No data source"
-        logger.info(f"Index from [{data_source}] to [{args.data.index}]")
+        # search parsed data
+        batches, num_batch, num_input = args.data.input_batches(data_file, args.data.total)
+        logger.info(f"Search [{args.data.file}] from [{args.data.index}] to [{args.data.table}]")
         logger.info(f"- amount: inputs={num_input}, batches={num_batch}")
-        progress, interval = (
-            tqdm(batches, total=num_batch, unit="batch", pre="*", desc="indexing"),
-            math.ceil(args.data.inter / args.data.batch)
-        )
-        for i, x in enumerate(progress):
-            if i > 0 and i % interval == 0:
-                logger.info(progress)
-            process_many(batch=x, wrapper=data_index, batch_size=args.data.batch)
-        logger.info(progress)
-        data_index.refresh(verbose=True)
-        logger.info(f"Indexed {len(data_index)} documents to [{args.data.index}]")
+        # progress, interval = (
+        #     tqdm(batches, total=num_batch, unit="batch", pre="*", desc="indexing"),
+        #     math.ceil(args.data.inter / args.data.batch)
+        # )
+        # for i, x in enumerate(progress):
+        #     if i > 0 and i % interval == 0:
+        #         logger.info(progress)
+        #     process_many(batch=x, wrapper=data_index, batch_size=args.data.batch)
+        # logger.info(progress)
+        # data_index.refresh(verbose=True)
+        # logger.info(f"Indexed {len(data_index)} documents to [{args.data.index}]")
 
 
 if __name__ == "__main__":

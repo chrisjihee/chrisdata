@@ -121,10 +121,10 @@ def index(
         # index parsed data
         if data_table and data_table.usable():
             data_source = args.data.table
-            batches, num_batch, num_input = args.data.make_batches(data_table, args.data.total)
+            batches, num_batch, num_input = args.data.input_batches(data_table, args.data.total)
         elif data_file and data_file.usable():
             data_source = args.data.file
-            batches, num_batch, num_input = args.data.make_batches(data_file, args.data.total)
+            batches, num_batch, num_input = args.data.input_batches(data_file, args.data.total)
         else:
             assert False, "No data source"
         logger.info(f"Index from [{data_source}] to [{args.data.index}]")

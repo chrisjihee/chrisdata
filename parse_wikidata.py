@@ -2,21 +2,19 @@ import json
 import logging
 import math
 from dataclasses import dataclass, field
-from itertools import islice
-from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
 import typer
 from dataclasses_json import DataClassJsonMixin
-from more_itertools import ichunked
-from pymongo.collection import Collection
 from qwikidata.claim import WikidataClaim
 from qwikidata.entity import WikidataItem, WikidataProperty, WikidataLexeme, ClaimsMixin
 from qwikidata.json_dump import WikidataJsonDump
 from qwikidata.typedefs import LanguageCode
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, TableOption, MongoDBWrapper
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, OptionData
+from chrisbase.data import DataOption, FileOption, TableOption
+from chrisbase.data import LineFileWrapper, MongoDBWrapper
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 
@@ -60,27 +58,15 @@ class WikidataLexemeEx(WikidataLexeme, ClaimMixinEx):
 
 
 @dataclass
-class DataOption(OptionData):
-    home: str | Path = field()
-    name: str | Path = field()
-    total: int = field(default=-1)
+class FilterOption(OptionData):
     lang1: str = field(default="ko")
     lang2: str = field(default="en")
-    limit: int = field(default=-1)
-    batch: int = field(default=1)
-    logging: int = field(default=10000)
-    from_scratch: bool = field(default=False)
-
-    def __post_init__(self):
-        self.home = Path(self.home)
-        self.name = Path(self.name)
 
 
 @dataclass
 class ProgramArguments(CommonArguments):
     data: DataOption = field()
-    table: TableOption = field()
-    other: str | None = field(default=None)
+    filter: FilterOption = field(default=FilterOption())
 
     def __post_init__(self):
         super().__post_init__()
@@ -89,11 +75,11 @@ class ProgramArguments(CommonArguments):
         if not columns:
             columns = [self.data_type, "value"]
         return pd.concat([
-            to_dataframe(columns=columns, raw=self.time, data_prefix="time"),
             to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
-            to_dataframe(columns=columns, raw=self.data, data_prefix="data"),
-            to_dataframe(columns=columns, raw=self.table, data_prefix="table"),
-            to_dataframe(columns=columns, raw={"other": self.other}),
+            to_dataframe(columns=columns, raw=self.data, data_prefix="data", data_exclude=["file", "table", "index"]),
+            to_dataframe(columns=columns, raw=self.data.file, data_prefix="data.file") if self.data.file else None,
+            to_dataframe(columns=columns, raw=self.data.table, data_prefix="data.table") if self.data.table else None,
+            to_dataframe(columns=columns, raw=self.data.index, data_prefix="data.index") if self.data.index else None,
         ]).reset_index(drop=True)
 
 
@@ -115,8 +101,8 @@ class WikidataUnit(DataClassJsonMixin):
 
 
 def process_one(x: dict, args: ProgramArguments):
-    lang1_code = LanguageCode(args.data.lang1)
-    lang2_code = LanguageCode(args.data.lang2)
+    lang1_code = LanguageCode(args.filter.lang1)
+    lang2_code = LanguageCode(args.filter.lang2)
     row = WikidataUnit(
         _id=x['id'],
         ns=x['ns'],
@@ -160,12 +146,12 @@ def process_one(x: dict, args: ProgramArguments):
     return None
 
 
-def process_many(batch: Iterable[dict], table: Collection, args: ProgramArguments):
-    rows = [None if table.count_documents({"_id": x['id']}, limit=1) > 0
+def process_many(batch: Iterable[dict], wrapper: MongoDBWrapper, args: ProgramArguments):
+    rows = [None if wrapper.count({"_id": x['id']}) > 0
             else process_one(x, args) for x in batch]
     rows = [row.to_dict() for row in rows if row]
     if len(rows) > 0:
-        table.insert_many(rows)
+        wrapper.table.insert_many(rows)
 
 
 @app.command()
@@ -177,17 +163,20 @@ def parse(
         logging_file: str = typer.Option(default="logging.out"),
         debugging: bool = typer.Option(default=False),
         # data
-        data_home: str = typer.Option(default="input/Wikidata"),
-        data_name: str = typer.Option(default="latest-all.json.bz2"),
-        data_total: int = typer.Option(default=105485440),  # https://www.wikidata.org/wiki/Wikidata:Statistics
-        data_limit: int = typer.Option(default=-1),
+        data_start: int = typer.Option(default=0),
+        # data_limit: int = typer.Option(default=-1),
+        data_limit: int = typer.Option(default=100),
         data_batch: int = typer.Option(default=100),
-        data_lang1: str = typer.Option(default="ko"),
-        data_lang2: str = typer.Option(default="en"),
-        data_logging: int = typer.Option(default=10000),
-        # table
-        table_host: str = typer.Option(default="localhost:6382"),
-        table_reset: bool = typer.Option(default=False),
+        data_inter: int = typer.Option(default=10000),
+        data_total: int = typer.Option(default=105485440),  # https://www.wikidata.org/wiki/Wikidata:Statistics
+        file_home: str = typer.Option(default="input/wikimedia"),
+        file_name: str = typer.Option(default="wikidata-20230920-dump.json.bz2"),
+        table_home: str = typer.Option(default="localhost:6382"),
+        table_name: str = typer.Option(default="wikidata-20230920-parse"),
+        table_reset: bool = typer.Option(default=True),
+        # filter
+        filter_lang1: str = typer.Option(default="ko"),
+        filter_lang2: str = typer.Option(default="en"),
 ):
     env = ProjectEnv(
         project=project,
@@ -198,55 +187,69 @@ def parse(
         msg_level=logging.DEBUG if debugging else logging.INFO,
         msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
     )
+    data_opt = DataOption(
+        start=data_start,
+        limit=data_limit,
+        batch=data_batch,
+        inter=data_inter,
+        total=data_total,
+        file=FileOption(
+            home=file_home,
+            name=file_name,
+        ) if file_home and file_name else None,
+        table=TableOption(
+            home=table_home,
+            name=table_name,
+            reset=table_reset,
+        ) if table_home and table_name else None,
+    )
+    filter_opt = FilterOption(
+        lang1=filter_lang1,
+        lang2=filter_lang2,
+    )
     args = ProgramArguments(
         env=env,
-        data=DataOption(
-            home=data_home,
-            name=data_name,
-            total=data_total,
-            lang1=data_lang1,
-            lang2=data_lang2,
-            limit=data_limit,
-            batch=data_batch,
-            from_scratch=table_reset,
-            logging=data_logging,
-        ),
-        table=TableOption(
-            home=table_host,
-            sect=env.project,
-            name=env.job_name,
-        ),
+        data=data_opt,
+        filter=filter_opt,
     )
     tqdm = mute_tqdm_cls()
-    output_file = (args.env.output_home / f"{args.data.name.stem}-{args.env.time_stamp}.jsonl")
+    save_file = (args.env.output_home / f"{table_name}-{args.env.time_stamp}.jsonl")
+    assert args.data.file, "data.file is required"
+    assert args.data.table, "data.table is required"
 
-    with (JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='=')):
-        with MongoDBWrapper(args.table) as out_table, output_file.open("w") as out_file:
-            if args.data.from_scratch:
-                logger.info(f"Clear database table: {args.table}")
-                out_table.drop()
-            num_input, inputs = args.data.total, WikidataJsonDump(str(args.data.home / args.data.name))
-            if args.data.limit > 0:
-                num_input, inputs = min(args.data.total, args.data.limit), islice(inputs, args.data.limit)
-            num_batch, batches = math.ceil(num_input / args.data.batch), ichunked(inputs, args.data.batch)
-            logger.info(f"Parse {num_input} inputs with {num_batch} batches")
-            progress, interval = (tqdm(batches, total=num_batch, unit="batch", pre="*", desc="importing"),
-                                  math.ceil(args.data.logging / args.data.batch))
-            for i, x in enumerate(progress):
-                if i > 0 and i % interval == 0:
-                    logger.info(progress)
-                process_many(batch=x, table=out_table, args=args)
-            logger.info(progress)
-            find_opt = {}
-            num_row, rows = out_table.count_documents(find_opt), out_table.find(find_opt).sort("_id")
-            progress, interval = (tqdm(rows, total=num_row, unit="row", pre="*", desc="exporting"),
-                                  args.data.logging * 10)
-            for i, x in enumerate(progress):
-                if i > 0 and i % interval == 0:
-                    logger.info(progress)
-                out_file.write(json.dumps(x, ensure_ascii=False) + '\n')
-            logger.info(progress)
-        logger.info(f"Export {num_row}/{num_input} rows to {output_file}")
+    with (
+        JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+        MongoDBWrapper(args.data.table) as data_table,
+        LineFileWrapper(args.data.file) as data_file,
+        save_file.open("w") as writer,
+    ):
+        # parse dump data
+        batches, num_batch, num_input = args.data.input_batches(WikidataJsonDump(str(data_file.path)), args.data.total)
+        logger.info(f"Parse from [{args.data.file}] to [{args.data.table}]")
+        logger.info(f"- amount: inputs={num_input}, batches={num_batch}")
+        logger.info(f"- filter: lang1={args.filter.lang1}, lang2={args.filter.lang2}")
+        progress, interval = (
+            tqdm(batches, total=num_batch, unit="batch", pre="*", desc="parsing"),
+            math.ceil(args.data.inter / args.data.batch),
+        )
+        for i, x in enumerate(progress):
+            if i > 0 and i % interval == 0:
+                logger.info(progress)
+            process_many(batch=x, wrapper=data_table, args=args)
+        logger.info(progress)
+
+        # save parsed data
+        rows, num_row = data_table, len(data_table)
+        progress, interval = (
+            tqdm(rows, total=num_row, unit="row", pre="*", desc="saving"),
+            args.data.inter * 100,
+        )
+        for i, x in enumerate(progress):
+            if i > 0 and i % interval == 0:
+                logger.info(progress)
+            writer.write(json.dumps(x, ensure_ascii=False) + '\n')
+        logger.info(progress)
+        logger.info(f"Saved {num_row} rows to [{save_file}]")
 
 
 @app.command()
