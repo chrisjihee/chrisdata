@@ -131,13 +131,11 @@ def parse(
         # data
         data_start: int = typer.Option(default=0),
         data_limit: int = typer.Option(default=-1),
-        # data_limit: int = typer.Option(default=100),
         data_batch: int = typer.Option(default=1000),
         data_inter: int = typer.Option(default=10000),
         data_total: int = typer.Option(default=1410203),
         file_home: str = typer.Option(default="input/wikimedia"),
-        # file_name: str = typer.Option(default="wikipedia-20230920-crawl-kowiki.jsonl"),
-        file_name: str = typer.Option(default="wikipedia-20230920-crawl-kowiki.jsonl.bz2"),
+        file_name: str = typer.Option(default="wikipedia-20230920-crawl-kowiki.jsonl"),
         table_home: str = typer.Option(default="localhost:6382/wikimedia"),
         table_name: str = typer.Option(default="wikipedia-20230920-parse-kowiki"),
         table_reset: bool = typer.Option(default=True),
@@ -183,6 +181,8 @@ def parse(
     )
     tqdm = mute_tqdm_cls()
     save_file = (env.output_home / f"{table_name}-{env.time_stamp}.jsonl")
+    assert args.data.file, "data.file is required"
+    assert args.data.table, "data.table is required"
 
     with (
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
