@@ -1,15 +1,13 @@
 import json
-from pathlib import Path
 
 from elastic_transport import ObjectApiResponse
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import streaming_bulk
 from tqdm import tqdm
 
-elastic_password = Path("cfg/elastic-pw.txt").read_text().strip().splitlines()[-1].strip()
+elastic_password = "cIrEP5OCwTLn0QIQwnsA"
 elastic_index_name = "example_index"
-elastic_host_info = "https://localhost:9200"
-elastic_ca_certs = "elasticsearch/config/certs/http_ca.crt"
+elastic_host_info = "http://localhost:9810"
 input_documents = "input/CHOSUN_2000.small.jsonl"
 total_documents = 50
 
@@ -29,15 +27,13 @@ def _document_generator(documents_path):
             )
 
 
-def main():
+if __name__ == "__main__":
     es: Elasticsearch = Elasticsearch(
         hosts=elastic_host_info,
         request_timeout=30,
         max_retries=10,
         retry_on_timeout=True,
         basic_auth=("elastic", elastic_password),
-        verify_certs=True,
-        ca_certs=elastic_ca_certs,
     )
 
     if es.indices.exists(index=elastic_index_name):
@@ -96,7 +92,7 @@ def main():
         _source=("id", "title", "body"),
         size=nbest,
     )
-    print(json.dumps(dict(response), ensure_ascii=False))
+    print(json.dumps(response.body, ensure_ascii=False))
     response: ObjectApiResponse = es.search(
         index=elastic_index_name,
         query={
@@ -107,8 +103,4 @@ def main():
         _source=("index", "id", "lang", "date", "title"),
         size=nbest,
     )
-    print(json.dumps(dict(response), ensure_ascii=False))
-
-
-if __name__ == "__main__":
-    main()
+    print(json.dumps(response.body, ensure_ascii=False))
