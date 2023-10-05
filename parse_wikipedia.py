@@ -47,7 +47,7 @@ class FilterOption(OptionData):
 
 
 @dataclass
-class ProgramArguments(CommonArguments):
+class ParseArguments(CommonArguments):
     data: DataOption = field()
     filter: FilterOption = field(default=FilterOption())
 
@@ -76,10 +76,10 @@ class PassageUnit(DataClassJsonMixin):
     body_text: str
 
 
-def process_one(x: str, processed: set[int], opt: FilterOption = FilterOption()) -> Iterable[PassageUnit]:
+def process_one(x: str, parsed_ids: set[int], opt: FilterOption = FilterOption()) -> Iterable[PassageUnit]:
     doc: WikipediaProcessResult = WikipediaProcessResult.from_json(x)
     doc.title = doc.title.strip() if doc.title else ""
-    if not doc.page_id or doc.page_id in processed or not doc.title or not doc.section_list:
+    if not doc.page_id or doc.page_id in parsed_ids or not doc.title or not doc.section_list:
         return None
     sect_ids: tuple[int, int] = (1, 1)
     sect_heads: tuple[str, str] = ("", "")
@@ -110,11 +110,11 @@ def process_one(x: str, processed: set[int], opt: FilterOption = FilterOption())
             path_ids = sect_ids + (text_id,)
             _id = f"{doc.page_id:07d}-{'-'.join([f'{i:03d}' for i in path_ids])}"
             yield PassageUnit(_id=_id, title=doc.title, subtitle1=h1, subtitle2=h2, body_text=text)
-    processed.add(doc.page_id)
+    parsed_ids.add(doc.page_id)
 
 
-def process_many(batch: Iterable[str], wrapper: MongoDBWrapper, processed: set[int]):
-    batch_units = [x for x in [process_one(x, processed) for x in batch] if x]
+def parse_many(batch: Iterable[str], wrapper: MongoDBWrapper, parsed_ids: set[int]):
+    batch_units = [x for x in [process_one(x, parsed_ids) for x in batch] if x]
     all_units = [unit for batch in batch_units for unit in batch]
     rows = [row.to_dict() for row in all_units if row]
     if len(rows) > 0:
@@ -175,7 +175,7 @@ def parse(
         min_word=filter_min_word,
         black_sect=filter_black_subtitle,
     )
-    args = ProgramArguments(
+    args = ParseArguments(
         env=env,
         data=data_opt,
         filter=filter_opt,
@@ -200,11 +200,11 @@ def parse(
             tqdm(batches, total=num_batch, unit="batch", pre="*", desc="parsing"),
             math.ceil(args.data.inter / args.data.batch),
         )
-        processed = set()
+        parsed_ids = set()
         for i, x in enumerate(progress):
             if i > 0 and i % interval == 0:
                 logger.info(progress)
-            process_many(batch=x, wrapper=data_table, processed=processed)
+            parse_many(batch=x, wrapper=data_table, parsed_ids=parsed_ids)
         logger.info(progress)
 
         # save parsed data
