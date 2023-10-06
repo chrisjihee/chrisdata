@@ -130,8 +130,6 @@ def search(
         input_batch: int = typer.Option(default=1000),
         input_inter: int = typer.Option(default=5000),
         input_total: int = typer.Option(default=1018174),
-        input_file_home: str = typer.Option(default="input/wikimedia"),
-        input_file_name: str = typer.Option(default="wikidata-20230920-parse-kowiki.jsonl"),
         input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
         input_table_name: str = typer.Option(default="wikidata-20230920-parse-kowiki"),
         input_index_home: str = typer.Option(default="localhost:9810"),
@@ -165,13 +163,10 @@ def search(
         batch=input_batch,
         inter=input_inter,
         total=input_total,
-        file=FileOption(
-            home=input_file_home,
-            name=input_file_name,
-        ) if input_file_home and input_file_name else None,
         table=TableOption(
             home=input_table_home,
             name=input_table_name,
+            strict=True,
         ) if input_table_home and input_table_name else None,
         index=IndexOption(
             home=input_index_home,
@@ -214,11 +209,11 @@ def search(
     with (
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
         MongoDBWrapper(args.output.table) as output_table, LineFileWrapper(args.output.file) as output_file,
-        MongoDBWrapper(args.input.table) as input_table, LineFileWrapper(args.input.file) as input_file,
+        MongoDBWrapper(args.input.table) as input_table,
         ElasticSearchWrapper(args.input.index) as input_index,
     ):
         # search parsed data
-        inputs = args.input.select_inputs(input_table, input_file)
+        inputs = args.input.select_inputs(input_table)
         outputs = args.output.select_outputs(output_table, output_file)
         logger.info(f"Search from [{inputs.wrapper.opt}] with [{args.input.index}] to [{outputs.wrapper.opt}]")
         logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.num_batch}")

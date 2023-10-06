@@ -204,8 +204,9 @@ def parse(
         LineFileWrapper(args.input.file) as input_file,
     ):
         # parse crawled data
-        inputs = args.input.load_batches(input_file, args.input.total)
-        logger.info(f"Parse from [{args.input.file}] to [{args.output.table}]")
+        inputs = args.input.select_inputs(input_file)
+        outputs = args.output.select_outputs(output_table)
+        logger.info(f"Parse from [{inputs.wrapper.opt}] to [{outputs.wrapper.opt}]")
         logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.num_batch}")
         logger.info(f"- filter: num_black_sect={args.filter.num_black_sect}, min_char={args.filter.min_char}, min_word={args.filter.min_word}")
         progress, interval = (
