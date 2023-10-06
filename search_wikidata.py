@@ -243,7 +243,7 @@ def search(
         output_file_name: str = typer.Option(default="wikidata-20230920-search-kowiki-new.jsonl"),
         output_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
         output_table_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
-        output_table_reset: bool = typer.Option(default=True),
+        output_table_reset: bool = typer.Option(default=False),
         # filter
         filter_min_char: int = typer.Option(default=2),
         filter_max_char: int = typer.Option(default=20),
