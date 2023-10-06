@@ -126,34 +126,51 @@ class SearchArguments(CommonArguments):
 
 
 def search_query(query: str, input_index: ElasticSearchWrapper):
-    query = query.replace('"', '')
-    response = input_index.cli.search(
-        index=input_index.opt.name,
-        query={
-            "query_string": {
-                "default_field": "body_text",
-                "query": query
+    try:
+        response = input_index.cli.search(
+            index=input_index.opt.name,
+            query={
+                "query_string": {
+                    "default_field": "body_text",
+                    "query": query
+                },
             },
-        },
-        _source=("_id", "title", "subtitle1", "subtitle2", "body_text"),
-        # size=10000,
-    )
-    if response.meta.status == 200:
-        body = response.body
-        max_score = body['hits']['max_score']
-        num_hits = body['hits']['total']['value']
-        # for hit in body["hits"]["hits"]:
-        #     logger.info(f"  - {hit}")
-        # return body['hits']['total']['value']
-        return num_hits, max_score
-    return 0, 0.0
+            _source=("_id", "title", "subtitle1", "subtitle2", "body_text"),
+            # size=10000,
+        )
+        if response.meta.status == 200:
+            body = response.body
+            max_score = body['hits']['max_score']
+            num_hits = body['hits']['total']['value']
+            # for hit in body["hits"]["hits"]:
+            #     logger.info(f"  - {hit}")
+            # return body['hits']['total']['value']
+            return num_hits, max_score
+        return 0, 0.0
+    except Exception as e:
+        logger.error(f"Failed to search [{query}] from [{input_index.opt}]")
+        logger.error(e)
+        exit(1)
+
+
+def escape_query(q: str) -> str:
+    special_characters = [
+        '\\', '+', '-', '=', '&&', '||', '>', '<', '!', '(', ')',
+        '{', '}', '[', ']', '^', '"', '~', '*', '?', ':'
+    ]
+    for char in special_characters:
+        q = q.replace(char, f"\\{char}")
+    return q
 
 
 def search_each(query: str, input_index: ElasticSearchWrapper):
+    query = escape_query(query)
     return search_query(f'"{query}"', input_index)
 
 
 def search_both(query1: str, query2: str, input_index: ElasticSearchWrapper):
+    query1 = escape_query(query1)
+    query2 = escape_query(query2)
     return search_query(f'"{query1}" AND "{query2}"', input_index)
 
 
@@ -329,7 +346,7 @@ def search(
         outputs = args.output.select_outputs(output_table, output_file)
         logger.info(f"Search from [{inputs.wrapper.opt}] with [{args.input.index}] to [{outputs.wrapper.opt}]")
         logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.num_batch}")
-        logger.info(f"- filter: num_black_sect={args.filter.num_black_prop}, min_char={args.filter.min_char}, max_char={args.filter.max_char}, max_word={args.filter.max_word}")
+        logger.info(f"- filter: set_black_prop={args.filter.set_black_prop}, ...")
         progress, interval = (
             tqdm(inputs.batches, total=inputs.num_batch, unit="batch", pre="*", desc="searching"),
             math.ceil(args.input.inter / args.input.batch)
@@ -340,7 +357,6 @@ def search(
                 logger.info(progress)
             search_many(batch=x, output_table=output_table, input_table=input_table, input_index=input_index, filter_opt=args.filter, invalid_queries=invalid_queries)
         logger.info(progress)
-        # logger.info(f"Indexed {len(data_index)} documents to [{args.data.index}]")
 
 
 if __name__ == "__main__":
