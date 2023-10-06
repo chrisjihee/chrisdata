@@ -200,7 +200,8 @@ def parse(
 
     with (
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        MongoDBWrapper(args.output.table) as output_table, LineFileWrapper(args.output.file) as output_file,
+        MongoDBWrapper(args.output.table) as output_table,
+        LineFileWrapper(args.output.file) as output_file,
         LineFileWrapper(args.input.file) as input_file,
     ):
         # parse crawled data

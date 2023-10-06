@@ -1,3 +1,4 @@
+import json
 import logging
 import math
 import re
@@ -5,6 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
+import bson.json_util
 import pandas as pd
 import typer
 
@@ -45,6 +47,55 @@ class EntityPairInWiki(TypedData):
         if self.score is None:
             self.score = 0.0
         self.pmi = self.calc_pmi(self.hits, self.entity1.hits, self.entity2.hits)
+
+
+def search_query(query: str, input_index: ElasticSearchWrapper):
+    try:
+        response = input_index.cli.search(
+            index=input_index.opt.name,
+            query={
+                "query_string": {
+                    "default_field": "body_text",
+                    "query": query
+                },
+            },
+            _source=("_id", "title", "subtitle1", "subtitle2", "body_text"),
+            # size=10000,
+        )
+        if response.meta.status == 200:
+            body = response.body
+            max_score = body['hits']['max_score']
+            num_hits = body['hits']['total']['value']
+            # for hit in body["hits"]["hits"]:
+            #     logger.info(f"  - {hit}")
+            # return body['hits']['total']['value']
+            return num_hits, max_score
+        return 0, 0.0
+    except Exception as e:
+        logger.error(f"Failed to search [{query}] from [{input_index.opt}]")
+        logger.error(e)
+        exit(1)
+
+
+def escape_query(q: str) -> str:
+    special_characters = [
+        '\\', '+', '-', '=', '&&', '||', '>', '<', '!', '(', ')',
+        '{', '}', '[', ']', '^', '"', '~', '*', '?', ':'
+    ]
+    for char in special_characters:
+        q = q.replace(char, f"\\{char}")
+    return q
+
+
+def search_each(query: str, input_index: ElasticSearchWrapper):
+    query = escape_query(query)
+    return search_query(f'"{query}"', input_index)
+
+
+def search_both(query1: str, query2: str, input_index: ElasticSearchWrapper):
+    query1 = escape_query(query1)
+    query2 = escape_query(query2)
+    return search_query(f'"{query1}" AND "{query2}"', input_index)
 
 
 @dataclass
@@ -101,79 +152,6 @@ class FilterOption(OptionData):
         )
 
 
-@dataclass
-class SearchArguments(CommonArguments):
-    input: InputOption = field()
-    output: OutputOption = field()
-    filter: FilterOption = field()
-
-    def __post_init__(self):
-        super().__post_init__()
-
-    def dataframe(self, columns=None) -> pd.DataFrame:
-        if not columns:
-            columns = [self.data_type, "value"]
-        return pd.concat([
-            to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
-            to_dataframe(columns=columns, raw=self.input, data_prefix="input", data_exclude=["file", "table", "index"]),
-            to_dataframe(columns=columns, raw=self.input.file, data_prefix="input.file") if self.input.file else None,
-            to_dataframe(columns=columns, raw=self.input.table, data_prefix="input.table") if self.input.table else None,
-            to_dataframe(columns=columns, raw=self.input.index, data_prefix="input.index") if self.input.index else None,
-            to_dataframe(columns=columns, raw=self.output.file, data_prefix="output.file") if self.output.file else None,
-            to_dataframe(columns=columns, raw=self.output.table, data_prefix="output.table") if self.output.table else None,
-            to_dataframe(columns=columns, raw=self.filter, data_prefix="filter"),
-        ]).reset_index(drop=True)
-
-
-def search_query(query: str, input_index: ElasticSearchWrapper):
-    try:
-        response = input_index.cli.search(
-            index=input_index.opt.name,
-            query={
-                "query_string": {
-                    "default_field": "body_text",
-                    "query": query
-                },
-            },
-            _source=("_id", "title", "subtitle1", "subtitle2", "body_text"),
-            # size=10000,
-        )
-        if response.meta.status == 200:
-            body = response.body
-            max_score = body['hits']['max_score']
-            num_hits = body['hits']['total']['value']
-            # for hit in body["hits"]["hits"]:
-            #     logger.info(f"  - {hit}")
-            # return body['hits']['total']['value']
-            return num_hits, max_score
-        return 0, 0.0
-    except Exception as e:
-        logger.error(f"Failed to search [{query}] from [{input_index.opt}]")
-        logger.error(e)
-        exit(1)
-
-
-def escape_query(q: str) -> str:
-    special_characters = [
-        '\\', '+', '-', '=', '&&', '||', '>', '<', '!', '(', ')',
-        '{', '}', '[', ']', '^', '"', '~', '*', '?', ':'
-    ]
-    for char in special_characters:
-        q = q.replace(char, f"\\{char}")
-    return q
-
-
-def search_each(query: str, input_index: ElasticSearchWrapper):
-    query = escape_query(query)
-    return search_query(f'"{query}"', input_index)
-
-
-def search_both(query1: str, query2: str, input_index: ElasticSearchWrapper):
-    query1 = escape_query(query1)
-    query2 = escape_query(query2)
-    return search_query(f'"{query1}" AND "{query2}"', input_index)
-
-
 def search_one(x: dict, input_table: MongoDBWrapper, input_index: ElasticSearchWrapper, opt: FilterOption, invalid_queries: set[str]):
     wikidata_item = WikidataUnit.from_dict(x)
     if wikidata_item.type == "item":
@@ -198,9 +176,10 @@ def search_one(x: dict, input_table: MongoDBWrapper, input_index: ElasticSearchW
                                 if item_row:
                                     object_full = item_row['title1']
                                     object_norm = opt.normalize_title(object_full)
-                                    if subject_norm != object_norm and not opt.invalid_title(full=object_full, norm=object_norm) and object_norm not in invalid_queries:
-                                        # print(f"- {prop_id:100s} ====> \t\t\t{entity_id:10s} -> {object_norm}")
-                                        object_norms.add(object_norm)
+                                    if subject_norm != object_norm and object_norm not in subject_norm and subject_norm not in object_norm:
+                                        if not opt.invalid_title(full=object_full, norm=object_norm) and object_norm not in invalid_queries:
+                                            # print(f"- {prop_id:100s} ====> \t\t\t{entity_id:10s} -> {object_norm}")
+                                            object_norms.add(object_norm)
                 valid_objects = list()
                 for object_norm in object_norms:
                     object_ex = EntityInWiki(object_norm, *search_each(object_norm, input_index))
@@ -234,6 +213,28 @@ def search_many(batch: Iterable[dict], output_table: MongoDBWrapper, input_table
         output_table.table.insert_many(rows)
 
 
+@dataclass
+class SearchArguments(CommonArguments):
+    input: InputOption = field()
+    output: OutputOption = field()
+    filter: FilterOption = field()
+
+    def __post_init__(self):
+        super().__post_init__()
+
+    def dataframe(self, columns=None) -> pd.DataFrame:
+        if not columns:
+            columns = [self.data_type, "value"]
+        return pd.concat([
+            to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
+            to_dataframe(columns=columns, raw=self.input, data_prefix="input", data_exclude=["file", "table", "index"]),
+            to_dataframe(columns=columns, raw=self.input.index, data_prefix="input.index"),
+            to_dataframe(columns=columns, raw=self.input.table, data_prefix="input.table"),
+            to_dataframe(columns=columns, raw=self.output.table, data_prefix="output.table"),
+            to_dataframe(columns=columns, raw=self.filter, data_prefix="filter"),
+        ]).reset_index(drop=True)
+
+
 @app.command()
 def search(
         # env
@@ -249,15 +250,13 @@ def search(
         input_batch: int = typer.Option(default=1000),
         input_inter: int = typer.Option(default=5000),
         input_total: int = typer.Option(default=1018174),
-        input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
-        input_table_name: str = typer.Option(default="wikidata-20230920-parse-kowiki"),
         input_index_home: str = typer.Option(default="localhost:9810"),
         input_index_name: str = typer.Option(default="wikipedia-20230920-index-kowiki"),
         input_index_user: str = typer.Option(default="elastic"),
         input_index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
+        input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
+        input_table_name: str = typer.Option(default="wikidata-20230920-parse-kowiki"),
         # output
-        output_file_home: str = typer.Option(default="input/wikimedia"),
-        output_file_name: str = typer.Option(default="wikidata-20230920-search-kowiki-new.jsonl"),
         output_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
         output_table_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
         output_table_reset: bool = typer.Option(default=False),
@@ -287,29 +286,26 @@ def search(
         batch=input_batch,
         inter=input_inter,
         total=input_total,
-        table=TableOption(
-            home=input_table_home,
-            name=input_table_name,
-            strict=True,
-        ) if input_table_home and input_table_name else None,
         index=IndexOption(
             home=input_index_home,
             user=input_index_user,
             pswd=input_index_pswd,
             name=input_index_name,
-        ) if input_index_home and input_index_name else None,
+            strict=True,
+        ),
+        table=TableOption(
+            home=input_table_home,
+            name=input_table_name,
+            strict=True,
+        ),
     )
     output_opt = OutputOption(
-        file=FileOption(
-            home=output_file_home,
-            name=output_file_name,
-            mode="w",
-        ) if output_file_home and output_file_name else None,
         table=TableOption(
             home=output_table_home,
             name=output_table_name,
             reset=output_table_reset,
-        ) if output_table_home and output_table_name else None,
+            strict=True,
+        ),
     )
     filter_opt = FilterOption(
         min_char=filter_min_char,
@@ -331,19 +327,18 @@ def search(
     tqdm = mute_tqdm_cls()
     logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
     assert args.input.index, "input.index is required"
-    assert args.input.file or args.input.table, "input.file or input.table is required"
-    assert args.output.file, "output.file is required"
+    assert args.input.table, "input.table is required"
     assert args.output.table, "output.table is required"
 
     with (
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        MongoDBWrapper(args.output.table) as output_table, LineFileWrapper(args.output.file) as output_file,
-        MongoDBWrapper(args.input.table) as input_table,
         ElasticSearchWrapper(args.input.index) as input_index,
+        MongoDBWrapper(args.input.table) as input_table,
+        MongoDBWrapper(args.output.table) as output_table,
     ):
         # search parsed data
         inputs = args.input.select_inputs(input_table)
-        outputs = args.output.select_outputs(output_table, output_file)
+        outputs = args.output.select_outputs(output_table)
         logger.info(f"Search from [{inputs.wrapper.opt}] with [{args.input.index}] to [{outputs.wrapper.opt}]")
         logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.num_batch}")
         logger.info(f"- filter: set_black_prop={args.filter.set_black_prop}, ...")  # TODO: Bridge Entity가 없으면 black_prop를 줄여보자!
@@ -357,6 +352,98 @@ def search(
                 logger.info(progress)
             search_many(batch=x, output_table=output_table, input_table=input_table, input_index=input_index, filter_opt=args.filter, invalid_queries=invalid_queries)
         logger.info(progress)
+
+
+@dataclass
+class ExportArguments(CommonArguments):
+    input: InputOption = field()
+    output: OutputOption = field()
+
+    def __post_init__(self):
+        super().__post_init__()
+
+    def dataframe(self, columns=None) -> pd.DataFrame:
+        if not columns:
+            columns = [self.data_type, "value"]
+        return pd.concat([
+            to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
+            to_dataframe(columns=columns, raw=self.input, data_prefix="input", data_exclude=["file", "table", "index"]),
+            to_dataframe(columns=columns, raw=self.input.table, data_prefix="input.table"),
+            to_dataframe(columns=columns, raw=self.output.file, data_prefix="output.file"),
+        ]).reset_index(drop=True)
+
+
+@app.command()
+def export(
+        # env
+        project: str = typer.Option(default="WiseData"),
+        job_name: str = typer.Option(default="search_wikidata"),
+        output_home: str = typer.Option(default="output-search_wikidata"),
+        logging_file: str = typer.Option(default="logging.out"),
+        debugging: bool = typer.Option(default=False),
+        # input
+        input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
+        input_table_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
+        # output
+        output_file_home: str = typer.Option(default="output-search_wikidata"),
+        output_file_name: str = typer.Option(default="wikidata-20230920-search-kowiki-new.jsonl"),
+):
+    env = ProjectEnv(
+        project=project,
+        job_name=job_name,
+        debugging=debugging,
+        output_home=output_home,
+        logging_file=logging_file,
+        msg_level=logging.DEBUG if debugging else logging.INFO,
+        msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_36,
+    )
+    input_opt = InputOption(
+        table=TableOption(
+            home=input_table_home,
+            name=input_table_name,
+            strict=True,
+        ),
+    )
+    output_opt = OutputOption(
+        file=FileOption(
+            home=output_file_home,
+            name=output_file_name,
+            mode="w",
+            strict=True,
+        ),
+    )
+    args = ExportArguments(
+        env=env,
+        input=input_opt,
+        output=output_opt,
+    )
+    tqdm = mute_tqdm_cls()
+    assert args.input.table, "input.table is required"
+    assert args.output.file, "output.file is required"
+
+    with (
+        JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+        MongoDBWrapper(args.input.table) as input_table,
+        LineFileWrapper(args.output.file) as output_file,
+    ):
+        # export search results
+        args.input.total = len(input_table)
+        inputs = args.input.select_inputs(input_table)
+        outputs = args.output.select_outputs(output_file)
+        logger.info(f"Export from [{inputs.wrapper.opt}] to [{outputs.wrapper.opt}]")
+        logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.num_batch}")
+        input_table.opt.sort = [("hits", 1)]
+        rows, num_row = input_table, len(input_table)
+        progress, interval = (
+            tqdm(rows, total=num_row, unit="row", pre="*", desc="saving"),
+            args.input.inter * 100,
+        )
+        for i, x in enumerate(progress):
+            if i > 0 and i % interval == 0:
+                logger.info(progress)
+            output_file.fp.write(json.dumps(x, default=bson.json_util.default, ensure_ascii=False) + '\n')
+        logger.info(progress)
+        logger.info(f"Saved {num_row} rows to [{output_file.path}]")
 
 
 if __name__ == "__main__":

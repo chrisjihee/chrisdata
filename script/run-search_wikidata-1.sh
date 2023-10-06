@@ -1,0 +1,1 @@
+python search_wikidata.py --input-limit 250000 --output-table-reset
