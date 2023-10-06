@@ -1,14 +1,15 @@
 import logging
 import math
+import operator
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
 import typer
-import re
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, OptionData
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, OptionData, TypedData
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption, IndexOption
 from chrisbase.data import LineFileWrapper, MongoDBWrapper, ElasticSearchWrapper
 from chrisbase.io import LoggingFormat
@@ -20,11 +21,31 @@ app = AppTyper()
 
 
 @dataclass
+class EntityInWiki(TypedData):
+    entity: str
+    hits: int
+    score: float
+
+
+@dataclass
+class EntityPairInWiki(TypedData):
+    entity1: EntityInWiki
+    entity2: EntityInWiki
+    hits: int
+    score: float
+
+
+@dataclass
 class FilterOption(OptionData):
-    min_char: int = field(default=2)
-    max_char: int = field(default=20)
-    max_word: int = field(default=5)
-    black_prop: str | Path = field(default="black_prop.txt")
+    min_char: int = field()
+    max_char: int = field()
+    max_word: int = field()
+    min_hits: int = field()
+    max_hits: int = field()
+    min_score: float = field()
+    max_score: float = field()
+    min_cooccur: int = field()
+    black_prop: str | Path = field()
     num_black_prop: int = 0
     set_black_prop = set()
     parenth_ending = re.compile(r" \(.+?\)$")
@@ -54,6 +75,19 @@ class FilterOption(OptionData):
                 full.endswith("(동음이의)")
         )
 
+    def invalid_entity(self, e: EntityInWiki):
+        return (
+                e.hits < self.min_hits or
+                e.hits > self.max_hits or
+                e.score < self.min_score or
+                e.score > self.max_score
+        )
+
+    def invalid_cooccur(self, p: EntityPairInWiki):
+        return (
+                p.hits < self.min_cooccur
+        )
+
 
 @dataclass
 class SearchArguments(CommonArguments):
@@ -79,36 +113,95 @@ class SearchArguments(CommonArguments):
         ]).reset_index(drop=True)
 
 
-def search_one(x: dict, input_table: MongoDBWrapper, input_index: ElasticSearchWrapper, opt: FilterOption):
+def search_query(query: str, input_index: ElasticSearchWrapper):
+    query = query.replace('""', '"')
+    response = input_index.cli.search(
+        index=input_index.opt.name,
+        query={
+            "query_string": {
+                "default_field": "body_text",
+                "query": query
+            },
+        },
+        _source=("_id", "title", "subtitle1", "subtitle2", "body_text"),
+        # size=10000,
+    )
+    if response.meta.status == 200:
+        body = response.body
+        max_score = body['hits']['max_score']
+        num_hits = body['hits']['total']['value']
+        # for hit in body["hits"]["hits"]:
+        #     logger.info(f"  - {hit}")
+        # return body['hits']['total']['value']
+        return num_hits, max_score
+    return 0, 0.0
+
+
+def search_each(query: str, input_index: ElasticSearchWrapper):
+    return search_query(f'"{query}"', input_index)
+
+
+def search_both(query1: str, query2: str, input_index: ElasticSearchWrapper):
+    return search_query(f'"{query1}" AND "{query2}"', input_index)
+
+
+def search_one(x: dict, input_table: MongoDBWrapper, input_index: ElasticSearchWrapper, opt: FilterOption, invalid_queries: set[str]):
     row = WikidataUnit.from_dict(x)
     if row.type == "item":
         subject_full = row.title1
         subject_norm = opt.normalize_title(subject_full)
-        if not opt.invalid_title(full=subject_full, norm=subject_norm):
-            print(f"subject={subject_norm}")
-            for claim in row.claims:
-                prop_id = claim['property']
-                if not opt.invalid_prop(prop_id):
-                    prop_res = input_table.table.find_one({'_id': prop_id})
-                    prop_label = f"{prop_id}[{prop_res['label2'].replace('(', '').replace(')', '')}]"
-                    value = claim['datavalue']
-                    value_type = value['type']
-                    if value_type == "wikibase-entityid":
-                        entity_type = value['value']['entity-type']
-                        if entity_type == "item":
-                            entity_id = value['value']['id']
-                            item_res = input_table.table.find_one({'_id': entity_id})
-                            if item_res:
-                                object_full = item_res['title1']
-                                object_norm = opt.normalize_title(object_full)
-                                if not opt.invalid_title(full=object_full, norm=object_norm):
-                                    print(f"- {prop_label:100s} ====> \t\t\t{entity_id:10s} -> {object_norm}")
-        print()
+        object_norms = set()
+        logger.info(f"subject={subject_norm}")
+        if not opt.invalid_title(full=subject_full, norm=subject_norm) and subject_norm not in invalid_queries:
+            subject_ex = EntityInWiki(subject_norm, *search_each(subject_norm, input_index))
+            logger.info(f"subject_ex={subject_ex}")
+            if opt.invalid_entity(subject_ex):
+                invalid_queries.add(subject_norm)
+            else:
+                # print(f"subject={subject_norm} [VALID]")
+                for claim in row.claims:
+                    prop_id = claim['property']
+                    if not opt.invalid_prop(prop_id):
+                        # prop_res = input_table.table.find_one({'_id': prop_id})
+                        # prop_label = f"{prop_id}[{prop_res['label2'].replace('(', '').replace(')', '')}]"
+                        value = claim['datavalue']
+                        value_type = value['type']
+                        if value_type == "wikibase-entityid":
+                            entity_type = value['value']['entity-type']
+                            if entity_type == "item":
+                                entity_id = value['value']['id']
+                                item_res = input_table.table.find_one({'_id': entity_id})
+                                if item_res:
+                                    object_full = item_res['title1']
+                                    object_norm = opt.normalize_title(object_full)
+                                    if subject_norm != object_norm and not opt.invalid_title(full=object_full, norm=object_norm) and object_norm not in invalid_queries:
+                                        # print(f"- {prop_id:100s} ====> \t\t\t{entity_id:10s} -> {object_norm}")
+                                        object_norms.add(object_norm)
+                                        # exit(1)
+                valid_objects = list()
+                for object_norm in object_norms:
+                    object_ex = EntityInWiki(object_norm, *search_each(object_norm, input_index))
+                    if opt.invalid_entity(object_ex):
+                        invalid_queries.add(object_norm)
+                    else:
+                        valid_objects.append(object_ex)
+                if len(valid_objects) > 0:
+                    valid_pairs = list()
+                    sorted_objects = sorted(valid_objects, key=operator.attrgetter('score'), reverse=True)
+                    logger.info(f"sorted_objects={sorted_objects}")
+                    for object_ex in sorted_objects:
+                        pair_ex = EntityPairInWiki(subject_ex, object_ex,
+                                                   *search_both(subject_ex.entity, object_ex.entity, input_index))
+                        if not opt.invalid_cooccur(pair_ex):
+                            valid_pairs.append(pair_ex)
+                    sorted_pairs = sorted(valid_pairs, key=operator.attrgetter('score'), reverse=True)
+                    logger.info(f"sorted_pairs={sorted_pairs}")
+        logger.info(f"")
     return None
 
 
-def search_many(batch: Iterable[dict], input_table: MongoDBWrapper, input_index: ElasticSearchWrapper, filter_opt: FilterOption):
-    batch_units = [x for x in [search_one(x, input_table, input_index, opt=filter_opt) for x in batch] if x]
+def search_many(batch: Iterable[dict], input_table: MongoDBWrapper, input_index: ElasticSearchWrapper, filter_opt: FilterOption, invalid_queries: set[str]):
+    batch_units = [x for x in [search_one(x, input_table, input_index, opt=filter_opt, invalid_queries=invalid_queries) for x in batch] if x]
     print(f"len(batch_units)={len(batch_units)}")
     # for a in x:
     #     a = WikidataUnit.from_dict(a)
@@ -146,6 +239,11 @@ def search(
         filter_min_char: int = typer.Option(default=2),
         filter_max_char: int = typer.Option(default=20),
         filter_max_word: int = typer.Option(default=5),
+        filter_min_hits: int = typer.Option(default=10),
+        filter_max_hits: int = typer.Option(default=1000),
+        filter_min_score: float = typer.Option(default=0.5),
+        filter_max_score: float = typer.Option(default=100.0),
+        filter_min_cooccur: int = typer.Option(default=3),
         filter_black_prop: str = typer.Option(default="input/wikimedia/wikidata-black_prop.txt"),
 ):
     env = ProjectEnv(
@@ -191,6 +289,11 @@ def search(
         min_char=filter_min_char,
         max_char=filter_max_char,
         max_word=filter_max_word,
+        min_hits=filter_min_hits,
+        max_hits=filter_max_hits,
+        min_score=filter_min_score,
+        max_score=filter_max_score,
+        min_cooccur=filter_min_cooccur,
         black_prop=filter_black_prop,
     )
     args = SearchArguments(
@@ -222,10 +325,11 @@ def search(
             tqdm(inputs.batches, total=inputs.num_batch, unit="batch", pre="*", desc="searching"),
             math.ceil(args.input.inter / args.input.batch)
         )
+        invalid_queries = set()
         for i, x in enumerate(progress):
             if i > 0 and i % interval == 0:
                 logger.info(progress)
-            search_many(batch=x, input_table=input_table, input_index=input_index, filter_opt=args.filter)
+            search_many(batch=x, input_table=input_table, input_index=input_index, filter_opt=args.filter, invalid_queries=invalid_queries)
         logger.info(progress)
         # logger.info(f"Indexed {len(data_index)} documents to [{args.data.index}]")
 
