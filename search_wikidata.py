@@ -126,7 +126,7 @@ class SearchArguments(CommonArguments):
 
 
 def search_query(query: str, input_index: ElasticSearchWrapper):
-    query = query.replace('""', '"')
+    query = query.replace('"', '')
     response = input_index.cli.search(
         index=input_index.opt.name,
         query={
