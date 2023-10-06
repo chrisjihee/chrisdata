@@ -1,1 +1,1 @@
-python search_wikidata.py search --input-start 250000 --input-limit 250000
+python search_wikidata.py search --input-start 200000 --input-limit 200000

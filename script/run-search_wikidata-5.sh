@@ -1,0 +1,1 @@
+python search_wikidata.py search --input-start 800000

@@ -153,7 +153,7 @@ class FilterOption(OptionData):
         return p.hits < self.min_cooccur
 
 
-def search_one(x: dict, input_table: MongoDBWrapper, input_index: ElasticSearchWrapper, opt: FilterOption, invalid_queries: set[str]):
+def search_one(x: dict, input_table: MongoDBWrapper, input_index: ElasticSearchWrapper, opt: FilterOption, invalid_queries: set[str], relation_cache: dict[str, Relation]):
     wikidata_item = WikidataUnit.from_dict(x)
     if wikidata_item.type == "item":
         subject_full = wikidata_item.title1
@@ -165,10 +165,11 @@ def search_one(x: dict, input_table: MongoDBWrapper, input_index: ElasticSearchW
                 invalid_queries.add(subject_norm)
             else:
                 for claim in wikidata_item.claims:
-                    prop_id = claim['property']
-                    prop_row = input_table.table.find_one({'_id': prop_id})
-                    relation = Relation(prop_id, prop_row['label1'], prop_row['label2'], prop_row['descr1'], prop_row['descr2'])
-                    if not opt.invalid_prop(prop_id):
+                    relation_id = claim['property']
+                    if relation_id not in relation_cache:
+                        r = input_table.table.find_one({'_id': relation_id})
+                        relation_cache[relation_id] = Relation(relation_id, r['label1'], r['label2'], r['descr1'], r['descr2'])
+                    if not opt.invalid_prop(relation_id):
                         value = claim['datavalue']
                         value_type = value['type']
                         if value_type == "wikibase-entityid":
@@ -187,7 +188,7 @@ def search_one(x: dict, input_table: MongoDBWrapper, input_index: ElasticSearchW
                                             if opt.invalid_entity(object_ex):
                                                 invalid_queries.add(object_norm)
                                             else:
-                                                triple_ex = TripleInWiki(subject_ex, object_ex, relation,
+                                                triple_ex = TripleInWiki(subject_ex, object_ex, relation_cache[relation_id],
                                                                          *search_both(subject_ex.entity, object_ex.entity, input_index))
                                                 if not opt.invalid_triple(triple_ex):
                                                     yield triple_ex
@@ -216,8 +217,8 @@ def search_one(x: dict, input_table: MongoDBWrapper, input_index: ElasticSearchW
                 #         yield pair
 
 
-def search_many(batch: Iterable[dict], output_table: MongoDBWrapper, input_table: MongoDBWrapper, input_index: ElasticSearchWrapper, filter_opt: FilterOption, invalid_queries: set[str]):
-    batch_units = [x for x in [search_one(x, input_table, input_index, opt=filter_opt, invalid_queries=invalid_queries) for x in batch] if x]
+def search_many(batch: Iterable[dict], output_table: MongoDBWrapper, input_table: MongoDBWrapper, input_index: ElasticSearchWrapper, filter_opt: FilterOption, invalid_queries: set[str], relation_cache: dict[str, Relation]):
+    batch_units = [x for x in [search_one(x, input_table, input_index, opt=filter_opt, invalid_queries=invalid_queries, relation_cache=relation_cache) for x in batch] if x]
     all_units = [unit for batch in batch_units for unit in batch]
     rows = [row.to_dict() for row in all_units if row]
     if len(rows) > 0:
@@ -354,11 +355,12 @@ def search(
             tqdm(inputs.batches, total=inputs.num_batch, unit="batch", pre="*", desc="searching"),
             math.ceil(args.input.inter / args.input.batch)
         )
+        relation_cache = dict()
         invalid_queries = set()
         for i, x in enumerate(progress):
             if i > 0 and i % interval == 0:
                 logger.info(progress)
-            search_many(batch=x, output_table=output_table, input_table=input_table, input_index=input_index, filter_opt=args.filter, invalid_queries=invalid_queries)
+            search_many(batch=x, output_table=output_table, input_table=input_table, input_index=input_index, filter_opt=args.filter, invalid_queries=invalid_queries, relation_cache=relation_cache)
         logger.info(progress)
 
 
