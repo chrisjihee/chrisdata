@@ -1,6 +1,5 @@
 import logging
 import math
-import operator
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -32,7 +31,20 @@ class EntityPairInWiki(TypedData):
     entity1: EntityInWiki
     entity2: EntityInWiki
     hits: int
-    score: float
+    score: float = field(default=0.0)
+    pmi: float = field(default=0.0)
+
+    @staticmethod
+    def calc_pmi(h_xy: float, h_x: float, h_y: float, n: int = 10000, e: float = 0.0000001) -> float:
+        p_xy = h_xy / n
+        p_x = h_x / n
+        p_y = h_y / n
+        return math.log2((p_xy + e) / ((p_x * p_y) + e))
+
+    def __post_init__(self):
+        if self.score is None:
+            self.score = 0.0
+        self.pmi = self.calc_pmi(self.hits, self.entity1.hits, self.entity2.hits)
 
 
 @dataclass
@@ -146,38 +158,32 @@ def search_both(query1: str, query2: str, input_index: ElasticSearchWrapper):
 
 
 def search_one(x: dict, input_table: MongoDBWrapper, input_index: ElasticSearchWrapper, opt: FilterOption, invalid_queries: set[str]):
-    row = WikidataUnit.from_dict(x)
-    if row.type == "item":
-        subject_full = row.title1
+    wikidata_item = WikidataUnit.from_dict(x)
+    if wikidata_item.type == "item":
+        subject_full = wikidata_item.title1
         subject_norm = opt.normalize_title(subject_full)
         object_norms = set()
-        logger.info(f"subject={subject_norm}")
         if not opt.invalid_title(full=subject_full, norm=subject_norm) and subject_norm not in invalid_queries:
             subject_ex = EntityInWiki(subject_norm, *search_each(subject_norm, input_index))
-            logger.info(f"subject_ex={subject_ex}")
             if opt.invalid_entity(subject_ex):
                 invalid_queries.add(subject_norm)
             else:
-                # print(f"subject={subject_norm} [VALID]")
-                for claim in row.claims:
+                for claim in wikidata_item.claims:
                     prop_id = claim['property']
                     if not opt.invalid_prop(prop_id):
-                        # prop_res = input_table.table.find_one({'_id': prop_id})
-                        # prop_label = f"{prop_id}[{prop_res['label2'].replace('(', '').replace(')', '')}]"
                         value = claim['datavalue']
                         value_type = value['type']
                         if value_type == "wikibase-entityid":
                             entity_type = value['value']['entity-type']
                             if entity_type == "item":
-                                entity_id = value['value']['id']
-                                item_res = input_table.table.find_one({'_id': entity_id})
-                                if item_res:
-                                    object_full = item_res['title1']
+                                item_id = value['value']['id']
+                                item_row = input_table.table.find_one({'_id': item_id})
+                                if item_row:
+                                    object_full = item_row['title1']
                                     object_norm = opt.normalize_title(object_full)
                                     if subject_norm != object_norm and not opt.invalid_title(full=object_full, norm=object_norm) and object_norm not in invalid_queries:
                                         # print(f"- {prop_id:100s} ====> \t\t\t{entity_id:10s} -> {object_norm}")
                                         object_norms.add(object_norm)
-                                        # exit(1)
                 valid_objects = list()
                 for object_norm in object_norms:
                     object_ex = EntityInWiki(object_norm, *search_each(object_norm, input_index))
@@ -187,25 +193,28 @@ def search_one(x: dict, input_table: MongoDBWrapper, input_index: ElasticSearchW
                         valid_objects.append(object_ex)
                 if len(valid_objects) > 0:
                     valid_pairs = list()
-                    sorted_objects = sorted(valid_objects, key=operator.attrgetter('score'), reverse=True)
-                    logger.info(f"sorted_objects={sorted_objects}")
-                    for object_ex in sorted_objects:
+                    # sorted_objects = sorted(valid_objects, key=operator.attrgetter('score'), reverse=True)
+                    # logger.info(f"subject_ex={subject_ex}")
+                    # logger.info(f"sorted_objects={sorted_objects}")
+                    for object_ex in valid_objects:
                         pair_ex = EntityPairInWiki(subject_ex, object_ex,
                                                    *search_both(subject_ex.entity, object_ex.entity, input_index))
                         if not opt.invalid_cooccur(pair_ex):
                             valid_pairs.append(pair_ex)
-                    sorted_pairs = sorted(valid_pairs, key=operator.attrgetter('score'), reverse=True)
-                    logger.info(f"sorted_pairs={sorted_pairs}")
-        logger.info(f"")
-    return None
+                    # sorted_pairs = sorted(valid_pairs, key=operator.attrgetter('score'), reverse=True)
+                    # logger.info(f"sorted_pairs={sorted_pairs}")
+                    # logger.info(f"")
+                    for pair in valid_pairs:
+                        yield pair
 
 
-def search_many(batch: Iterable[dict], input_table: MongoDBWrapper, input_index: ElasticSearchWrapper, filter_opt: FilterOption, invalid_queries: set[str]):
+def search_many(batch: Iterable[dict], output_table: MongoDBWrapper, input_table: MongoDBWrapper, input_index: ElasticSearchWrapper, filter_opt: FilterOption, invalid_queries: set[str]):
     batch_units = [x for x in [search_one(x, input_table, input_index, opt=filter_opt, invalid_queries=invalid_queries) for x in batch] if x]
-    print(f"len(batch_units)={len(batch_units)}")
-    # for a in x:
-    #     a = WikidataUnit.from_dict(a)
-    #     # print("a", type(a), a)
+    all_units = [unit for batch in batch_units for unit in batch]
+    # sorted_units = sorted(all_units, key=operator.attrgetter('pmi'), reverse=True)
+    rows = [row.to_dict() for row in all_units if row]
+    if len(rows) > 0:
+        output_table.table.insert_many(rows)
 
 
 @app.command()
@@ -217,9 +226,9 @@ def search(
         logging_file: str = typer.Option(default="logging.out"),
         debugging: bool = typer.Option(default=False),
         # input
-        input_start: int = typer.Option(default=11000),
-        # input_limit: int = typer.Option(default=-1),
-        input_limit: int = typer.Option(default=20000),
+        input_start: int = typer.Option(default=0),
+        input_limit: int = typer.Option(default=-1),
+        # input_limit: int = typer.Option(default=20000),
         input_batch: int = typer.Option(default=1000),
         input_inter: int = typer.Option(default=5000),
         input_total: int = typer.Option(default=1018174),
@@ -243,7 +252,7 @@ def search(
         filter_max_hits: int = typer.Option(default=1000),
         filter_min_score: float = typer.Option(default=0.5),
         filter_max_score: float = typer.Option(default=100.0),
-        filter_min_cooccur: int = typer.Option(default=3),
+        filter_min_cooccur: int = typer.Option(default=1),
         filter_black_prop: str = typer.Option(default="input/wikimedia/wikidata-black_prop.txt"),
 ):
     env = ProjectEnv(
@@ -329,7 +338,7 @@ def search(
         for i, x in enumerate(progress):
             if i > 0 and i % interval == 0:
                 logger.info(progress)
-            search_many(batch=x, input_table=input_table, input_index=input_index, filter_opt=args.filter, invalid_queries=invalid_queries)
+            search_many(batch=x, output_table=output_table, input_table=input_table, input_index=input_index, filter_opt=args.filter, invalid_queries=invalid_queries)
         logger.info(progress)
         # logger.info(f"Indexed {len(data_index)} documents to [{args.data.index}]")
 
