@@ -1,0 +1,111 @@
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇ =========================================================================================================================================
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇ [INIT] python search_wikidata.py search --input-start 800000
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇ =========================================================================================================================================
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇ -----+-----------------------+----------------------------------------------------------
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇    # | SearchArguments       | value
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇ -----+-----------------------+----------------------------------------------------------
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇    1 | env.project           | WiseData
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇    2 | env.job_name          | search_wikidata
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇    3 | env.hostname          | chrisBookPro.local
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇    4 | env.hostaddr          | 192.168.0.2
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇    5 | env.python_path       | /Users/chris/miniforge3/envs/WiseData-2023.08/bin/python
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇    6 | env.working_path      | /Users/chris/proj/WiseData-2023.08
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇    7 | env.running_file      | search_wikidata.py
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇    8 | env.command_args      | ['search', '--input-start', '800000']
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇    9 | env.num_ip_addrs      | 0
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   10 | env.max_workers       | 1
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   11 | env.output_home       | output-search_wikidata
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   12 | env.logging_file      | logging-1007.075927.out
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   13 | env.argument_file     | arguments-1007.075927.json
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   14 | env.debugging         | False
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   15 | env.msg_level         | 20
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   16 | env.msg_format        | %(asctime)s ┇ %(levelname)-8s ┇ %(name)36s ┇ %(message)s
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   17 | env.date_format       | [%m.%d %H:%M:%S]
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   18 | env.time_stamp        | 1007.075927
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   19 | input.start           | 800000
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   20 | input.limit           | -1
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   21 | input.batch           | 1000
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   22 | input.inter           | 5000
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   23 | input.total           | 1018174
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   24 | input.index.home      | localhost:9810
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   25 | input.index.name      | wikipedia-20230920-index-kowiki
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   26 | input.index.user      | elastic
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   27 | input.index.pswd      | cIrEP5OCwTLn0QIQwnsA
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   28 | input.index.reset     | False
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   29 | input.index.strict    | True
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   30 | input.index.timeout   | 10
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   31 | input.index.retrial   | 3
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   32 | input.index.create    |
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   33 | input.table.home      | localhost:6382/wikimedia
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   34 | input.table.name      | wikidata-20230920-parse-kowiki
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   35 | input.table.sort      | _id
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   36 | input.table.find      | {}
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   37 | input.table.reset     | False
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   38 | input.table.strict    | True
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   39 | input.table.timeout   | 5000
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   40 | output.table.home     | localhost:6382/wikimedia
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   41 | output.table.name     | wikidata-20230920-search-kowiki
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   42 | output.table.sort     | _id
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   43 | output.table.find     | {}
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   44 | output.table.reset    | False
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   45 | output.table.strict   | True
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   46 | output.table.timeout  | 5000
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   47 | filter.min_char       | 2
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   48 | filter.max_char       | 20
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   49 | filter.max_word       | 5
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   50 | filter.min_hits       | 3
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   51 | filter.max_hits       | 1000
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   52 | filter.min_cooccur    | 1
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   53 | filter.black_prop     | .
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇   54 | filter.num_black_prop | 0
+[10.07 07:59:28] ┇ INFO     ┇                       chrisbase.data ┇ -----+-----------------------+----------------------------------------------------------
+[10.07 07:59:29] ┇ INFO     ┇                             __main__ ┇ Search from [localhost:6382/wikimedia/wikidata-20230920-parse-kowiki] with [elastic@localhost:9810/wikipedia-20230920-index-kowiki] to [localhost:6382/wikimedia/wikidata-20230920-search-kowiki]
+[10.07 07:59:29] ┇ INFO     ┇                             __main__ ┇ - amount: inputs=218174, batches=219
+[10.07 07:59:29] ┇ INFO     ┇                             __main__ ┇ - filter: set_black_prop=set(), ...
+[10.07 08:00:32] ┇ INFO     ┇                             __main__ ┇ *  searching:   2%|█▏                                                | 5/219 [01:03<28:07,  7.89s/batch]
+[10.07 08:00:52] ┇ INFO     ┇                             __main__ ┇ *  searching:   5%|██▎                                               | 10/219 [01:23<15:10,  4.35s/batch]
+[10.07 08:01:06] ┇ INFO     ┇                             __main__ ┇ *  searching:   7%|███▍                                              | 15/219 [01:37<10:25,  3.07s/batch]
+[10.07 08:01:23] ┇ INFO     ┇                             __main__ ┇ *  searching:   9%|████▌                                             | 20/219 [01:53<09:14,  2.79s/batch]
+[10.07 08:01:43] ┇ INFO     ┇                             __main__ ┇ *  searching:  11%|█████▋                                            | 25/219 [02:14<12:42,  3.93s/batch]
+[10.07 08:02:04] ┇ INFO     ┇                             __main__ ┇ *  searching:  14%|██████▊                                           | 30/219 [02:35<10:32,  3.35s/batch]
+[10.07 08:02:09] ┇ INFO     ┇                             __main__ ┇ *  searching:  16%|███████▉                                          | 35/219 [02:40<04:34,  1.49s/batch]
+[10.07 08:02:15] ┇ INFO     ┇                             __main__ ┇ *  searching:  18%|█████████▏                                        | 40/219 [02:46<03:47,  1.27s/batch]
+[10.07 08:02:23] ┇ INFO     ┇                             __main__ ┇ *  searching:  21%|██████████▎                                       | 45/219 [02:54<04:32,  1.56s/batch]
+[10.07 08:02:32] ┇ INFO     ┇                             __main__ ┇ *  searching:  23%|███████████▍                                      | 50/219 [03:03<04:55,  1.75s/batch]
+[10.07 08:02:40] ┇ INFO     ┇                             __main__ ┇ *  searching:  25%|████████████▌                                     | 55/219 [03:11<04:32,  1.66s/batch]
+[10.07 08:02:46] ┇ INFO     ┇                             __main__ ┇ *  searching:  27%|█████████████▋                                    | 60/219 [03:17<03:51,  1.46s/batch]
+[10.07 08:02:54] ┇ INFO     ┇                             __main__ ┇ *  searching:  30%|██████████████▊                                   | 65/219 [03:25<04:11,  1.63s/batch]
+[10.07 08:03:05] ┇ INFO     ┇                             __main__ ┇ *  searching:  32%|███████████████▉                                  | 70/219 [03:36<05:45,  2.32s/batch]
+[10.07 08:03:16] ┇ INFO     ┇                             __main__ ┇ *  searching:  34%|█████████████████                                 | 75/219 [03:47<05:24,  2.26s/batch]
+[10.07 08:03:27] ┇ INFO     ┇                             __main__ ┇ *  searching:  37%|██████████████████▎                               | 80/219 [03:58<05:15,  2.27s/batch]
+[10.07 08:03:40] ┇ INFO     ┇                             __main__ ┇ *  searching:  39%|███████████████████▍                              | 85/219 [04:10<05:04,  2.28s/batch]
+[10.07 08:03:51] ┇ INFO     ┇                             __main__ ┇ *  searching:  41%|████████████████████▌                             | 90/219 [04:22<04:28,  2.08s/batch]
+[10.07 08:04:02] ┇ INFO     ┇                             __main__ ┇ *  searching:  43%|█████████████████████▋                            | 95/219 [04:33<04:55,  2.38s/batch]
+[10.07 08:04:12] ┇ INFO     ┇                             __main__ ┇ *  searching:  46%|██████████████████████▊                           | 100/219 [04:43<04:06,  2.08s/batch]
+[10.07 08:04:22] ┇ INFO     ┇                             __main__ ┇ *  searching:  48%|███████████████████████▉                          | 105/219 [04:53<04:11,  2.21s/batch]
+[10.07 08:04:30] ┇ INFO     ┇                             __main__ ┇ *  searching:  50%|█████████████████████████                         | 110/219 [05:01<03:09,  1.73s/batch]
+[10.07 08:04:38] ┇ INFO     ┇                             __main__ ┇ *  searching:  53%|██████████████████████████▎                       | 115/219 [05:09<02:49,  1.63s/batch]
+[10.07 08:04:47] ┇ INFO     ┇                             __main__ ┇ *  searching:  55%|███████████████████████████▍                      | 120/219 [05:18<03:16,  1.98s/batch]
+[10.07 08:04:53] ┇ INFO     ┇                             __main__ ┇ *  searching:  57%|████████████████████████████▌                     | 125/219 [05:24<01:57,  1.26s/batch]
+[10.07 08:05:02] ┇ INFO     ┇                             __main__ ┇ *  searching:  59%|█████████████████████████████▋                    | 130/219 [05:33<02:26,  1.64s/batch]
+[10.07 08:05:10] ┇ INFO     ┇                             __main__ ┇ *  searching:  62%|██████████████████████████████▊                   | 135/219 [05:41<02:10,  1.55s/batch]
+[10.07 08:05:16] ┇ INFO     ┇                             __main__ ┇ *  searching:  64%|███████████████████████████████▉                  | 140/219 [05:46<01:50,  1.40s/batch]
+[10.07 08:05:23] ┇ INFO     ┇                             __main__ ┇ *  searching:  66%|█████████████████████████████████                 | 145/219 [05:54<01:48,  1.47s/batch]
+[10.07 08:05:31] ┇ INFO     ┇                             __main__ ┇ *  searching:  68%|██████████████████████████████████▏               | 150/219 [06:01<01:33,  1.35s/batch]
+[10.07 08:05:34] ┇ INFO     ┇                             __main__ ┇ *  searching:  71%|███████████████████████████████████▍              | 155/219 [06:05<00:53,  1.19batch/s]
+[10.07 08:05:39] ┇ INFO     ┇                             __main__ ┇ *  searching:  73%|████████████████████████████████████▌             | 160/219 [06:10<01:03,  1.08s/batch]
+[10.07 08:05:47] ┇ INFO     ┇                             __main__ ┇ *  searching:  75%|█████████████████████████████████████▋            | 165/219 [06:18<01:17,  1.44s/batch]
+[10.07 08:06:01] ┇ INFO     ┇                             __main__ ┇ *  searching:  78%|██████████████████████████████████████▊           | 170/219 [06:32<02:13,  2.73s/batch]
+[10.07 08:06:20] ┇ INFO     ┇                             __main__ ┇ *  searching:  80%|███████████████████████████████████████▉          | 175/219 [06:51<02:45,  3.76s/batch]
+[10.07 08:06:43] ┇ INFO     ┇                             __main__ ┇ *  searching:  82%|█████████████████████████████████████████         | 180/219 [07:14<02:51,  4.40s/batch]
+[10.07 08:07:14] ┇ INFO     ┇                             __main__ ┇ *  searching:  84%|██████████████████████████████████████████▏       | 185/219 [07:45<02:58,  5.24s/batch]
+[10.07 08:07:27] ┇ INFO     ┇                             __main__ ┇ *  searching:  87%|███████████████████████████████████████████▍      | 190/219 [07:58<01:33,  3.24s/batch]
+[10.07 08:07:41] ┇ INFO     ┇                             __main__ ┇ *  searching:  89%|████████████████████████████████████████████▌     | 195/219 [08:11<01:02,  2.62s/batch]
+[10.07 08:07:51] ┇ INFO     ┇                             __main__ ┇ *  searching:  91%|█████████████████████████████████████████████▋    | 200/219 [08:22<00:39,  2.10s/batch]
+[10.07 08:08:04] ┇ INFO     ┇                             __main__ ┇ *  searching:  94%|██████████████████████████████████████████████▊   | 205/219 [08:35<00:34,  2.47s/batch]
+[10.07 08:08:12] ┇ INFO     ┇                             __main__ ┇ *  searching:  96%|███████████████████████████████████████████████▉  | 210/219 [08:43<00:17,  1.94s/batch]
+[10.07 08:08:31] ┇ INFO     ┇                             __main__ ┇ *  searching:  98%|█████████████████████████████████████████████████ | 215/219 [09:02<00:14,  3.71s/batch]
+[10.07 08:08:40] ┇ INFO     ┇                             __main__ ┇ *  searching: 100%|██████████████████████████████████████████████████| 219/219 [09:11<00:00,  2.52s/batch]
+[10.07 08:08:41] ┇ INFO     ┇                       chrisbase.data ┇ =========================================================================================================================================
+[10.07 08:08:41] ┇ INFO     ┇                       chrisbase.data ┇ [EXIT] python search_wikidata.py search --input-start 800000 ($=00:09:11.652)
+[10.07 08:08:41] ┇ INFO     ┇                       chrisbase.data ┇ =========================================================================================================================================
