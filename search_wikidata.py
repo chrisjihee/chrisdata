@@ -29,9 +29,19 @@ class EntityInWiki(TypedData):
 
 
 @dataclass
-class EntityPairInWiki(TypedData):
+class Relation(TypedData):
+    id: str
+    label1: str
+    label2: str
+    descr1: str
+    descr2: str
+
+
+@dataclass
+class TripleInWiki(TypedData):
     entity1: EntityInWiki
     entity2: EntityInWiki
+    relation: Relation
     hits: int
     score: float = field(default=0.0)
     pmi: float = field(default=0.0)
@@ -139,7 +149,7 @@ class FilterOption(OptionData):
     def invalid_entity(self, e: EntityInWiki):
         return e.hits < self.min_hits or self.max_hits < e.hits
 
-    def invalid_cooccur(self, p: EntityPairInWiki):
+    def invalid_triple(self, p: TripleInWiki):
         return p.hits < self.min_cooccur
 
 
@@ -156,6 +166,8 @@ def search_one(x: dict, input_table: MongoDBWrapper, input_index: ElasticSearchW
             else:
                 for claim in wikidata_item.claims:
                     prop_id = claim['property']
+                    prop_row = input_table.table.find_one({'_id': prop_id})
+                    relation = Relation(prop_id, prop_row['label1'], prop_row['label2'], prop_row['descr1'], prop_row['descr2'])
                     if not opt.invalid_prop(prop_id):
                         value = claim['datavalue']
                         value_type = value['type']
@@ -171,34 +183,42 @@ def search_one(x: dict, input_table: MongoDBWrapper, input_index: ElasticSearchW
                                         if not opt.invalid_title(full=object_full, norm=object_norm) and object_norm not in invalid_queries:
                                             # print(f"- {prop_id:100s} ====> \t\t\t{entity_id:10s} -> {object_norm}")
                                             object_norms.add(object_norm)
-                valid_objects = list()
-                for object_norm in object_norms:
-                    object_ex = EntityInWiki(object_norm, *search_each(object_norm, input_index))
-                    if opt.invalid_entity(object_ex):
-                        invalid_queries.add(object_norm)
-                    else:
-                        valid_objects.append(object_ex)
-                if len(valid_objects) > 0:
-                    valid_pairs = list()
-                    # sorted_objects = sorted(valid_objects, key=operator.attrgetter('score'), reverse=True)
-                    # logger.info(f"subject_ex={subject_ex}")
-                    # logger.info(f"sorted_objects={sorted_objects}")
-                    for object_ex in valid_objects:
-                        pair_ex = EntityPairInWiki(subject_ex, object_ex,
-                                                   *search_both(subject_ex.entity, object_ex.entity, input_index))
-                        if not opt.invalid_cooccur(pair_ex):
-                            valid_pairs.append(pair_ex)
-                    # sorted_pairs = sorted(valid_pairs, key=operator.attrgetter('score'), reverse=True)
-                    # logger.info(f"sorted_pairs={sorted_pairs}")
-                    # logger.info(f"")
-                    for pair in valid_pairs:
-                        yield pair
+                                            object_ex = EntityInWiki(object_norm, *search_each(object_norm, input_index))
+                                            if opt.invalid_entity(object_ex):
+                                                invalid_queries.add(object_norm)
+                                            else:
+                                                triple_ex = TripleInWiki(subject_ex, object_ex, relation,
+                                                                         *search_both(subject_ex.entity, object_ex.entity, input_index))
+                                                if not opt.invalid_triple(triple_ex):
+                                                    yield triple_ex
+                #
+                # valid_objects = list()
+                # for object_norm in object_norms:
+                #     object_ex = EntityInWiki(object_norm, *search_each(object_norm, input_index))
+                #     if opt.invalid_entity(object_ex):
+                #         invalid_queries.add(object_norm)
+                #     else:
+                #         valid_objects.append(object_ex)
+                # if len(valid_objects) > 0:
+                #     valid_pairs = list()
+                #     # sorted_objects = sorted(valid_objects, key=operator.attrgetter('score'), reverse=True)
+                #     # logger.info(f"subject_ex={subject_ex}")
+                #     # logger.info(f"sorted_objects={sorted_objects}")
+                #     for object_ex in valid_objects:
+                #         pair_ex = TripleInWiki(subject_ex, object_ex,relation,
+                #                                *search_both(subject_ex.entity, object_ex.entity, input_index))
+                #         if not opt.invalid_triple(pair_ex):
+                #             valid_pairs.append(pair_ex)
+                #     # sorted_pairs = sorted(valid_pairs, key=operator.attrgetter('score'), reverse=True)
+                #     # logger.info(f"sorted_pairs={sorted_pairs}")
+                #     # logger.info(f"")
+                #     for pair in valid_pairs:
+                #         yield pair
 
 
 def search_many(batch: Iterable[dict], output_table: MongoDBWrapper, input_table: MongoDBWrapper, input_index: ElasticSearchWrapper, filter_opt: FilterOption, invalid_queries: set[str]):
     batch_units = [x for x in [search_one(x, input_table, input_index, opt=filter_opt, invalid_queries=invalid_queries) for x in batch] if x]
     all_units = [unit for batch in batch_units for unit in batch]
-    # sorted_units = sorted(all_units, key=operator.attrgetter('pmi'), reverse=True)
     rows = [row.to_dict() for row in all_units if row]
     if len(rows) > 0:
         output_table.table.insert_many(rows)
@@ -258,7 +278,8 @@ def search(
         filter_min_hits: int = typer.Option(default=3),
         filter_max_hits: int = typer.Option(default=1000),
         filter_min_cooccur: int = typer.Option(default=1),
-        filter_black_prop: str = typer.Option(default="input/wikimedia/wikidata-black_prop.txt"),
+        filter_black_prop: str = typer.Option(default="."),
+        # filter_black_prop: str = typer.Option(default="input/wikimedia/wikidata-black_prop.txt"),
 ):
     env = ProjectEnv(
         project=project,
