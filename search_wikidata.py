@@ -346,7 +346,7 @@ def search(
         outputs = args.output.select_outputs(output_table, output_file)
         logger.info(f"Search from [{inputs.wrapper.opt}] with [{args.input.index}] to [{outputs.wrapper.opt}]")
         logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.num_batch}")
-        logger.info(f"- filter: set_black_prop={args.filter.set_black_prop}, ...")
+        logger.info(f"- filter: set_black_prop={args.filter.set_black_prop}, ...")  # TODO: Bridge Entity가 없으면 black_prop를 줄여보자!
         progress, interval = (
             tqdm(inputs.batches, total=inputs.num_batch, unit="batch", pre="*", desc="searching"),
             math.ceil(args.input.inter / args.input.batch)
