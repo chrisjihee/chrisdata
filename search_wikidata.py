@@ -105,8 +105,6 @@ class FilterOption(OptionData):
     max_word: int = field()
     min_hits: int = field()
     max_hits: int = field()
-    min_score: float = field()
-    max_score: float = field()
     min_cooccur: int = field()
     black_prop: str | Path = field()
     num_black_prop: int = 0
@@ -139,17 +137,10 @@ class FilterOption(OptionData):
         )
 
     def invalid_entity(self, e: EntityInWiki):
-        return (
-                e.hits < self.min_hits or
-                e.hits > self.max_hits or
-                e.score < self.min_score or
-                e.score > self.max_score
-        )
+        return e.hits < self.min_hits or self.max_hits < e.hits
 
     def invalid_cooccur(self, p: EntityPairInWiki):
-        return (
-                p.hits < self.min_cooccur
-        )
+        return p.hits < self.min_cooccur
 
 
 def search_one(x: dict, input_table: MongoDBWrapper, input_index: ElasticSearchWrapper, opt: FilterOption, invalid_queries: set[str]):
@@ -264,10 +255,8 @@ def search(
         filter_min_char: int = typer.Option(default=2),
         filter_max_char: int = typer.Option(default=20),
         filter_max_word: int = typer.Option(default=5),
-        filter_min_hits: int = typer.Option(default=10),
+        filter_min_hits: int = typer.Option(default=3),
         filter_max_hits: int = typer.Option(default=1000),
-        filter_min_score: float = typer.Option(default=0.5),
-        filter_max_score: float = typer.Option(default=100.0),
         filter_min_cooccur: int = typer.Option(default=1),
         filter_black_prop: str = typer.Option(default="input/wikimedia/wikidata-black_prop.txt"),
 ):
@@ -313,8 +302,6 @@ def search(
         max_word=filter_max_word,
         min_hits=filter_min_hits,
         max_hits=filter_max_hits,
-        min_score=filter_min_score,
-        max_score=filter_max_score,
         min_cooccur=filter_min_cooccur,
         black_prop=filter_black_prop,
     )
