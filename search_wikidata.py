@@ -4,7 +4,7 @@ import math
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Tuple
 
 import bson.json_util
 import pandas as pd
@@ -384,6 +384,7 @@ def export(
         # input
         input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
         input_table_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
+        input_table_sort: Tuple[str, int] = typer.Option(default=("hits", -1)),
         # output
         output_file_home: str = typer.Option(default="output-search_wikidata"),
         output_file_name: str = typer.Option(default="wikidata-20230920-search-kowiki-new.jsonl"),
@@ -401,6 +402,7 @@ def export(
         table=TableOption(
             home=input_table_home,
             name=input_table_name,
+            sort=[input_table_sort],
             strict=True,
         ),
     )
@@ -432,7 +434,6 @@ def export(
         outputs = args.output.select_outputs(output_file)
         logger.info(f"Export from [{inputs.wrapper.opt}] to [{outputs.wrapper.opt}]")
         logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.num_batch}")
-        input_table.opt.sort = [("hits", 1)]
         rows, num_row = input_table, len(input_table)
         progress, interval = (
             tqdm(rows, total=num_row, unit="row", pre="*", desc="saving"),
