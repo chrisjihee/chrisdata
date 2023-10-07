@@ -192,29 +192,6 @@ def search_one(x: dict, input_table: MongoDBWrapper, input_index: ElasticSearchW
                                                                          *search_both(subject_ex.entity, object_ex.entity, input_index))
                                                 if not opt.invalid_triple(triple_ex):
                                                     yield triple_ex
-                #
-                # valid_objects = list()
-                # for object_norm in object_norms:
-                #     object_ex = EntityInWiki(object_norm, *search_each(object_norm, input_index))
-                #     if opt.invalid_entity(object_ex):
-                #         invalid_queries.add(object_norm)
-                #     else:
-                #         valid_objects.append(object_ex)
-                # if len(valid_objects) > 0:
-                #     valid_pairs = list()
-                #     # sorted_objects = sorted(valid_objects, key=operator.attrgetter('score'), reverse=True)
-                #     # logger.info(f"subject_ex={subject_ex}")
-                #     # logger.info(f"sorted_objects={sorted_objects}")
-                #     for object_ex in valid_objects:
-                #         pair_ex = TripleInWiki(subject_ex, object_ex,relation,
-                #                                *search_both(subject_ex.entity, object_ex.entity, input_index))
-                #         if not opt.invalid_triple(pair_ex):
-                #             valid_pairs.append(pair_ex)
-                #     # sorted_pairs = sorted(valid_pairs, key=operator.attrgetter('score'), reverse=True)
-                #     # logger.info(f"sorted_pairs={sorted_pairs}")
-                #     # logger.info(f"")
-                #     for pair in valid_pairs:
-                #         yield pair
 
 
 def search_many(batch: Iterable[dict], output_table: MongoDBWrapper, input_table: MongoDBWrapper, input_index: ElasticSearchWrapper, filter_opt: FilterOption, invalid_queries: set[str], relation_cache: dict[str, Relation]):
@@ -258,7 +235,6 @@ def search(
         # input
         input_start: int = typer.Option(default=0),
         input_limit: int = typer.Option(default=-1),
-        # input_limit: int = typer.Option(default=20000),
         input_batch: int = typer.Option(default=1000),
         input_inter: int = typer.Option(default=5000),
         input_total: int = typer.Option(default=1018174),
@@ -452,82 +428,6 @@ def export(
             if i > 0 and i % interval == 0:
                 logger.info(progress)
             output_file.fp.write(json.dumps(x, default=bson.json_util.default, ensure_ascii=False) + '\n')
-        logger.info(progress)
-        logger.info(f"Saved {num_row} rows to [{output_file.path}]")
-
-
-@app.command()
-def extract(
-        # env
-        project: str = typer.Option(default="WiseData"),
-        job_name: str = typer.Option(default="search_wikidata"),
-        output_home: str = typer.Option(default="output-search_wikidata"),
-        logging_file: str = typer.Option(default="extract.out"),
-        debugging: bool = typer.Option(default=False),
-        # input
-        input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
-        input_table_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
-        input_table_sort: Tuple[str, int] = typer.Option(default=("hits", -1)),
-        # output
-        output_file_home: str = typer.Option(default="output-search_wikidata"),
-        output_file_name: str = typer.Option(default="wikidata-20230920-search-kowiki-new.jsonl"),
-):
-    env = ProjectEnv(
-        project=project,
-        job_name=job_name,
-        debugging=debugging,
-        output_home=output_home,
-        logging_file=logging_file,
-        msg_level=logging.DEBUG if debugging else logging.INFO,
-        msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_36,
-    )
-    input_opt = InputOption(
-        table=TableOption(
-            home=input_table_home,
-            name=input_table_name,
-            sort=[input_table_sort],
-            strict=True,
-        ),
-    )
-    output_opt = OutputOption(
-        file=FileOption(
-            home=output_file_home,
-            name=output_file_name,
-            mode="w",
-            strict=True,
-        ),
-    )
-    args = ExportArguments(
-        env=env,
-        input=input_opt,
-        output=output_opt,
-    )
-    tqdm = mute_tqdm_cls()
-    assert args.input.table, "input.table is required"
-    assert args.output.file, "output.file is required"
-
-    with (
-        JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        MongoDBWrapper(args.input.table) as input_table,
-        LineFileWrapper(args.output.file) as output_file,
-    ):
-        # extract connected triple pairs
-        args.input.total = len(input_table)
-        inputs = args.input.select_inputs(input_table)
-        outputs = args.output.select_outputs(output_file)
-        logger.info(f"Extract from [{inputs.wrapper.opt}] to [{outputs.wrapper.opt}]")
-        logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.num_batch}")
-        rows, num_row = input_table, len(input_table)
-        progress, interval = (
-            tqdm(rows, total=num_row, unit="row", pre="*", desc="saving"),
-            args.input.inter * 100,
-        )
-        for i, x in enumerate(progress):
-            if i > 0 and i % interval == 0:
-                logger.info(progress)
-            triple = TripleInWiki.from_dict(x)
-            print(triple)
-            exit(1)
         logger.info(progress)
         logger.info(f"Saved {num_row} rows to [{output_file.path}]")
 
