@@ -33,9 +33,6 @@ class IndexApp:
                 input_limit: int = typer.Option(default=-1),
                 input_batch: int = typer.Option(default=10000),
                 input_inter: int = typer.Option(default=100000),
-                # input_limit: int = typer.Option(default=-1),
-                # input_batch: int = typer.Option(default=10000),
-                # input_inter: int = typer.Option(default=100000),
                 input_file_home: str = typer.Option(default="input/wikimedia"),
                 input_file_name: str = typer.Option(default="wikipedia-20230920-parse-kowiki.jsonl"),  # TODO: 문장 단위로 색인해보거나, 형태소분석기를 적용한 후 색인해보기
                 input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
