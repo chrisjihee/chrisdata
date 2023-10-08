@@ -111,7 +111,7 @@ class ExtractArguments(CommonArguments):
         ]).reset_index(drop=True)
 
 
-def extract_one(x: dict, wrapper: MongoDBWrapper | LineFileWrapper, input_table: MongoDBWrapper):
+def extract_one(x: dict, input_table: MongoDBWrapper):
     single1 = SingleTriple.from_dict(x)
     if single1.entity1.entity != single1.entity2.entity:
         bridge = single1.entity2
@@ -123,43 +123,19 @@ def extract_one(x: dict, wrapper: MongoDBWrapper | LineFileWrapper, input_table:
 
 
 def extract_many(batch: Iterable[dict], wrapper: MongoDBWrapper | LineFileWrapper, input_table: MongoDBWrapper):
-    batch_units = [extract_one(x, wrapper, input_table) for x in batch]
+    batch_units = [extract_one(x, input_table) for x in batch]
     all_units = [x for batch in batch_units for x in batch]
     rows = [row.to_dict() for row in all_units if row]
     if len(rows) > 0:
         wrapper.table.insert_many(rows)
-    #
-    # print()
-    # print()
-    # print()
-    # print()
-    # print()
-    #
-    # for x in all_units:
-    #     print(f"- all_units -> x = {x}")
-    # #
-    # # for x in batch:
-    # #     single1 = SingleTriple.from_dict(item)
-    # #     print()
-    # #     print(f"* item={item}")
-    # #     print(f"  = single1={single1}")
-    # #     if single1.entity1.entity != single1.entity2.entity:
-    # #         for y in input_table.table.find({"entity1": single1.entity2.to_dict()}):
-    # #             single2 = SingleTriple.from_dict(y)
-    # #             double = DoubleTriple.from_triples(single1, single2)
-    # #             if double:
-    # #                 print(f"    - single1={single1}")
-    # #                 print(f"    - single2={single2}")
-    # #                 print(f"    - double={double}")
-    # exit(1)
 
 
 @app.command()
 def extract(
         # env
         project: str = typer.Option(default="WiseData"),
-        job_name: str = typer.Option(default="search_wikidata"),
-        output_home: str = typer.Option(default="output-search_wikidata"),
+        job_name: str = typer.Option(default="extract_wikidata"),
+        output_home: str = typer.Option(default="output-extract_wikidata"),
         logging_file: str = typer.Option(default="extract.out"),
         debugging: bool = typer.Option(default=False),
         # input
