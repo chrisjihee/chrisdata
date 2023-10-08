@@ -60,7 +60,7 @@ def index(
         debugging: bool = typer.Option(default=False),
         # input
         input_start: int = typer.Option(default=0),
-        input_limit: int = typer.Option(default=12000),
+        input_limit: int = typer.Option(default=500),
         input_batch: int = typer.Option(default=1),
         input_inter: int = typer.Option(default=100),
         # input_limit: int = typer.Option(default=-1),
@@ -164,15 +164,8 @@ def index(
             # index_many(batch=x, wrapper=output_index, batch_size=args.input.batch)
         logger.info(progress)
         output_index.refresh()
-        logger.info(f"Indexed {len(writer)} documents to [{writer.opt}]")
-
-        # writer.status(only_opt=False)
-        res = writer.cli.search(index=writer.opt.name, size=12000)
-        print(res['hits']['total']['value'])
-        print(len(res['hits']['hits']))
-        print(type(res['hits']['hits']))
-        # for hit in res['hits']['hits']:
-        #     print(hit["_source"])
+        logger.info(f"Indexed {len(writer)} items to [{writer.opt}]")
+        writer.status(only_opt=False)
 
 
 if __name__ == "__main__":
