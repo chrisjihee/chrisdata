@@ -8,7 +8,7 @@ from typing import Iterable
 import pandas as pd
 import typer
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, TypedData, IOArguments
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, TypedData, IOArguments, Streamer
 from chrisbase.data import InputOption, OutputOption, TableOption, IndexOption
 from chrisbase.data import MongoStreamer, ElasticStreamer
 from chrisbase.io import LoggingFormat
@@ -227,10 +227,14 @@ class SearchApp:
                 logging_file: str = typer.Option(default="search.out"),
                 debugging: bool = typer.Option(default=False),
                 # input
-                input_start: int = typer.Option(default=0),
-                input_limit: int = typer.Option(default=-1),
-                input_batch: int = typer.Option(default=1000),
-                input_inter: int = typer.Option(default=5000),
+                # input_start: int = typer.Option(default=0),
+                # input_limit: int = typer.Option(default=-1),
+                # input_batch: int = typer.Option(default=1000),
+                # input_inter: int = typer.Option(default=5000),
+                input_start: int = typer.Option(default=30000),
+                input_limit: int = typer.Option(default=50),
+                input_batch: int = typer.Option(default=10),
+                input_inter: int = typer.Option(default=10),
                 input_index_home: str = typer.Option(default="localhost:9810"),
                 input_index_name: str = typer.Option(default="wikipedia-20230920-index-kowiki"),
                 input_index_user: str = typer.Option(default="elastic"),
@@ -238,6 +242,11 @@ class SearchApp:
                 input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
                 input_table_name: str = typer.Option(default="wikidata-20230920-parse-kowiki"),
                 # output
+                output_index_home: str = typer.Option(default="localhost:9810"),
+                output_index_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
+                output_index_user: str = typer.Option(default="elastic"),
+                output_index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
+                output_index_reset: bool = typer.Option(default=True),
                 output_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
                 output_table_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
                 output_table_reset: bool = typer.Option(default=False),
@@ -278,6 +287,14 @@ class SearchApp:
                 ),
             )
             output_opt = OutputOption(
+                index=IndexOption(
+                    home=output_index_home,
+                    user=output_index_user,
+                    pswd=output_index_pswd,
+                    name=output_index_name,
+                    reset=output_index_reset,
+                    strict=True,
+                ),
                 table=TableOption(
                     home=output_table_home,
                     name=output_table_name,
@@ -300,7 +317,6 @@ class SearchApp:
                 output=output_opt,
                 filter=filter_opt,
             )
-
             tqdm = mute_tqdm_cls()
             logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
             assert args.input.index, "input.index is required"
@@ -309,25 +325,31 @@ class SearchApp:
 
             with (
                 JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-                ElasticStreamer(args.input.index) as input_index,
-                MongoStreamer(args.input.table) as input_table,
-                MongoStreamer(args.output.table) as output_table,
+                ElasticStreamer(args.output.index) as output_index, MongoStreamer(args.output.table) as output_table,
+                ElasticStreamer(args.input.index) as input_index, MongoStreamer(args.input.table) as input_table,
             ):
                 # search parsed data
-                inputs = args.input.first_usable(input_table, total=len(input_table))
-                outputs = args.output.first_usable(output_table)
-                logger.info(f"Search from [{inputs.rewriter.opt}] with [{args.input.index}] to [{outputs.rewriter.opt}]")
-                logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.total}")
+                writer = Streamer.first_usable(output_index, output_table)
+                reader = Streamer.first_usable(input_table)
+                input_items: InputOption.InputItems = args.input.ready_inputs(reader, len(reader))
+                logger.info(f"Search from [{reader.opt}] with [{input_index.opt}] to [{writer.opt}]")
+                logger.info(f"- amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
                 logger.info(f"- filter: set_black_prop={args.filter.set_black_prop}, ...")  # TODO: Bridge Entity가 없으면 black_prop를 줄여보자!
                 progress, interval = (
-                    tqdm(inputs.batches, total=inputs.total, unit="batch", pre="*", desc="searching"),
+                    tqdm(input_items.items, total=input_items.total, unit="batch", pre="*", desc="searching"),
                     math.ceil(args.input.inter / args.input.batch)
                 )
+                print(f"len(reader)={len(reader)}")
+                print(f"len(input_index)={len(input_index)}")
+                print(f"len(writer)={len(writer)}")
                 relation_cache = dict()
                 invalid_queries = set()
                 for i, x in enumerate(progress):
                     if i > 0 and i % interval == 0:
                         logger.info(progress)
+                    for a in x:
+                        print(a)
+                    exit(1)
                     search_many(batch=x, output_table=output_table, input_table=input_table, input_index=input_index, filter_opt=args.filter, invalid_queries=invalid_queries, relation_cache=relation_cache)
                 logger.info(progress)
 
