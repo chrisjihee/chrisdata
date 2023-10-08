@@ -122,7 +122,7 @@ def index(
         ElasticSearchWrapper(args.output.index) as output_index,
     ):
         # index parsed data
-        inputs = args.input.select_inputs(input_table, input_file)
+        inputs = args.input.select_input_batches(input_table, input_file)
         logger.info(f"Index from [{inputs.wrapper.opt}] to [{args.output.index}]")
         logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.num_batch}")
         progress, interval = (

@@ -321,8 +321,8 @@ def search(
         MongoDBWrapper(args.output.table) as output_table,
     ):
         # search parsed data
-        inputs = args.input.select_inputs(input_table)
-        outputs = args.output.select_outputs(output_table)
+        inputs = args.input.select_input_batches(input_table, num_input=len(input_table))
+        outputs = args.output.select_output_source(output_table)
         logger.info(f"Search from [{inputs.wrapper.opt}] with [{args.input.index}] to [{outputs.wrapper.opt}]")
         logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.num_batch}")
         logger.info(f"- filter: set_black_prop={args.filter.set_black_prop}, ...")  # TODO: Bridge Entity가 없으면 black_prop를 줄여보자!
@@ -414,14 +414,12 @@ def export(
         LineFileWrapper(args.output.file) as output_file,
     ):
         # export search results
-        args.input.total = len(input_table)
-        inputs = args.input.select_inputs(input_table)
-        outputs = args.output.select_outputs(output_file)
+        inputs = args.input.select_input_batches(input_table, num_input=len(input_table))
+        outputs = args.output.select_output_source(output_file)
         logger.info(f"Export from [{inputs.wrapper.opt}] to [{outputs.wrapper.opt}]")
         logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.num_batch}")
-        rows, num_row = input_table, len(input_table)
         progress, interval = (
-            tqdm(rows, total=num_row, unit="row", pre="*", desc="saving"),
+            tqdm(input_table, total=len(input_table), unit="row", pre="*", desc="saving"),
             args.input.inter * 10,
         )
         for i, x in enumerate(progress):
@@ -429,7 +427,7 @@ def export(
                 logger.info(progress)
             output_file.fp.write(json.dumps(x, default=bson.json_util.default, ensure_ascii=False) + '\n')
         logger.info(progress)
-        logger.info(f"Saved {num_row} rows to [{output_file.path}]")
+        logger.info(f"Saved {len(input_table)} rows to [{output_file.path}]")
 
 
 if __name__ == "__main__":

@@ -239,9 +239,8 @@ def parse(
         logger.info(progress)
 
         # save parsed data
-        rows, num_row = data_table, len(data_table)
         progress, interval = (
-            tqdm(rows, total=num_row, unit="row", pre="*", desc="saving"),
+            tqdm(data_table, total=len(data_table), unit="row", pre="*", desc="saving"),
             args.data.inter * 100,
         )
         for i, x in enumerate(progress):
@@ -249,7 +248,7 @@ def parse(
                 logger.info(progress)
             writer.write(json.dumps(x, ensure_ascii=False) + '\n')
         logger.info(progress)
-        logger.info(f"Saved {num_row} rows to [{save_file}]")
+        logger.info(f"Saved {len(data_table)} rows to [{save_file}]")
 
 
 @dataclass
@@ -346,9 +345,8 @@ def restore(
         logger.info(progress)
 
         # save restored data
-        rows, num_row = data_table, len(data_table)
         progress, interval = (
-            tqdm(rows, total=num_row, unit="row", pre="*", desc="saving"),
+            tqdm(data_table, total=len(data_table), unit="row", pre="*", desc="saving"),
             args.data.inter,
         )
         for i, x in enumerate(progress):
@@ -356,7 +354,7 @@ def restore(
                 logger.info(progress)
             writer.write(json.dumps(x, ensure_ascii=False) + '\n')
         logger.info(progress)
-        logger.info(f"Saved {num_row} rows to [{save_file}]")
+        logger.info(f"Saved {len(data_table)} rows to [{save_file}]")
 
 
 if __name__ == "__main__":

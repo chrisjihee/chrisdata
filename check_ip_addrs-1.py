@@ -160,8 +160,10 @@ def check(
                 num_input, inputs = min(args.data.total, args.data.limit), islice(inputs, args.data.limit)
             num_batch, batches = math.ceil(num_input / args.data.batch), ichunked(inputs, args.data.batch)
             logger.info(f"Check {num_input} IP addresses with {num_batch} batches")
-            progress, interval = (tqdm(batches, total=num_batch, unit="batch", pre="*", desc="visiting"),
-                                  math.ceil(args.data.prog_interval / args.data.batch))
+            progress, interval = (
+                tqdm(batches, total=num_batch, unit="batch", pre="*", desc="visiting"),
+                math.ceil(args.data.prog_interval / args.data.batch)
+            )
             with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
                 def make_jobs() -> Iterable[Future]:
                     for i, x in enumerate(progress):
@@ -182,8 +184,10 @@ def check(
 
             find_opt = {}
             num_row, rows = out_table.count_documents(find_opt), out_table.find(find_opt).sort("_id")
-            progress, interval = (tqdm(rows, unit="ea", pre="*", desc="exporting", total=num_row),
-                                  args.data.prog_interval * 10)
+            progress, interval = (
+                tqdm(rows, unit="ea", pre="*", desc="exporting", total=num_row),
+                args.data.prog_interval * 10
+            )
             for i, row in enumerate(progress):
                 if i > 0 and i % interval == 0:
                     logger.info(progress)
