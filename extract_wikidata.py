@@ -6,9 +6,9 @@ from typing import Tuple, Optional, Iterable
 import pandas as pd
 import typer
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, TypedData, InputSource, OutputSource, LineFileWrapper
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, TypedData, InputChannel, OutputChannel, FileRewriter
 from chrisbase.data import InputOption, OutputOption, TableOption
-from chrisbase.data import MongoDBWrapper
+from chrisbase.data import MongoRewriter
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 
@@ -111,7 +111,7 @@ class ExtractArguments(CommonArguments):
         ]).reset_index(drop=True)
 
 
-def extract_one(x: dict, input_table: MongoDBWrapper):
+def extract_one(x: dict, input_table: MongoRewriter):
     single1 = SingleTriple.from_dict(x)
     if single1.entity1.entity != single1.entity2.entity:
         bridge = single1.entity2
@@ -122,7 +122,7 @@ def extract_one(x: dict, input_table: MongoDBWrapper):
                 yield double
 
 
-def extract_many(batch: Iterable[dict], wrapper: MongoDBWrapper | LineFileWrapper, input_table: MongoDBWrapper):
+def extract_many(batch: Iterable[dict], wrapper: MongoRewriter | FileRewriter, input_table: MongoRewriter):
     batch_units = [extract_one(x, input_table) for x in batch]
     all_units = [x for batch in batch_units for x in batch]
     rows = [row.to_dict() for row in all_units if row]
@@ -193,22 +193,22 @@ def extract(
 
     with (
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        MongoDBWrapper(args.input.table) as input_table,
-        MongoDBWrapper(args.output.table) as output_table,
+        MongoRewriter(args.input.table) as input_table,
+        MongoRewriter(args.output.table) as output_table,
     ):
         # extract connected triple pairs
-        inp: InputSource = args.input.select_input_batches(input_table, num_input=len(input_table))
-        out: OutputSource = args.output.select_output_source(output_table)
-        logger.info(f"Extract from [{inp.wrapper.opt}] to [{out.wrapper.opt}]")
-        logger.info(f"- amount: inputs={inp.num_input}, batches={inp.num_batch}")
+        inp: InputChannel = args.input.first_usable(input_table, total=len(input_table))
+        out: OutputChannel = args.output.first_usable(output_table)
+        logger.info(f"Extract from [{inp.wrapper.opt}] to [{out.rewriter.opt}]")
+        logger.info(f"- amount: inputs={inp.num_input}, batches={inp.total}")
         progress, interval = (
-            tqdm(inp.batches, total=inp.num_batch, unit="batch", pre="*", desc="parsing"),
+            tqdm(inp.batches, total=inp.total, unit="batch", pre="*", desc="parsing"),
             math.ceil(args.input.inter / args.input.batch),
         )
         for i, x in enumerate(progress):
             if i > 0 and i % interval == 0:
                 logger.info(progress)
-            extract_many(batch=x, wrapper=out.wrapper, input_table=input_table)
+            extract_many(batch=x, wrapper=out.rewriter, input_table=input_table)
         logger.info(progress)
 
 

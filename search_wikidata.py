@@ -12,7 +12,7 @@ import typer
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, OptionData, TypedData
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption, IndexOption
-from chrisbase.data import LineFileWrapper, MongoDBWrapper, ElasticSearchWrapper
+from chrisbase.data import FileRewriter, MongoRewriter, ElasticRewriter
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 from parse_wikidata import WikidataUnit
@@ -59,7 +59,7 @@ class TripleInWiki(TypedData):
         self.pmi = self.calc_pmi(self.hits, self.entity1.hits, self.entity2.hits)
 
 
-def search_query(query: str, input_index: ElasticSearchWrapper):
+def search_query(query: str, input_index: ElasticRewriter):
     try:
         response = input_index.cli.search(
             index=input_index.opt.name,
@@ -97,12 +97,12 @@ def escape_query(q: str) -> str:
     return q
 
 
-def search_each(query: str, input_index: ElasticSearchWrapper):
+def search_each(query: str, input_index: ElasticRewriter):
     query = escape_query(query)
     return search_query(f'"{query}"', input_index)
 
 
-def search_both(query1: str, query2: str, input_index: ElasticSearchWrapper):
+def search_both(query1: str, query2: str, input_index: ElasticRewriter):
     query1 = escape_query(query1)
     query2 = escape_query(query2)
     return search_query(f'"{query1}" AND "{query2}"', input_index)
@@ -153,7 +153,7 @@ class FilterOption(OptionData):
         return p.hits < self.min_cooccur
 
 
-def search_one(x: dict, input_table: MongoDBWrapper, input_index: ElasticSearchWrapper, opt: FilterOption, invalid_queries: set[str], relation_cache: dict[str, Relation]):
+def search_one(x: dict, input_table: MongoRewriter, input_index: ElasticRewriter, opt: FilterOption, invalid_queries: set[str], relation_cache: dict[str, Relation]):
     wikidata_item = WikidataUnit.from_dict(x)
     if wikidata_item.type == "item":
         subject_full = wikidata_item.title1
@@ -194,7 +194,7 @@ def search_one(x: dict, input_table: MongoDBWrapper, input_index: ElasticSearchW
                                                     yield triple_ex
 
 
-def search_many(batch: Iterable[dict], output_table: MongoDBWrapper, input_table: MongoDBWrapper, input_index: ElasticSearchWrapper, filter_opt: FilterOption, invalid_queries: set[str], relation_cache: dict[str, Relation]):
+def search_many(batch: Iterable[dict], output_table: MongoRewriter, input_table: MongoRewriter, input_index: ElasticRewriter, filter_opt: FilterOption, invalid_queries: set[str], relation_cache: dict[str, Relation]):
     batch_units = [x for x in [search_one(x, input_table, input_index, opt=filter_opt, invalid_queries=invalid_queries, relation_cache=relation_cache) for x in batch] if x]
     all_units = [unit for batch in batch_units for unit in batch]
     rows = [row.to_dict() for row in all_units if row]
@@ -316,18 +316,18 @@ def search(
 
     with (
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        ElasticSearchWrapper(args.input.index) as input_index,
-        MongoDBWrapper(args.input.table) as input_table,
-        MongoDBWrapper(args.output.table) as output_table,
+        ElasticRewriter(args.input.index) as input_index,
+        MongoRewriter(args.input.table) as input_table,
+        MongoRewriter(args.output.table) as output_table,
     ):
         # search parsed data
-        inputs = args.input.select_input_batches(input_table, num_input=len(input_table))
-        outputs = args.output.select_output_source(output_table)
-        logger.info(f"Search from [{inputs.wrapper.opt}] with [{args.input.index}] to [{outputs.wrapper.opt}]")
-        logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.num_batch}")
+        inputs = args.input.first_usable(input_table, total=len(input_table))
+        outputs = args.output.first_usable(output_table)
+        logger.info(f"Search from [{inputs.rewriter.opt}] with [{args.input.index}] to [{outputs.rewriter.opt}]")
+        logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.total}")
         logger.info(f"- filter: set_black_prop={args.filter.set_black_prop}, ...")  # TODO: Bridge Entity가 없으면 black_prop를 줄여보자!
         progress, interval = (
-            tqdm(inputs.batches, total=inputs.num_batch, unit="batch", pre="*", desc="searching"),
+            tqdm(inputs.batches, total=inputs.total, unit="batch", pre="*", desc="searching"),
             math.ceil(args.input.inter / args.input.batch)
         )
         relation_cache = dict()
@@ -410,14 +410,14 @@ def export(
 
     with (
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        MongoDBWrapper(args.input.table) as input_table,
-        LineFileWrapper(args.output.file) as output_file,
+        MongoRewriter(args.input.table) as input_table,
+        FileRewriter(args.output.file) as output_file,
     ):
         # export search results
-        inputs = args.input.select_input_batches(input_table, num_input=len(input_table))
-        outputs = args.output.select_output_source(output_file)
-        logger.info(f"Export from [{inputs.wrapper.opt}] to [{outputs.wrapper.opt}]")
-        logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.num_batch}")
+        inputs = args.input.first_usable(input_table, total=len(input_table))
+        outputs = args.output.first_usable(output_file)
+        logger.info(f"Export from [{inputs.rewriter.opt}] to [{outputs.rewriter.opt}]")
+        logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.total}")
         progress, interval = (
             tqdm(input_table, total=len(input_table), unit="row", pre="*", desc="saving"),
             args.input.inter * 10,

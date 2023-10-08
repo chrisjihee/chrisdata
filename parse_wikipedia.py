@@ -9,9 +9,9 @@ import pandas as pd
 import typer
 from dataclasses_json import DataClassJsonMixin
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, OptionData, InputSource, OutputSource
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, OptionData
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption
-from chrisbase.data import LineFileWrapper, MongoDBWrapper
+from chrisbase.data import FileRewriter, MongoRewriter
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 from crawl_wikipedia import ProcessResult as WikipediaProcessResult
@@ -115,7 +115,7 @@ def parse_one(x: dict, parsed_ids: set[int], opt: FilterOption) -> Iterable[Pass
     parsed_ids.add(doc.page_id)
 
 
-def parse_many(batch: Iterable[dict], wrapper: MongoDBWrapper | LineFileWrapper, parsed_ids: set[int], filter_opt: FilterOption):
+def parse_many(batch: Iterable[dict], wrapper: MongoRewriter | FileRewriter, parsed_ids: set[int], filter_opt: FilterOption):
     batch_units = [x for x in [parse_one(x, parsed_ids, opt=filter_opt) for x in batch] if x]
     all_units = [unit for batch in batch_units for unit in batch]
     rows = [row.to_dict() for row in all_units if row]
@@ -200,30 +200,30 @@ def parse(
 
     with (
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        MongoDBWrapper(args.output.table) as output_table,
-        LineFileWrapper(args.output.file) as output_file,
-        LineFileWrapper(args.input.file) as input_file,
+        MongoRewriter(args.output.table) as output_table,
+        FileRewriter(args.output.file) as output_file,
+        FileRewriter(args.input.file) as input_file,
     ):
         # parse crawled data
-        inp: InputSource = args.input.select_input_batches(input_file)
-        out: OutputSource = args.output.select_output_source(output_table)
-        logger.info(f"Parse from [{inp.wrapper.opt}] to [{out.wrapper.opt}]")
-        logger.info(f"- amount: inputs={inp.num_input}, batches={inp.num_batch}")
+        inp: InputChannel = args.input.first_usable(input_file)
+        out: OutputChannel = args.output.first_usable(output_table)
+        logger.info(f"Parse from [{inp.wrapper.opt}] to [{out.rewriter.opt}]")
+        logger.info(f"- amount: inputs={inp.num_input}, batches={inp.total}")
         logger.info(f"- filter: num_black_sect={args.filter.num_black_sect}, min_char={args.filter.min_char}, min_word={args.filter.min_word}")
         progress, interval = (
-            tqdm(inp.batches, total=inp.num_batch, unit="batch", pre="*", desc="parsing"),
+            tqdm(inp.batches, total=inp.total, unit="batch", pre="*", desc="parsing"),
             math.ceil(args.input.inter / args.input.batch),
         )
         parsed_ids = set()
         for i, x in enumerate(progress):
             if i > 0 and i % interval == 0:
                 logger.info(progress)
-            parse_many(batch=x, wrapper=out.wrapper, parsed_ids=parsed_ids, filter_opt=args.filter)
+            parse_many(batch=x, wrapper=out.rewriter, parsed_ids=parsed_ids, filter_opt=args.filter)
         logger.info(progress)
 
         # save parsed data
         progress, interval = (
-            tqdm(out.wrapper, total=len(out.wrapper), unit="row", pre="*", desc="saving"),
+            tqdm(out.rewriter, total=len(out.rewriter), unit="row", pre="*", desc="saving"),
             args.input.inter * 100,
         )
         for i, x in enumerate(progress):
@@ -231,7 +231,7 @@ def parse(
                 logger.info(progress)
             output_file.fp.write(json.dumps(x, ensure_ascii=False) + '\n')
         logger.info(progress)
-        logger.info(f"Saved {len(out.wrapper)} rows to [{output_file.path}]")
+        logger.info(f"Saved {len(out.rewriter)} rows to [{output_file.path}]")
 
 
 if __name__ == "__main__":

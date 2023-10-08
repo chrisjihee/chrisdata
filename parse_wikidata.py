@@ -14,7 +14,7 @@ from qwikidata.typedefs import LanguageCode
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, OptionData
 from chrisbase.data import InputOption, FileOption, TableOption
-from chrisbase.data import LineFileWrapper, MongoDBWrapper
+from chrisbase.data import FileRewriter, MongoRewriter
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 
@@ -147,7 +147,7 @@ def parse_one(x: dict, args: ParseArguments):
     return None
 
 
-def parse_many(batch: Iterable[dict], wrapper: MongoDBWrapper, args: ParseArguments):
+def parse_many(batch: Iterable[dict], wrapper: MongoRewriter, args: ParseArguments):
     rows = [parse_one(x, args) if wrapper.count({"_id": x['id']}) == 0 else None
             for x in batch]
     rows = [row.to_dict() for row in rows if row]
@@ -219,17 +219,17 @@ def parse(
 
     with (
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        MongoDBWrapper(args.data.table) as data_table,
-        LineFileWrapper(args.data.file) as data_file,
+        MongoRewriter(args.data.table) as data_table,
+        FileRewriter(args.data.file) as data_file,
         save_file.open("w") as writer,
     ):
         # parse dump data
-        inputs = args.data.load_batches(WikidataJsonDump(str(data_file.path)), args.data.total)
+        inputs = args.data.ready_inputs(WikidataJsonDump(str(data_file.path)), args.data.total)
         logger.info(f"Parse from [{args.data.file}] to [{args.data.table}]")
-        logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.num_batch}")
+        logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.total}")
         logger.info(f"- filter: lang1={args.filter.lang1}, lang2={args.filter.lang2}")
         progress, interval = (
-            tqdm(inputs.batches, total=inputs.num_batch, unit="batch", pre="*", desc="parsing"),
+            tqdm(inputs.batches, total=inputs.total, unit="batch", pre="*", desc="parsing"),
             math.ceil(args.data.inter / args.data.batch),
         )
         for i, x in enumerate(progress):
@@ -326,16 +326,16 @@ def restore(
 
     with (
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        MongoDBWrapper(args.data.table) as data_table,
-        LineFileWrapper(args.data.file) as data_file,
+        MongoRewriter(args.data.table) as data_table,
+        FileRewriter(args.data.file) as data_file,
         save_file.open("w") as writer,
     ):
         # restore parsed data
-        inputs = args.data.load_batches(data_file, args.data.total)
+        inputs = args.data.ready_inputs(data_file, args.data.total)
         logger.info(f"Restore from [{args.data.file}] to [{args.data.table}]")
-        logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.num_batch}")
+        logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.total}")
         progress, interval = (
-            tqdm(inputs.batches, total=inputs.num_batch, unit="batch", pre="*", desc="restoring"),
+            tqdm(inputs.batches, total=inputs.total, unit="batch", pre="*", desc="restoring"),
             math.ceil(args.data.inter / args.data.batch),
         )
         for i, x in enumerate(progress):
