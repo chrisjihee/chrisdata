@@ -1,0 +1,78 @@
+{
+  "env": {
+    "project": "WiseData",
+    "job_name": "index_wikipedia",
+    "hostname": "chrisBookPro.local",
+    "hostaddr": "192.168.0.41",
+    "python_path": "/Users/chris/miniforge3/envs/WiseData-2023.08/bin/python",
+    "working_path": "/Users/chris/proj/WiseData-2023.08",
+    "running_file": "index_wikipedia.py",
+    "command_args": [
+      "index",
+      "wikipedia"
+    ],
+    "num_ip_addrs": 0,
+    "max_workers": 1,
+    "output_home": "output-index_wikipedia",
+    "logging_file": "logging-1009.034115.out",
+    "argument_file": "arguments-1009.034115.json",
+    "debugging": false,
+    "msg_level": 20,
+    "msg_format": "%(asctime)s ┇ %(levelname)-8s ┇ %(name)36s ┇ %(message)s",
+    "date_format": "[%m.%d %H:%M:%S]",
+    "time_stamp": "1009.034115"
+  },
+  "input": {
+    "file": {
+      "home": "input/wikimedia",
+      "name": "wikipedia-20230920-parse-kowiki.jsonl",
+      "user": null,
+      "pswd": null,
+      "reset": false,
+      "strict": false,
+      "mode": "rb",
+      "encoding": "utf-8"
+    },
+    "table": {
+      "home": "localhost:6382/wikimedia",
+      "name": "wikipedia-20230920-parse-kowiki",
+      "user": null,
+      "pswd": null,
+      "reset": false,
+      "strict": false,
+      "sort": "_id",
+      "find": {},
+      "timeout": 5000
+    },
+    "index": null,
+    "start": 0,
+    "limit": -1,
+    "batch": 10000,
+    "inter": 100000
+  },
+  "output": {
+    "file": {
+      "home": "output-index_wikipedia",
+      "name": "wikipedia-20230920-index-kowiki.jsonl",
+      "user": null,
+      "pswd": null,
+      "reset": false,
+      "strict": false,
+      "mode": "a",
+      "encoding": "utf-8"
+    },
+    "table": null,
+    "index": {
+      "home": "localhost:9810",
+      "name": "wikipedia-20230920-index-kowiki",
+      "user": "elastic",
+      "pswd": "cIrEP5OCwTLn0QIQwnsA",
+      "reset": true,
+      "strict": false,
+      "window": 10000,
+      "timeout": 10,
+      "retrial": 3,
+      "create": "input/wikimedia/wikipedia-index_create_args.json"
+    }
+  }
+}
