@@ -254,7 +254,7 @@ def search(
         filter_max_word: int = typer.Option(default=5),
         filter_min_hits: int = typer.Option(default=3),
         filter_max_hits: int = typer.Option(default=1000),
-        filter_min_cooccur: int = typer.Option(default=1),
+        filter_min_cooccur: int = typer.Option(default=1),  # TODO: filter_min_cooccur를 올려보기: 2, 3, ...?
         filter_black_prop: str = typer.Option(default="input/wikimedia/wikidata-black_prop-x.txt"),
 ):
     env = ProjectEnv(
