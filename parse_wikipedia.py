@@ -11,7 +11,7 @@ from dataclasses_json import DataClassJsonMixin
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, OptionData
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption
-from chrisbase.data import FileRewriter, MongoRewriter
+from chrisbase.data import FileStreamer, MongoStreamer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 from crawl_wikipedia import ProcessResult as WikipediaProcessResult
@@ -115,7 +115,7 @@ def parse_one(x: dict, parsed_ids: set[int], opt: FilterOption) -> Iterable[Pass
     parsed_ids.add(doc.page_id)
 
 
-def parse_many(batch: Iterable[dict], wrapper: MongoRewriter | FileRewriter, parsed_ids: set[int], filter_opt: FilterOption):
+def parse_many(batch: Iterable[dict], wrapper: MongoStreamer | FileStreamer, parsed_ids: set[int], filter_opt: FilterOption):
     batch_units = [x for x in [parse_one(x, parsed_ids, opt=filter_opt) for x in batch] if x]
     all_units = [unit for batch in batch_units for unit in batch]
     rows = [row.to_dict() for row in all_units if row]
@@ -200,9 +200,9 @@ def parse(
 
     with (
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        MongoRewriter(args.output.table) as output_table,
-        FileRewriter(args.output.file) as output_file,
-        FileRewriter(args.input.file) as input_file,
+        MongoStreamer(args.output.table) as output_table,
+        FileStreamer(args.output.file) as output_file,
+        FileStreamer(args.input.file) as input_file,
     ):
         # parse crawled data
         inp: InputChannel = args.input.first_usable(input_file)

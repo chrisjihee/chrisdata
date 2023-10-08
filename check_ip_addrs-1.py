@@ -14,7 +14,7 @@ import typer
 from dataclasses_json import DataClassJsonMixin
 from more_itertools import ichunked
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, TableOption, MongoRewriter
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, TableOption, MongoStreamer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls, terminate_processes
 
@@ -97,7 +97,7 @@ def process_many(batch: Iterable[str], args: ProgramArguments):
     rows = [process_one(x, args) for x in batch]
     rows = [row.to_dict() for row in rows if row]
     if len(rows) > 0:
-        with MongoRewriter(args.table) as table:
+        with MongoStreamer(args.table) as table:
             table.insert_many(rows)
 
 
@@ -153,7 +153,7 @@ def check(
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        with MongoRewriter(args.table) as out_table, output_file.open("w") as out_file:
+        with MongoStreamer(args.table) as out_table, output_file.open("w") as out_file:
             out_table.drop()
             num_input, inputs = args.data.total, args.data.items
             if args.data.limit > 0:

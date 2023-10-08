@@ -6,9 +6,9 @@ from typing import Tuple, Optional, Iterable
 import pandas as pd
 import typer
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, TypedData, InputChannel, OutputChannel, FileRewriter
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, TypedData, InputChannel, OutputChannel, FileStreamer
 from chrisbase.data import InputOption, OutputOption, TableOption
-from chrisbase.data import MongoRewriter
+from chrisbase.data import MongoStreamer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 
@@ -111,7 +111,7 @@ class ExtractArguments(CommonArguments):
         ]).reset_index(drop=True)
 
 
-def extract_one(x: dict, input_table: MongoRewriter):
+def extract_one(x: dict, input_table: MongoStreamer):
     single1 = SingleTriple.from_dict(x)
     if single1.entity1.entity != single1.entity2.entity:
         bridge = single1.entity2
@@ -122,7 +122,7 @@ def extract_one(x: dict, input_table: MongoRewriter):
                 yield double
 
 
-def extract_many(batch: Iterable[dict], wrapper: MongoRewriter | FileRewriter, input_table: MongoRewriter):
+def extract_many(batch: Iterable[dict], wrapper: MongoStreamer | FileStreamer, input_table: MongoStreamer):
     batch_units = [extract_one(x, input_table) for x in batch]
     all_units = [x for batch in batch_units for x in batch]
     rows = [row.to_dict() for row in all_units if row]
@@ -193,8 +193,8 @@ def extract(
 
     with (
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        MongoRewriter(args.input.table) as input_table,
-        MongoRewriter(args.output.table) as output_table,
+        MongoStreamer(args.input.table) as input_table,
+        MongoStreamer(args.output.table) as output_table,
     ):
         # extract connected triple pairs
         inp: InputChannel = args.input.first_usable(input_table, total=len(input_table))

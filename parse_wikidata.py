@@ -14,7 +14,7 @@ from qwikidata.typedefs import LanguageCode
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, OptionData
 from chrisbase.data import InputOption, FileOption, TableOption
-from chrisbase.data import FileRewriter, MongoRewriter
+from chrisbase.data import FileStreamer, MongoStreamer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 
@@ -147,7 +147,7 @@ def parse_one(x: dict, args: ParseArguments):
     return None
 
 
-def parse_many(batch: Iterable[dict], wrapper: MongoRewriter, args: ParseArguments):
+def parse_many(batch: Iterable[dict], wrapper: MongoStreamer, args: ParseArguments):
     rows = [parse_one(x, args) if wrapper.count({"_id": x['id']}) == 0 else None
             for x in batch]
     rows = [row.to_dict() for row in rows if row]
@@ -219,8 +219,8 @@ def parse(
 
     with (
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        MongoRewriter(args.data.table) as data_table,
-        FileRewriter(args.data.file) as data_file,
+        MongoStreamer(args.data.table) as data_table,
+        FileStreamer(args.data.file) as data_file,
         save_file.open("w") as writer,
     ):
         # parse dump data
@@ -326,8 +326,8 @@ def restore(
 
     with (
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        MongoRewriter(args.data.table) as data_table,
-        FileRewriter(args.data.file) as data_file,
+        MongoStreamer(args.data.table) as data_table,
+        FileStreamer(args.data.file) as data_file,
         save_file.open("w") as writer,
     ):
         # restore parsed data

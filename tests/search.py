@@ -10,7 +10,7 @@ from elastic_transport import ObjectApiResponse
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import streaming_bulk
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, TableOption, IndexOption, ElasticRewriter
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, TableOption, IndexOption, ElasticStreamer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 
@@ -153,7 +153,7 @@ def search(
 
     logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
     with (JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='=')):
-        with ElasticRewriter(args.index) as client:
+        with ElasticStreamer(args.index) as client:
             # Search a query
             query1, query2, nbest = '63빌딩', '마천루', 5
             hc = print_search_results(client.search(

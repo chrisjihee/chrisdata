@@ -8,9 +8,9 @@ import pandas as pd
 import typer
 from elasticsearch.helpers import streaming_bulk
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, GenericRewriter
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, Streamer
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption, IndexOption
-from chrisbase.data import FileRewriter, MongoRewriter, ElasticRewriter
+from chrisbase.data import FileStreamer, MongoStreamer, ElasticStreamer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 from parse_wikipedia import PassageUnit
@@ -133,12 +133,12 @@ def index(
 
     with (
         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        MongoRewriter(args.input.table) as input_table, FileRewriter(args.input.file) as input_file,
-        ElasticRewriter(args.output.index) as output_index, FileRewriter(args.output.file) as output_file,
+        MongoStreamer(args.input.table) as input_table, FileStreamer(args.input.file) as input_file,
+        ElasticStreamer(args.output.index) as output_index, FileStreamer(args.output.file) as output_file,
     ):
         # index parsed data
-        reader = GenericRewriter.first_usable(input_table, input_file)
-        writer = GenericRewriter.first_usable(output_index, output_file)
+        reader = Streamer.first_usable(input_table, input_file)
+        writer = Streamer.first_usable(output_index, output_file)
         logger.info(f"len(input_table)={len(input_table)}")
         logger.info(f"len(output_index)={len(output_index)}")
         logger.info(f"Index from [{reader.opt}] to [{writer.opt}]")
@@ -157,9 +157,9 @@ def index(
             # print(type(writer))
             # print(type(x))
             x["passage_id"] = x.pop("_id")
-            if isinstance(writer, ElasticRewriter):
+            if isinstance(writer, ElasticStreamer):
                 writer.cli.index(index=writer.opt.name, document=x)
-            elif isinstance(writer, FileRewriter):
+            elif isinstance(writer, FileStreamer):
                 writer.fp.write(json.dumps(x, ensure_ascii=False) + "\n")
             # index_many(batch=x, wrapper=output_index, batch_size=args.input.batch)
         logger.info(progress)
