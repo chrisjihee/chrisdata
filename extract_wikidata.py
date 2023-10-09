@@ -129,7 +129,7 @@ class ExtractApp:
                 debugging: bool = typer.Option(default=False),
                 # input
                 input_start: int = typer.Option(default=0),
-                input_limit: int = typer.Option(default=-1),
+                input_limit: int = typer.Option(default=10000),
                 input_batch: int = typer.Option(default=1000),
                 input_inter: int = typer.Option(default=5000),
                 input_index_home: str = typer.Option(default="localhost:9810"),
@@ -221,6 +221,14 @@ class ExtractApp:
                         logger.info(progress)
                     extract_many(batch=batch, writer=writer, reader=reader)
                 logger.info(progress)
+                if isinstance(writer, MongoStreamer):
+                    logger.info(f"Inserted {len(writer)} items to [{writer.opt}]")
+                elif isinstance(writer, ElasticStreamer):
+                    writer.status()
+                    logger.info(f"Indexed {len(writer)} items to [{writer.opt}]")
+                # logger.info(f"* Writer({len(writer)}):")
+                # for x in writer:
+                #     logger.info(f"- x={x}")
 
         return cls.app
 
