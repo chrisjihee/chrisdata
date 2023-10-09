@@ -1,12 +1,14 @@
+import json
 import logging
 import math
 from dataclasses import dataclass, field
 from typing import Optional, Iterable
 
+import bson.json_util
 import typer
 from elasticsearch.helpers import streaming_bulk
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, TypedData
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, TypedData, FileOption, FileStreamer
 from chrisbase.data import InputOption, OutputOption, IOArguments, TableOption, IndexOption
 from chrisbase.data import Streamer, MongoStreamer, ElasticStreamer
 from chrisbase.io import LoggingFormat
@@ -233,7 +235,106 @@ class ExtractApp:
         return cls.app
 
 
+class ExportApp:
+    app = AppTyper()
+
+    @classmethod
+    def typer(cls) -> typer.Typer:
+
+        @cls.app.command()
+        def run(
+                # env
+                project: str = typer.Option(default="WiseData"),
+                job_name: str = typer.Option(default="extract_wikidata"),
+                output_home: str = typer.Option(default="output-extract_wikidata"),
+                logging_file: str = typer.Option(default="export.out"),
+                debugging: bool = typer.Option(default=False),
+                # input
+                input_batch: int = typer.Option(default=1),
+                input_inter: int = typer.Option(default=5000),
+                input_index_home: str = typer.Option(default="localhost:9810"),
+                input_index_name: str = typer.Option(default="wikidata-20230920-extract-kowiki"),
+                input_index_user: str = typer.Option(default="elastic"),
+                input_index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
+                input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
+                input_table_name: str = typer.Option(default="wikidata-20230920-extract-kowiki"),
+                # output
+                output_file_home: str = typer.Option(default="output-extract_wikidata"),
+                output_file_name: str = typer.Option(default="wikidata-20230920-extract-kowiki-new.jsonl"),
+                output_file_mode: str = typer.Option(default="w"),
+                output_file_reset: bool = typer.Option(default=False),
+        ):
+            env = ProjectEnv(
+                project=project,
+                job_name=job_name,
+                debugging=debugging,
+                output_home=output_home,
+                logging_file=logging_file,
+                msg_level=logging.DEBUG if debugging else logging.INFO,
+                msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_36,
+            )
+            input_opt = InputOption(
+                batch=input_batch,
+                inter=input_inter,
+                index=IndexOption(
+                    home=input_index_home,
+                    user=input_index_user,
+                    pswd=input_index_pswd,
+                    name=input_index_name,
+                ),
+                table=TableOption(
+                    home=input_table_home,
+                    name=input_table_name,
+                ),
+            )
+            output_opt = OutputOption(
+                file=FileOption(
+                    home=output_file_home,
+                    name=output_file_name,
+                    mode=output_file_mode,
+                    reset=output_file_reset,
+                    strict=True,
+                ),
+            )
+            args = IOArguments(
+                env=env,
+                input=input_opt,
+                output=output_opt,
+            )
+            tqdm = mute_tqdm_cls()
+            logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
+            assert args.input.index or args.input.table, "input.index or input.table is required"
+            assert args.output.file, "output.file is required"
+
+            with (
+                JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+                ElasticStreamer(args.input.index) as input_index, MongoStreamer(args.input.table) as input_table,
+                FileStreamer(args.output.file) as output_file,
+            ):
+                # export search results
+                writer = Streamer.first_usable(output_file)
+                reader = Streamer.first_usable(input_table)
+                input_items: InputOption.InputItems = args.input.ready_inputs(reader, len(reader))
+                logger.info(f"Run ExportApp")
+                logger.info(f"- from: [{type(reader).__name__}] [{reader.opt}]({len(reader)})")
+                logger.info(f"  => amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
+                logger.info(f"- into: [{type(writer).__name__}] [{writer.opt}]({len(writer)})")
+                progress, interval = (
+                    tqdm(input_items.items, total=input_items.total, unit="batch", pre="*", desc="exporting"),
+                    math.ceil(args.input.inter / args.input.batch)
+                )
+                for i, x in enumerate(progress):
+                    if i > 0 and i % interval == 0:
+                        logger.info(progress)
+                    output_file.fp.write(json.dumps(x, default=bson.json_util.default, ensure_ascii=False) + '\n')
+                logger.info(progress)
+                logger.info(f"Saved {len(writer)} items to [{writer.opt}]")
+
+        return cls.app
+
+
 if __name__ == "__main__":
     main = AppTyper()
     main.add_typer(ExtractApp.typer(), name="extract")
+    main.add_typer(ExportApp.typer(), name="export")
     main()
