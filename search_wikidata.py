@@ -1,3 +1,4 @@
+import json
 import logging
 import math
 import re
@@ -5,13 +6,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
+import bson.json_util
 import pandas as pd
 import typer
 from elasticsearch.helpers import streaming_bulk
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, TypedData, IOArguments, Streamer, FileOption, FileStreamer
-from chrisbase.data import InputOption, OutputOption, TableOption, IndexOption
-from chrisbase.data import MongoStreamer, ElasticStreamer
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, TypedData, OptionData
+from chrisbase.data import InputOption, OutputOption, IOArguments, FileOption, TableOption, IndexOption
+from chrisbase.data import Streamer, FileStreamer, MongoStreamer, ElasticStreamer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 from parse_wikidata import WikidataUnit
@@ -455,7 +457,7 @@ class ExportApp:
                 ElasticStreamer(args.input.index) as input_index, MongoStreamer(args.input.table) as input_table,
                 FileStreamer(args.output.file) as output_file,
             ):
-                # search parsed data
+                # export search results
                 writer = Streamer.first_usable(output_file)
                 reader = Streamer.first_usable(input_index, input_table)
                 input_items: InputOption.InputItems = args.input.ready_inputs(reader, len(reader))
@@ -467,80 +469,14 @@ class ExportApp:
                     tqdm(input_items.items, total=input_items.total, unit="batch", pre="*", desc="searching"),
                     math.ceil(args.input.inter / args.input.batch)
                 )
+                for i, x in enumerate(progress):
+                    if i > 0 and i % interval == 0:
+                        logger.info(progress)
+                    output_file.fp.write(json.dumps(x, default=bson.json_util.default, ensure_ascii=False) + '\n')
+                logger.info(progress)
+                logger.info(f"Saved {len(writer)} items to [{writer.opt}]")
 
         return cls.app
-
-
-# @app.command()
-# def export(
-#         # env
-#         project: str = typer.Option(default="WiseData"),
-#         job_name: str = typer.Option(default="search_wikidata"),
-#         output_home: str = typer.Option(default="output-search_wikidata"),
-#         logging_file: str = typer.Option(default="export.out"),
-#         debugging: bool = typer.Option(default=False),
-#         # input
-#         input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
-#         input_table_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
-#         input_table_sort: Tuple[str, int] = typer.Option(default=("hits", -1)),
-#         # output
-#         output_file_home: str = typer.Option(default="output-search_wikidata"),
-#         output_file_name: str = typer.Option(default="wikidata-20230920-search-kowiki-new.jsonl"),
-# ):
-#     env = ProjectEnv(
-#         project=project,
-#         job_name=job_name,
-#         debugging=debugging,
-#         output_home=output_home,
-#         logging_file=logging_file,
-#         msg_level=logging.DEBUG if debugging else logging.INFO,
-#         msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_36,
-#     )
-#     input_opt = InputOption(
-#         table=TableOption(
-#             home=input_table_home,
-#             name=input_table_name,
-#             sort=[input_table_sort],
-#             strict=True,
-#         ),
-#     )
-#     output_opt = OutputOption(
-#         file=FileOption(
-#             home=output_file_home,
-#             name=output_file_name,
-#             mode="w",
-#             strict=True,
-#         ),
-#     )
-#     args = ExportArguments(
-#         env=env,
-#         input=input_opt,
-#         output=output_opt,
-#     )
-#     tqdm = mute_tqdm_cls()
-#     assert args.input.table, "input.table is required"
-#     assert args.output.file, "output.file is required"
-#
-#     with (
-#         JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-#         MongoStreamer(args.input.table) as input_table,
-#         FileStreamer(args.output.file) as output_file,
-#     ):
-#         # export search results
-#         inputs = args.input.first_usable(input_table, total=len(input_table))
-#         outputs = args.output.first_usable(output_file)
-#         logger.info(f"Export from [{inputs.rewriter.opt}] to [{outputs.rewriter.opt}]")
-#         logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.total}")
-#         progress, interval = (
-#             tqdm(input_table, total=len(input_table), unit="row", pre="*", desc="saving"),
-#             args.input.inter * 10,
-#         )
-#         for i, x in enumerate(progress):
-#             if i > 0 and i % interval == 0:
-#                 logger.info(progress)
-#             output_file.fp.write(json.dumps(x, default=bson.json_util.default, ensure_ascii=False) + '\n')
-#         logger.info(progress)
-#         logger.info(f"Saved {len(input_table)} rows to [{output_file.path}]")
 
 
 if __name__ == "__main__":
