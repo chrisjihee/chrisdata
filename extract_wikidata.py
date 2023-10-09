@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Optional, Iterable
 
 import typer
+from elasticsearch.helpers import streaming_bulk
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, TypedData
 from chrisbase.data import InputOption, OutputOption, IOArguments, TableOption, IndexOption
@@ -81,25 +82,44 @@ class ExtractApp:
     @classmethod
     def typer(cls) -> typer.Typer:
 
-        def extract_one(x: dict, input_table: MongoStreamer):
+        def extract_one(x: dict, reader: Streamer):
             single1 = SingleTriple.from_dict(x)
             if single1.entity1.entity != single1.entity2.entity:
                 bridge = single1.entity2
-                for y in input_table.table.find({"entity1.entity": bridge.entity}):
-                    single2 = SingleTriple.from_dict(y)
-                    double = DoubleTriple.from_triples(single1, single2)
-                    if double:
-                        yield double
+                if isinstance(reader, ElasticStreamer):
+                    res = reader.cli.search(index=reader.opt.name, query={
+                        "match": {"entity1.entity": bridge.entity}
+                    })
+                    if res.meta.status == 200 and len(res.body["hits"]["hits"]) > 0:
+                        for y in res.body["hits"]["hits"]:
+                            y = y["_source"]
+                            single2 = SingleTriple.from_dict(y)
+                            double = DoubleTriple.from_triples(single1, single2)
+                            if double:
+                                yield double
+                elif isinstance(reader, MongoStreamer):
+                    for y in reader.table.find({"entity1.entity": bridge.entity}):
+                        single2 = SingleTriple.from_dict(y)
+                        double = DoubleTriple.from_triples(single1, single2)
+                        if double:
+                            yield double
 
         def extract_many(batch: Iterable[dict], writer: Streamer, reader: Streamer):
-            batch_units = [
-                extract_one(x, reader) for x in batch
-            ]
-            all_units = [unit for batch in batch_units for unit in batch]
+            all_units = list()
+            for x in batch:
+                for r in extract_one(x, reader):
+                    all_units.append(r)
+            for a in all_units:  # TODO: remove
+                print(a)
             rows = [row.to_dict() for row in all_units if row]
             if len(rows) > 0:
-                if isinstance(writer, MongoStreamer):
+                if isinstance(writer, ElasticStreamer):
+                    for ok, action in streaming_bulk(writer.cli, actions=rows, chunk_size=len(rows), index=writer.opt.name, yield_ok=False):
+                        logger.warning(f"ok={ok}, action={action}")
+                elif isinstance(writer, MongoStreamer):
                     writer.table.insert_many(rows)
+                else:
+                    raise ValueError(f"Unsupported writer: {type(writer)}")
 
         @cls.app.command()
         def run(
@@ -111,13 +131,14 @@ class ExtractApp:
                 debugging: bool = typer.Option(default=False),
                 # input
                 input_start: int = typer.Option(default=0),
-                input_limit: int = typer.Option(default=-1),
-                input_batch: int = typer.Option(default=10),
+                input_limit: int = typer.Option(default=10),
+                input_batch: int = typer.Option(default=2),
                 input_inter: int = typer.Option(default=100),
                 input_index_home: str = typer.Option(default="localhost:9810"),
                 input_index_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
                 input_index_user: str = typer.Option(default="elastic"),
                 input_index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
+                input_index_sort: str = typer.Option(default="hits:desc"),
                 input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
                 input_table_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
                 # output
@@ -149,6 +170,7 @@ class ExtractApp:
                     user=input_index_user,
                     pswd=input_index_pswd,
                     name=input_index_name,
+                    sort=input_index_sort,
                 ),
                 table=TableOption(
                     home=input_table_home,
@@ -182,7 +204,7 @@ class ExtractApp:
             with (
                 JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
                 ElasticStreamer(args.output.index) as output_index, MongoStreamer(args.output.table) as output_table,
-                ElasticStreamer(args.output.index) as input_index, MongoStreamer(args.input.table) as input_table,
+                ElasticStreamer(args.input.index) as input_index, MongoStreamer(args.input.table) as input_table,
             ):
                 # extract connected triple pairs
                 writer = Streamer.first_usable(output_index, output_table)
