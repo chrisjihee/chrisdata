@@ -269,10 +269,10 @@ class SearchApp:
                 output_index_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
                 output_index_user: str = typer.Option(default="elastic"),
                 output_index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
-                output_index_reset: bool = typer.Option(default=True),
+                output_index_reset: bool = typer.Option(default=False),
                 output_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
                 output_table_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
-                output_table_reset: bool = typer.Option(default=True),
+                output_table_reset: bool = typer.Option(default=False),
                 # filter
                 filter_min_char: int = typer.Option(default=2),
                 filter_max_char: int = typer.Option(default=20),
