@@ -129,7 +129,7 @@ class ExtractApp:
                 debugging: bool = typer.Option(default=False),
                 # input
                 input_start: int = typer.Option(default=0),
-                input_limit: int = typer.Option(default=10000),
+                input_limit: int = typer.Option(default=-1),
                 input_batch: int = typer.Option(default=1000),
                 input_inter: int = typer.Option(default=5000),
                 input_index_home: str = typer.Option(default="localhost:9810"),
@@ -205,7 +205,7 @@ class ExtractApp:
                 ElasticStreamer(args.input.index) as input_index, MongoStreamer(args.input.table) as input_table,
             ):
                 # extract connected triple pairs
-                writer = Streamer.first_usable(output_index, output_table)
+                writer = Streamer.first_usable(output_table, output_index)
                 reader = Streamer.first_usable(input_index, input_table)
                 input_items: InputOption.InputItems = args.input.ready_inputs(reader, len(reader))
                 logger.info(f"Run ExtractApp")
