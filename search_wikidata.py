@@ -312,13 +312,11 @@ class SearchApp:
                     pswd=output_index_pswd,
                     name=output_index_name,
                     reset=output_index_reset,
-                    strict=True,
                 ),
                 table=TableOption(
                     home=output_table_home,
                     name=output_table_name,
                     reset=output_table_reset,
-                    strict=True,
                 ),
             )
             filter_opt = cls.FilterOption(

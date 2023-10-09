@@ -1,35 +1,18 @@
 import logging
 import math
 from dataclasses import dataclass, field
-from typing import Tuple, Optional, Iterable
+from typing import Optional, Iterable
 
-import pandas as pd
 import typer
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, TypedData, InputChannel, OutputChannel, FileStreamer
-from chrisbase.data import InputOption, OutputOption, TableOption
-from chrisbase.data import MongoStreamer
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, TypedData
+from chrisbase.data import InputOption, OutputOption, IOArguments, TableOption, IndexOption
+from chrisbase.data import Streamer, MongoStreamer, ElasticStreamer
 from chrisbase.io import LoggingFormat
-from chrisbase.util import to_dataframe, mute_tqdm_cls
+from chrisbase.util import mute_tqdm_cls
+from search_wikidata import EntityInWiki, Relation
 
 logger = logging.getLogger(__name__)
-app = AppTyper()
-
-
-@dataclass
-class EntityInWiki(TypedData):
-    entity: str
-    hits: int
-    score: float
-
-
-@dataclass
-class Relation(TypedData):
-    id: str
-    label1: str
-    label2: str
-    # descr1: str
-    # descr2: str
 
 
 @dataclass
@@ -92,125 +75,137 @@ class DoubleTriple(TypedData):
             return None
 
 
-@dataclass
-class ExtractArguments(CommonArguments):
-    input: InputOption = field()
-    output: OutputOption = field()
+class ExtractApp:
+    app = AppTyper()
 
-    def __post_init__(self):
-        super().__post_init__()
+    @classmethod
+    def typer(cls) -> typer.Typer:
 
-    def dataframe(self, columns=None) -> pd.DataFrame:
-        if not columns:
-            columns = [self.data_type, "value"]
-        return pd.concat([
-            to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
-            to_dataframe(columns=columns, raw=self.input, data_prefix="input", data_exclude=["file", "table", "index"]),
-            to_dataframe(columns=columns, raw=self.input.table, data_prefix="input.table"),
-            to_dataframe(columns=columns, raw=self.output.table, data_prefix="output.table"),
-        ]).reset_index(drop=True)
+        def extract_one(x: dict, input_table: MongoStreamer):
+            single1 = SingleTriple.from_dict(x)
+            if single1.entity1.entity != single1.entity2.entity:
+                bridge = single1.entity2
+                for y in input_table.table.find({"entity1.entity": bridge.entity}):
+                    single2 = SingleTriple.from_dict(y)
+                    double = DoubleTriple.from_triples(single1, single2)
+                    if double:
+                        yield double
 
+        def extract_many(batch: Iterable[dict], writer: Streamer, reader: Streamer):
+            batch_units = [
+                extract_one(x, reader) for x in batch
+            ]
+            all_units = [unit for batch in batch_units for unit in batch]
+            rows = [row.to_dict() for row in all_units if row]
+            if len(rows) > 0:
+                if isinstance(writer, MongoStreamer):
+                    writer.table.insert_many(rows)
 
-def extract_one(x: dict, input_table: MongoStreamer):
-    single1 = SingleTriple.from_dict(x)
-    if single1.entity1.entity != single1.entity2.entity:
-        bridge = single1.entity2
-        for y in input_table.table.find({"entity1.entity": bridge.entity}):
-            single2 = SingleTriple.from_dict(y)
-            double = DoubleTriple.from_triples(single1, single2)
-            if double:
-                yield double
+        @cls.app.command()
+        def run(
+                # env
+                project: str = typer.Option(default="WiseData"),
+                job_name: str = typer.Option(default="extract_wikidata"),
+                output_home: str = typer.Option(default="output-extract_wikidata"),
+                logging_file: str = typer.Option(default="extract.out"),
+                debugging: bool = typer.Option(default=False),
+                # input
+                input_start: int = typer.Option(default=0),
+                input_limit: int = typer.Option(default=-1),
+                input_batch: int = typer.Option(default=10),
+                input_inter: int = typer.Option(default=100),
+                input_index_home: str = typer.Option(default="localhost:9810"),
+                input_index_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
+                input_index_user: str = typer.Option(default="elastic"),
+                input_index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
+                input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
+                input_table_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
+                # output
+                output_index_home: str = typer.Option(default="localhost:9810"),
+                output_index_name: str = typer.Option(default="wikidata-20230920-extract-kowiki"),
+                output_index_user: str = typer.Option(default="elastic"),
+                output_index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
+                output_index_reset: bool = typer.Option(default=True),
+                output_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
+                output_table_name: str = typer.Option(default="wikidata-20230920-extract-kowiki"),
+                output_table_reset: bool = typer.Option(default=True),
+        ):
+            env = ProjectEnv(
+                project=project,
+                job_name=job_name,
+                debugging=debugging,
+                output_home=output_home,
+                logging_file=logging_file,
+                msg_level=logging.DEBUG if debugging else logging.INFO,
+                msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_36,
+            )
+            input_opt = InputOption(
+                start=input_start,
+                limit=input_limit,
+                batch=input_batch,
+                inter=input_inter,
+                index=IndexOption(
+                    home=input_index_home,
+                    user=input_index_user,
+                    pswd=input_index_pswd,
+                    name=input_index_name,
+                ),
+                table=TableOption(
+                    home=input_table_home,
+                    name=input_table_name,
+                ),
+            )
+            output_opt = OutputOption(
+                index=IndexOption(
+                    home=output_index_home,
+                    user=output_index_user,
+                    pswd=output_index_pswd,
+                    name=output_index_name,
+                    reset=output_index_reset,
+                ),
+                table=TableOption(
+                    home=output_table_home,
+                    name=output_table_name,
+                    reset=output_table_reset,
+                ),
+            )
+            args = IOArguments(
+                env=env,
+                input=input_opt,
+                output=output_opt,
+            )
+            tqdm = mute_tqdm_cls()
+            logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
+            assert args.input.index or args.input.table, "input.index or input.table is required"
+            assert args.output.index or args.output.table, "output.index or output.table is required"
 
-
-def extract_many(batch: Iterable[dict], wrapper: MongoStreamer | FileStreamer, input_table: MongoStreamer):
-    batch_units = [extract_one(x, input_table) for x in batch]
-    all_units = [x for batch in batch_units for x in batch]
-    rows = [row.to_dict() for row in all_units if row]
-    if len(rows) > 0:
-        wrapper.table.insert_many(rows)
-
-
-@app.command()
-def extract(
-        # env
-        project: str = typer.Option(default="WiseData"),
-        job_name: str = typer.Option(default="extract_wikidata"),
-        output_home: str = typer.Option(default="output-extract_wikidata"),
-        logging_file: str = typer.Option(default="extract.out"),
-        debugging: bool = typer.Option(default=False),
-        # input
-        input_start: int = typer.Option(default=0),
-        input_limit: int = typer.Option(default=-1),
-        input_batch: int = typer.Option(default=10),
-        input_inter: int = typer.Option(default=100),
-        input_total: int = typer.Option(default=-1),
-        input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
-        input_table_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
-        input_table_sort: Tuple[str, int] = typer.Option(default=("entity2.entity", 1)),
-        # output
-        output_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
-        output_table_name: str = typer.Option(default="wikidata-20230920-extract-kowiki"),
-        output_table_reset: bool = typer.Option(default=False),
-):
-    env = ProjectEnv(
-        project=project,
-        job_name=job_name,
-        debugging=debugging,
-        output_home=output_home,
-        logging_file=logging_file,
-        msg_level=logging.DEBUG if debugging else logging.INFO,
-        msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_36,
-    )
-    input_opt = InputOption(
-        start=input_start,
-        limit=input_limit,
-        batch=input_batch,
-        inter=input_inter,
-        total=input_total,
-        table=TableOption(
-            home=input_table_home,
-            name=input_table_name,
-            sort=[input_table_sort],
-            strict=True,
-        ),
-    )
-    output_opt = OutputOption(
-        table=TableOption(
-            home=output_table_home,
-            name=output_table_name,
-            reset=output_table_reset,
-            strict=True,
-        ),
-    )
-    args = ExtractArguments(
-        env=env,
-        input=input_opt,
-        output=output_opt,
-    )
-    tqdm = mute_tqdm_cls()
-    assert args.input.table, "input.table is required"
-    assert args.output.table, "output.table is required"
-
-    with (
-        JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        MongoStreamer(args.input.table) as input_table,
-        MongoStreamer(args.output.table) as output_table,
-    ):
-        # extract connected triple pairs
-        inp: InputChannel = args.input.first_usable(input_table, total=len(input_table))
-        out: OutputChannel = args.output.first_usable(output_table)
-        logger.info(f"Extract from [{inp.wrapper.opt}] to [{out.rewriter.opt}]")
-        logger.info(f"- amount: inputs={inp.num_input}, batches={inp.total}")
-        progress, interval = (
-            tqdm(inp.batches, total=inp.total, unit="batch", pre="*", desc="parsing"),
-            math.ceil(args.input.inter / args.input.batch),
-        )
-        for i, x in enumerate(progress):
-            if i > 0 and i % interval == 0:
+            with (
+                JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+                ElasticStreamer(args.output.index) as output_index, MongoStreamer(args.output.table) as output_table,
+                ElasticStreamer(args.output.index) as input_index, MongoStreamer(args.input.table) as input_table,
+            ):
+                # extract connected triple pairs
+                writer = Streamer.first_usable(output_index, output_table)
+                reader = Streamer.first_usable(input_index, input_table)
+                input_items: InputOption.InputItems = args.input.ready_inputs(reader, len(reader))
+                logger.info(f"Run ExtractApp")
+                logger.info(f"- from: [{type(reader).__name__}] [{reader.opt}]({len(reader)})")
+                logger.info(f"  => amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
+                logger.info(f"- into: [{type(writer).__name__}] [{writer.opt}]({len(writer)})")
+                progress, interval = (
+                    tqdm(input_items.items, total=input_items.total, unit="batch", pre="*", desc="extracting"),
+                    math.ceil(args.input.inter / args.input.batch),
+                )
+                for i, batch in enumerate(progress):
+                    if i > 0 and i % interval == 0:
+                        logger.info(progress)
+                    extract_many(batch=batch, writer=writer, reader=reader)
                 logger.info(progress)
-            extract_many(batch=x, wrapper=out.rewriter, input_table=input_table)
-        logger.info(progress)
+
+        return cls.app
 
 
 if __name__ == "__main__":
-    app()
+    main = AppTyper()
+    main.add_typer(ExtractApp.typer(), name="extract")
+    main()
