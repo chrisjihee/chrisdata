@@ -1,1 +1,1 @@
-python search_wikidata.py export
+python search_wikidata.py export run
