@@ -9,7 +9,7 @@ import pandas as pd
 import typer
 from elasticsearch.helpers import streaming_bulk
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, TypedData, IOArguments, Streamer
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, TypedData, IOArguments, Streamer, FileOption, FileStreamer
 from chrisbase.data import InputOption, OutputOption, TableOption, IndexOption
 from chrisbase.data import MongoStreamer, ElasticStreamer
 from chrisbase.io import LoggingFormat
@@ -242,7 +242,7 @@ class SearchApp:
                     raise ValueError(f"Unsupported writer: {type(writer)}")
 
         @cls.app.command()
-        def wikidata(
+        def run(
                 # env
                 project: str = typer.Option(default="WiseData"),
                 job_name: str = typer.Option(default="search_wikidata"),
@@ -254,10 +254,6 @@ class SearchApp:
                 input_limit: int = typer.Option(default=-1),
                 input_batch: int = typer.Option(default=1000),
                 input_inter: int = typer.Option(default=5000),
-                # input_start: int = typer.Option(default=30000),
-                # input_limit: int = typer.Option(default=100),
-                # input_batch: int = typer.Option(default=100),
-                # input_inter: int = typer.Option(default=100),
                 input_index_home: str = typer.Option(default="localhost:9810"),
                 input_index_name: str = typer.Option(default="wikipedia-20230920-index-kowiki"),
                 input_index_user: str = typer.Option(default="elastic"),
@@ -301,12 +297,10 @@ class SearchApp:
                     user=input_index_user,
                     pswd=input_index_pswd,
                     name=input_index_name,
-                    strict=True,
                 ),
                 table=TableOption(
                     home=input_table_home,
                     name=input_table_name,
-                    strict=True,
                 ),
             )
             output_opt = OutputOption(
@@ -344,7 +338,7 @@ class SearchApp:
             logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
             assert args.input.index, "input.index is required"
             assert args.input.table, "input.table is required"
-            assert args.output.table, "output.table is required"
+            assert args.output.index or args.output.table, "output.index or output.table is required"
 
             with (
                 JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
@@ -385,25 +379,98 @@ class SearchApp:
         return cls.app
 
 
-# @dataclass
-# class ExportArguments(CommonArguments):
-#     input: InputOption = field()
-#     output: OutputOption = field()
-#
-#     def __post_init__(self):
-#         super().__post_init__()
-#
-#     def dataframe(self, columns=None) -> pd.DataFrame:
-#         if not columns:
-#             columns = [self.data_type, "value"]
-#         return pd.concat([
-#             to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
-#             to_dataframe(columns=columns, raw=self.input, data_prefix="input", data_exclude=["file", "table", "index"]),
-#             to_dataframe(columns=columns, raw=self.input.table, data_prefix="input.table"),
-#             to_dataframe(columns=columns, raw=self.output.file, data_prefix="output.file"),
-#         ]).reset_index(drop=True)
-#
-#
+class ExportApp:
+    app = AppTyper()
+
+    @classmethod
+    def typer(cls) -> typer.Typer:
+
+        @cls.app.command()
+        def run(
+                # env
+                project: str = typer.Option(default="WiseData"),
+                job_name: str = typer.Option(default="search_wikidata"),
+                output_home: str = typer.Option(default="output-search_wikidata"),
+                logging_file: str = typer.Option(default="search.out"),
+                debugging: bool = typer.Option(default=False),
+                # input
+                input_batch: int = typer.Option(default=1),
+                input_inter: int = typer.Option(default=5000),
+                input_index_home: str = typer.Option(default="localhost:9810"),
+                input_index_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
+                input_index_user: str = typer.Option(default="elastic"),
+                input_index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
+                input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
+                input_table_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
+                # output
+                output_file_home: str = typer.Option(default="output-search_wikidata"),
+                output_file_name: str = typer.Option(default="wikidata-20230920-search-kowiki-new.jsonl"),
+                output_file_mode: str = typer.Option(default="w"),
+                output_file_reset: bool = typer.Option(default=False),
+        ):
+            env = ProjectEnv(
+                project=project,
+                job_name=job_name,
+                debugging=debugging,
+                output_home=output_home,
+                logging_file=logging_file,
+                msg_level=logging.DEBUG if debugging else logging.INFO,
+                msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_36,
+            )
+            input_opt = InputOption(
+                batch=input_batch,
+                inter=input_inter,
+                index=IndexOption(
+                    home=input_index_home,
+                    user=input_index_user,
+                    pswd=input_index_pswd,
+                    name=input_index_name,
+                ),
+                table=TableOption(
+                    home=input_table_home,
+                    name=input_table_name,
+                ),
+            )
+            output_opt = OutputOption(
+                file=FileOption(
+                    home=output_file_home,
+                    name=output_file_name,
+                    mode=output_file_mode,
+                    reset=output_file_reset,
+                    strict=True,
+                ),
+            )
+            args = IOArguments(
+                env=env,
+                input=input_opt,
+                output=output_opt,
+            )
+            tqdm = mute_tqdm_cls()
+            logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
+            assert args.input.index or args.input.table, "input.index or input.table is required"
+            assert args.output.file, "output.file is required"
+
+            with (
+                JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+                ElasticStreamer(args.input.index) as input_index, MongoStreamer(args.input.table) as input_table,
+                FileStreamer(args.output.file) as output_file,
+            ):
+                # search parsed data
+                writer = Streamer.first_usable(output_file)
+                reader = Streamer.first_usable(input_index, input_table)
+                input_items: InputOption.InputItems = args.input.ready_inputs(reader, len(reader))
+                logger.info(f"Run ExportApp")
+                logger.info(f"- from: [{type(reader).__name__}] [{reader.opt}]({len(reader)})")
+                logger.info(f"  => amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
+                logger.info(f"- into: [{type(writer).__name__}] [{writer.opt}]({len(writer)})")
+                progress, interval = (
+                    tqdm(input_items.items, total=input_items.total, unit="batch", pre="*", desc="searching"),
+                    math.ceil(args.input.inter / args.input.batch)
+                )
+
+        return cls.app
+
+
 # @app.command()
 # def export(
 #         # env
@@ -479,4 +546,5 @@ class SearchApp:
 if __name__ == "__main__":
     main = AppTyper()
     main.add_typer(SearchApp.typer(), name="search")
+    main.add_typer(ExportApp.typer(), name="export")
     main()
