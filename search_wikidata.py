@@ -7,6 +7,7 @@ from typing import Iterable
 
 import pandas as pd
 import typer
+from elasticsearch.helpers import streaming_bulk
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, TypedData, IOArguments, Streamer
 from chrisbase.data import InputOption, OutputOption, TableOption, IndexOption
@@ -30,8 +31,9 @@ class Relation(TypedData):
     id: str
     label1: str
     label2: str
-    descr1: str
-    descr2: str
+
+    def __str__(self):
+        return f"{self.id}[{self.label2}]"
 
 
 @dataclass
@@ -171,7 +173,8 @@ class SearchApp:
             query2 = escape_query(query2)
             return search_query(f'"{query1}" AND "{query2}"', input_index)
 
-        def search_one(x: dict, input_table: MongoStreamer, input_index: ElasticStreamer, opt: cls.FilterOption, invalid_queries: set[str], relation_cache: dict[str, Relation]):
+        def search_one(x: dict, input_table: MongoStreamer, input_index: ElasticStreamer,
+                       opt: cls.FilterOption, invalid_queries: set[str], relation_cache: dict[str, Relation], debug: bool = False):
             wikidata_item = WikidataUnit.from_dict(x)
             if wikidata_item.type == "item":
                 subject_full = wikidata_item.title1
@@ -186,7 +189,8 @@ class SearchApp:
                             relation_id = claim['property']
                             if relation_id not in relation_cache:
                                 r = input_table.table.find_one({'_id': relation_id})
-                                relation_cache[relation_id] = Relation(relation_id, r['label1'], r['label2'], r['descr1'], r['descr2'])
+                                relation = Relation(relation_id, r['label1'], r['label2'])
+                                relation_cache[relation_id] = relation
                             if not opt.invalid_prop(relation_id):
                                 value = claim['datavalue']
                                 value_type = value['type']
@@ -200,7 +204,6 @@ class SearchApp:
                                             object_norm = opt.normalize_title(object_full)
                                             if subject_norm != object_norm and object_norm not in subject_norm and subject_norm not in object_norm:
                                                 if not opt.invalid_title(full=object_full, norm=object_norm) and object_norm not in invalid_queries:
-                                                    # print(f"- {prop_id:100s} ====> \t\t\t{entity_id:10s} -> {object_norm}")
                                                     object_norms.add(object_norm)
                                                     object_ex = EntityInWiki(object_norm, *search_each(object_norm, input_index))
                                                     if opt.invalid_entity(object_ex):
@@ -208,15 +211,35 @@ class SearchApp:
                                                     else:
                                                         triple_ex = TripleInWiki(subject_ex, object_ex, relation_cache[relation_id],
                                                                                  *search_both(subject_ex.entity, object_ex.entity, input_index))
+                                                        if debug:
+                                                            logger.info(f"  - {subject_ex} -- {relation_cache[relation_id]} -- {object_ex}")
+                                                            logger.info(f"    => {triple_ex}")
                                                         if not opt.invalid_triple(triple_ex):
                                                             yield triple_ex
 
-        def search_many(batch: Iterable[dict], output_table: MongoStreamer, input_table: MongoStreamer, input_index: ElasticStreamer, filter_opt: cls.FilterOption, invalid_queries: set[str], relation_cache: dict[str, Relation]):
-            batch_units = [x for x in [search_one(x, input_table, input_index, opt=filter_opt, invalid_queries=invalid_queries, relation_cache=relation_cache) for x in batch] if x]
+        def search_many(batch: Iterable[dict], writer: Streamer,
+                        input_table: MongoStreamer, input_index: ElasticStreamer,
+                        filter_opt: cls.FilterOption, invalid_queries: set[str], relation_cache: dict[str, Relation], debug: bool = False):
+            batch_units = [
+                list(x) for x in [
+                    search_one(x, input_table, input_index, opt=filter_opt,
+                               invalid_queries=invalid_queries, relation_cache=relation_cache)
+                    for x in batch] if x
+            ]
             all_units = [unit for batch in batch_units for unit in batch]
+            if debug:
+                logger.info(f"* All Units({len(all_units)}):")
+                for a in all_units:
+                    logger.info(f"  - {a}")
             rows = [row.to_dict() for row in all_units if row]
             if len(rows) > 0:
-                output_table.table.insert_many(rows)
+                if isinstance(writer, MongoStreamer):
+                    writer.table.insert_many(rows)
+                elif isinstance(writer, ElasticStreamer):
+                    for ok, action in streaming_bulk(writer.cli, actions=rows, chunk_size=len(rows), index=writer.opt.name, yield_ok=False):
+                        logger.warning(f"ok={ok}, action={action}")
+                else:
+                    raise ValueError(f"Unsupported writer: {type(writer)}")
 
         @cls.app.command()
         def wikidata(
@@ -232,9 +255,9 @@ class SearchApp:
                 # input_batch: int = typer.Option(default=1000),
                 # input_inter: int = typer.Option(default=5000),
                 input_start: int = typer.Option(default=30000),
-                input_limit: int = typer.Option(default=50),
-                input_batch: int = typer.Option(default=10),
-                input_inter: int = typer.Option(default=10),
+                input_limit: int = typer.Option(default=100),
+                input_batch: int = typer.Option(default=100),
+                input_inter: int = typer.Option(default=100),
                 input_index_home: str = typer.Option(default="localhost:9810"),
                 input_index_name: str = typer.Option(default="wikipedia-20230920-index-kowiki"),
                 input_index_user: str = typer.Option(default="elastic"),
@@ -249,7 +272,7 @@ class SearchApp:
                 output_index_reset: bool = typer.Option(default=True),
                 output_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
                 output_table_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
-                output_table_reset: bool = typer.Option(default=False),
+                output_table_reset: bool = typer.Option(default=True),
                 # filter
                 filter_min_char: int = typer.Option(default=2),
                 filter_max_char: int = typer.Option(default=20),
@@ -332,26 +355,32 @@ class SearchApp:
                 writer = Streamer.first_usable(output_index, output_table)
                 reader = Streamer.first_usable(input_table)
                 input_items: InputOption.InputItems = args.input.ready_inputs(reader, len(reader))
-                logger.info(f"Search from [{reader.opt}] with [{input_index.opt}] to [{writer.opt}]")
-                logger.info(f"- amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
-                logger.info(f"- filter: set_black_prop={args.filter.set_black_prop}, ...")  # TODO: Bridge Entity가 없으면 black_prop를 줄여보자!
+                logger.info(f"Run SearchApp")
+                logger.info(f"- from: [{type(reader).__name__}] [{reader.opt}]({len(reader)})")
+                logger.info(f"  => amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
+                logger.info(f"- with: [{type(input_index).__name__}] [{input_index.opt}]({len(input_index)})")
+                logger.info(f"  => filter: set_black_prop={args.filter.set_black_prop}, ...")  # TODO: Bridge Entity가 없으면 black_prop를 줄여보자!
+                logger.info(f"- into: [{type(writer).__name__}] [{writer.opt}]({len(writer)})")
                 progress, interval = (
                     tqdm(input_items.items, total=input_items.total, unit="batch", pre="*", desc="searching"),
                     math.ceil(args.input.inter / args.input.batch)
                 )
-                print(f"len(reader)={len(reader)}")
-                print(f"len(input_index)={len(input_index)}")
-                print(f"len(writer)={len(writer)}")
                 relation_cache = dict()
                 invalid_queries = set()
-                for i, x in enumerate(progress):
+                for i, batch in enumerate(progress):
                     if i > 0 and i % interval == 0:
                         logger.info(progress)
-                    for a in x:
-                        print(a)
-                    exit(1)
-                    search_many(batch=x, output_table=output_table, input_table=input_table, input_index=input_index, filter_opt=args.filter, invalid_queries=invalid_queries, relation_cache=relation_cache)
+                    search_many(batch=batch, writer=writer, input_table=input_table, input_index=input_index,
+                                filter_opt=args.filter, invalid_queries=invalid_queries, relation_cache=relation_cache)
                 logger.info(progress)
+                if isinstance(writer, MongoStreamer):
+                    logger.info(f"Inserted {len(writer)} items to [{writer.opt}]")
+                elif isinstance(writer, ElasticStreamer):
+                    writer.status()
+                    logger.info(f"Indexed {len(writer)} items to [{writer.opt}]")
+                # logger.info(f"* Writer({len(writer)}):")
+                # for x in writer:
+                #     logger.info(f"- x={x}")
 
         return cls.app
 
