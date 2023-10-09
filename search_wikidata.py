@@ -400,6 +400,7 @@ class ExportApp:
                 input_index_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
                 input_index_user: str = typer.Option(default="elastic"),
                 input_index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
+                input_index_sort: str = typer.Option(default="hits:desc"),
                 input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
                 input_table_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
                 # output
@@ -425,6 +426,7 @@ class ExportApp:
                     user=input_index_user,
                     pswd=input_index_pswd,
                     name=input_index_name,
+                    sort=input_index_sort,
                 ),
                 table=TableOption(
                     home=input_table_home,
