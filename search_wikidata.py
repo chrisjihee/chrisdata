@@ -466,7 +466,7 @@ class ExportApp:
                 logger.info(f"  => amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
                 logger.info(f"- into: [{type(writer).__name__}] [{writer.opt}]({len(writer)})")
                 progress, interval = (
-                    tqdm(input_items.items, total=input_items.total, unit="batch", pre="*", desc="searching"),
+                    tqdm(input_items.items, total=input_items.total, unit="batch", pre="*", desc="exporting"),
                     math.ceil(args.input.inter / args.input.batch)
                 )
                 for i, x in enumerate(progress):
