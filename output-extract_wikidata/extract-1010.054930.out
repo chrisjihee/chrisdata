@@ -1,0 +1,151 @@
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇ =========================================================================================================================================
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇ [INIT] python extract_wikidata.py extract run
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇ =========================================================================================================================================
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇ -----+----------------------+----------------------------------------------------------
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇    # | IOArguments          | value
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇ -----+----------------------+----------------------------------------------------------
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇    1 | env.project          | WiseData
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇    2 | env.job_name         | extract_wikidata
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇    3 | env.hostname         | chrisBookPro.local
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇    4 | env.hostaddr         | 172.30.1.1
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇    5 | env.python_path      | /Users/chris/miniforge3/envs/WiseData-2023.08/bin/python
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇    6 | env.working_path     | /Users/chris/proj/WiseData-2023.08
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇    7 | env.running_file     | extract_wikidata.py
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇    8 | env.command_args     | ['extract', 'run']
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇    9 | env.num_ip_addrs     | 0
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   10 | env.max_workers      | 1
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   11 | env.output_home      | output-extract_wikidata
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   12 | env.logging_file     | extract-1010.054930.out
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   13 | env.argument_file    | arguments-1010.054930.json
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   14 | env.debugging        | False
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   15 | env.msg_level        | 20
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   16 | env.msg_format       | %(asctime)s ┇ %(levelname)-8s ┇ %(name)36s ┇ %(message)s
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   17 | env.date_format      | [%m.%d %H:%M:%S]
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   18 | env.time_stamp       | 1010.054930
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   19 | input.start          | 0
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   20 | input.limit          | -1
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   21 | input.batch          | 1000
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   22 | input.inter          | 5000
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   23 | input.table.home     | localhost:6382/wikimedia
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   24 | input.table.name     | wikidata-20230920-search-kowiki
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   25 | input.table.user     |
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   26 | input.table.pswd     |
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   27 | input.table.reset    | False
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   28 | input.table.strict   | False
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   29 | input.table.sort     | _id
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   30 | input.table.find     | {}
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   31 | input.table.timeout  | 5000
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   32 | input.index.home     | localhost:9810
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   33 | input.index.name     | wikidata-20230920-search-kowiki
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   34 | input.index.user     | elastic
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   35 | input.index.pswd     | cIrEP5OCwTLn0QIQwnsA
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   36 | input.index.reset    | False
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   37 | input.index.strict   | False
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   38 | input.index.window   | 1000
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   39 | input.index.scroll   | 3m
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   40 | input.index.sort     | hits:desc
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   41 | input.index.timeout  | 10
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   42 | input.index.retrial  | 3
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   43 | input.index.create   |
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   44 | output.table.home    | localhost:6382/wikimedia
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   45 | output.table.name    | wikidata-20230920-extract-kowiki
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   46 | output.table.user    |
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   47 | output.table.pswd    |
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   48 | output.table.reset   | True
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   49 | output.table.strict  | False
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   50 | output.table.sort    | _id
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   51 | output.table.find    | {}
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   52 | output.table.timeout | 5000
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   53 | output.index.home    | localhost:9810
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   54 | output.index.name    | wikidata-20230920-extract-kowiki
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   55 | output.index.user    | elastic
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   56 | output.index.pswd    | cIrEP5OCwTLn0QIQwnsA
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   57 | output.index.reset   | True
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   58 | output.index.strict  | False
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   59 | output.index.window  | 1000
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   60 | output.index.scroll  | 3m
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   61 | output.index.sort    |
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   62 | output.index.timeout | 10
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   63 | output.index.retrial | 3
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇   64 | output.index.create  |
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇ -----+----------------------+----------------------------------------------------------
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇ Drop an existing index: elastic@localhost:9810/wikidata-20230920-extract-kowiki
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇ Created a new index: elastic@localhost:9810/wikidata-20230920-extract-kowiki
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇ - option: keys=[]
+[10.10 05:49:31] ┇ INFO     ┇                       chrisbase.data ┇ Drop an existing table: localhost:6382/wikimedia/wikidata-20230920-extract-kowiki
+[10.10 05:49:31] ┇ INFO     ┇                             __main__ ┇ Run ExtractApp
+[10.10 05:49:31] ┇ INFO     ┇                             __main__ ┇ - from: [ElasticStreamer] [elastic@localhost:9810/wikidata-20230920-search-kowiki](335072)
+[10.10 05:49:31] ┇ INFO     ┇                             __main__ ┇   => amount: 336 * 1000 (BatchItems)
+[10.10 05:49:31] ┇ INFO     ┇                             __main__ ┇ - into: [MongoStreamer] [localhost:6382/wikimedia/wikidata-20230920-extract-kowiki](0)
+[10.10 05:49:41] ┇ INFO     ┇                             __main__ ┇ * extracting:   1%|▋                                                 | 5/336 [00:09<10:35,  1.92s/batch]
+[10.10 05:49:51] ┇ INFO     ┇                             __main__ ┇ * extracting:   3%|█▍                                                | 10/336 [00:19<10:20,  1.90s/batch]
+[10.10 05:50:00] ┇ INFO     ┇                             __main__ ┇ * extracting:   4%|██▏                                               | 15/336 [00:28<10:07,  1.89s/batch]
+[10.10 05:50:10] ┇ INFO     ┇                             __main__ ┇ * extracting:   6%|██▉                                               | 20/336 [00:38<10:17,  1.96s/batch]
+[10.10 05:50:20] ┇ INFO     ┇                             __main__ ┇ * extracting:   7%|███▋                                              | 25/336 [00:48<10:11,  1.97s/batch]
+[10.10 05:50:30] ┇ INFO     ┇                             __main__ ┇ * extracting:   9%|████▍                                             | 30/336 [00:58<09:59,  1.96s/batch]
+[10.10 05:50:40] ┇ INFO     ┇                             __main__ ┇ * extracting:  10%|█████▏                                            | 35/336 [01:08<09:46,  1.95s/batch]
+[10.10 05:50:49] ┇ INFO     ┇                             __main__ ┇ * extracting:  12%|█████▉                                            | 40/336 [01:17<09:35,  1.94s/batch]
+[10.10 05:50:59] ┇ INFO     ┇                             __main__ ┇ * extracting:  13%|██████▋                                           | 45/336 [01:27<09:27,  1.95s/batch]
+[10.10 05:51:09] ┇ INFO     ┇                             __main__ ┇ * extracting:  15%|███████▍                                          | 50/336 [01:37<09:12,  1.93s/batch]
+[10.10 05:51:19] ┇ INFO     ┇                             __main__ ┇ * extracting:  16%|████████▏                                         | 55/336 [01:47<09:10,  1.96s/batch]
+[10.10 05:51:28] ┇ INFO     ┇                             __main__ ┇ * extracting:  18%|████████▉                                         | 60/336 [01:56<08:59,  1.95s/batch]
+[10.10 05:51:38] ┇ INFO     ┇                             __main__ ┇ * extracting:  19%|█████████▋                                        | 65/336 [02:06<08:45,  1.94s/batch]
+[10.10 05:51:48] ┇ INFO     ┇                             __main__ ┇ * extracting:  21%|██████████▍                                       | 70/336 [02:16<08:37,  1.95s/batch]
+[10.10 05:51:58] ┇ INFO     ┇                             __main__ ┇ * extracting:  22%|███████████▏                                      | 75/336 [02:26<08:31,  1.96s/batch]
+[10.10 05:52:07] ┇ INFO     ┇                             __main__ ┇ * extracting:  24%|███████████▉                                      | 80/336 [02:35<08:14,  1.93s/batch]
+[10.10 05:52:17] ┇ INFO     ┇                             __main__ ┇ * extracting:  25%|████████████▋                                     | 85/336 [02:45<07:59,  1.91s/batch]
+[10.10 05:52:26] ┇ INFO     ┇                             __main__ ┇ * extracting:  27%|█████████████▍                                    | 90/336 [02:55<07:57,  1.94s/batch]
+[10.10 05:52:36] ┇ INFO     ┇                             __main__ ┇ * extracting:  28%|██████████████▏                                   | 95/336 [03:04<07:47,  1.94s/batch]
+[10.10 05:52:46] ┇ INFO     ┇                             __main__ ┇ * extracting:  30%|██████████████▉                                   | 100/336 [03:14<07:34,  1.93s/batch]
+[10.10 05:52:56] ┇ INFO     ┇                             __main__ ┇ * extracting:  31%|███████████████▋                                  | 105/336 [03:24<07:26,  1.93s/batch]
+[10.10 05:53:05] ┇ INFO     ┇                             __main__ ┇ * extracting:  33%|████████████████▎                                 | 110/336 [03:33<07:14,  1.92s/batch]
+[10.10 05:53:15] ┇ INFO     ┇                             __main__ ┇ * extracting:  34%|█████████████████                                 | 115/336 [03:43<07:09,  1.95s/batch]
+[10.10 05:53:25] ┇ INFO     ┇                             __main__ ┇ * extracting:  36%|█████████████████▊                                | 120/336 [03:53<07:00,  1.95s/batch]
+[10.10 05:53:34] ┇ INFO     ┇                             __main__ ┇ * extracting:  37%|██████████████████▌                               | 125/336 [04:03<06:44,  1.92s/batch]
+[10.10 05:53:44] ┇ INFO     ┇                             __main__ ┇ * extracting:  39%|███████████████████▎                              | 130/336 [04:12<06:49,  1.99s/batch]
+[10.10 05:53:54] ┇ INFO     ┇                             __main__ ┇ * extracting:  40%|████████████████████                              | 135/336 [04:22<06:33,  1.96s/batch]
+[10.10 05:54:04] ┇ INFO     ┇                             __main__ ┇ * extracting:  42%|████████████████████▊                             | 140/336 [04:32<06:25,  1.96s/batch]
+[10.10 05:54:13] ┇ INFO     ┇                             __main__ ┇ * extracting:  43%|█████████████████████▌                            | 145/336 [04:42<06:14,  1.96s/batch]
+[10.10 05:54:23] ┇ INFO     ┇                             __main__ ┇ * extracting:  45%|██████████████████████▎                           | 150/336 [04:51<05:56,  1.92s/batch]
+[10.10 05:54:33] ┇ INFO     ┇                             __main__ ┇ * extracting:  46%|███████████████████████                           | 155/336 [05:01<05:57,  1.98s/batch]
+[10.10 05:54:43] ┇ INFO     ┇                             __main__ ┇ * extracting:  48%|███████████████████████▊                          | 160/336 [05:11<05:52,  2.00s/batch]
+[10.10 05:54:53] ┇ INFO     ┇                             __main__ ┇ * extracting:  49%|████████████████████████▌                         | 165/336 [05:21<05:28,  1.92s/batch]
+[10.10 05:55:02] ┇ INFO     ┇                             __main__ ┇ * extracting:  51%|█████████████████████████▎                        | 170/336 [05:31<05:24,  1.95s/batch]
+[10.10 05:55:12] ┇ INFO     ┇                             __main__ ┇ * extracting:  52%|██████████████████████████                        | 175/336 [05:40<05:06,  1.90s/batch]
+[10.10 05:55:22] ┇ INFO     ┇                             __main__ ┇ * extracting:  54%|██████████████████████████▊                       | 180/336 [05:50<05:08,  1.98s/batch]
+[10.10 05:55:32] ┇ INFO     ┇                             __main__ ┇ * extracting:  55%|███████████████████████████▌                      | 185/336 [06:00<05:04,  2.02s/batch]
+[10.10 05:55:42] ┇ INFO     ┇                             __main__ ┇ * extracting:  57%|████████████████████████████▎                     | 190/336 [06:10<04:43,  1.94s/batch]
+[10.10 05:55:51] ┇ INFO     ┇                             __main__ ┇ * extracting:  58%|█████████████████████████████                     | 195/336 [06:19<04:30,  1.92s/batch]
+[10.10 05:56:01] ┇ INFO     ┇                             __main__ ┇ * extracting:  60%|█████████████████████████████▊                    | 200/336 [06:29<04:26,  1.96s/batch]
+[10.10 05:56:11] ┇ INFO     ┇                             __main__ ┇ * extracting:  61%|██████████████████████████████▌                   | 205/336 [06:39<04:25,  2.03s/batch]
+[10.10 05:56:21] ┇ INFO     ┇                             __main__ ┇ * extracting:  62%|███████████████████████████████▎                  | 210/336 [06:49<04:11,  1.99s/batch]
+[10.10 05:56:31] ┇ INFO     ┇                             __main__ ┇ * extracting:  64%|███████████████████████████████▉                  | 215/336 [06:59<04:05,  2.03s/batch]
+[10.10 05:56:41] ┇ INFO     ┇                             __main__ ┇ * extracting:  65%|████████████████████████████████▋                 | 220/336 [07:10<03:51,  2.00s/batch]
+[10.10 05:56:51] ┇ INFO     ┇                             __main__ ┇ * extracting:  67%|█████████████████████████████████▍                | 225/336 [07:19<03:44,  2.02s/batch]
+[10.10 05:57:01] ┇ INFO     ┇                             __main__ ┇ * extracting:  68%|██████████████████████████████████▏               | 230/336 [07:29<03:25,  1.94s/batch]
+[10.10 05:57:11] ┇ INFO     ┇                             __main__ ┇ * extracting:  70%|██████████████████████████████████▉               | 235/336 [07:39<03:19,  1.97s/batch]
+[10.10 05:57:20] ┇ INFO     ┇                             __main__ ┇ * extracting:  71%|███████████████████████████████████▋              | 240/336 [07:48<03:00,  1.88s/batch]
+[10.10 05:57:30] ┇ INFO     ┇                             __main__ ┇ * extracting:  73%|████████████████████████████████████▍             | 245/336 [07:58<02:57,  1.95s/batch]
+[10.10 05:57:40] ┇ INFO     ┇                             __main__ ┇ * extracting:  74%|█████████████████████████████████████▏            | 250/336 [08:08<02:47,  1.95s/batch]
+[10.10 05:57:49] ┇ INFO     ┇                             __main__ ┇ * extracting:  76%|█████████████████████████████████████▉            | 255/336 [08:18<02:37,  1.94s/batch]
+[10.10 05:57:59] ┇ INFO     ┇                             __main__ ┇ * extracting:  77%|██████████████████████████████████████▋           | 260/336 [08:28<02:30,  1.98s/batch]
+[10.10 05:58:09] ┇ INFO     ┇                             __main__ ┇ * extracting:  79%|███████████████████████████████████████▍          | 265/336 [08:38<02:23,  2.02s/batch]
+[10.10 05:58:19] ┇ INFO     ┇                             __main__ ┇ * extracting:  80%|████████████████████████████████████████▏         | 270/336 [08:48<02:12,  2.01s/batch]
+[10.10 05:58:30] ┇ INFO     ┇                             __main__ ┇ * extracting:  82%|████████████████████████████████████████▉         | 275/336 [08:58<02:03,  2.03s/batch]
+[10.10 05:58:39] ┇ INFO     ┇                             __main__ ┇ * extracting:  83%|█████████████████████████████████████████▋        | 280/336 [09:07<01:48,  1.95s/batch]
+[10.10 05:58:49] ┇ INFO     ┇                             __main__ ┇ * extracting:  85%|██████████████████████████████████████████▍       | 285/336 [09:17<01:42,  2.00s/batch]
+[10.10 05:58:59] ┇ INFO     ┇                             __main__ ┇ * extracting:  86%|███████████████████████████████████████████▏      | 290/336 [09:27<01:31,  1.99s/batch]
+[10.10 05:59:09] ┇ INFO     ┇                             __main__ ┇ * extracting:  88%|███████████████████████████████████████████▉      | 295/336 [09:37<01:23,  2.03s/batch]
+[10.10 05:59:19] ┇ INFO     ┇                             __main__ ┇ * extracting:  89%|████████████████████████████████████████████▋     | 300/336 [09:47<01:12,  2.02s/batch]
+[10.10 05:59:29] ┇ INFO     ┇                             __main__ ┇ * extracting:  91%|█████████████████████████████████████████████▍    | 305/336 [09:57<01:01,  1.97s/batch]
+[10.10 05:59:39] ┇ INFO     ┇                             __main__ ┇ * extracting:  92%|██████████████████████████████████████████████▏   | 310/336 [10:07<00:51,  1.99s/batch]
+[10.10 05:59:49] ┇ INFO     ┇                             __main__ ┇ * extracting:  94%|██████████████████████████████████████████████▉   | 315/336 [10:17<00:41,  1.99s/batch]
+[10.10 05:59:59] ┇ INFO     ┇                             __main__ ┇ * extracting:  95%|███████████████████████████████████████████████▌  | 320/336 [10:27<00:31,  1.98s/batch]
+[10.10 06:00:09] ┇ INFO     ┇                             __main__ ┇ * extracting:  97%|████████████████████████████████████████████████▎ | 325/336 [10:37<00:21,  1.96s/batch]
+[10.10 06:00:19] ┇ INFO     ┇                             __main__ ┇ * extracting:  98%|█████████████████████████████████████████████████ | 330/336 [10:47<00:12,  2.05s/batch]
+[10.10 06:00:29] ┇ INFO     ┇                             __main__ ┇ * extracting: 100%|█████████████████████████████████████████████████▊| 335/336 [10:57<00:02,  2.01s/batch]
+[10.10 06:00:29] ┇ INFO     ┇                             __main__ ┇ * extracting: 100%|██████████████████████████████████████████████████| 336/336 [10:57<00:00,  1.96s/batch]
+[10.10 06:00:29] ┇ INFO     ┇                             __main__ ┇ Inserted 2043342 items to [localhost:6382/wikimedia/wikidata-20230920-extract-kowiki]
+[10.10 06:00:30] ┇ INFO     ┇                       chrisbase.data ┇ =========================================================================================================================================
+[10.10 06:00:30] ┇ INFO     ┇                       chrisbase.data ┇ [EXIT] python extract_wikidata.py extract run ($=00:10:57.985)
+[10.10 06:00:30] ┇ INFO     ┇                       chrisbase.data ┇ =========================================================================================================================================
