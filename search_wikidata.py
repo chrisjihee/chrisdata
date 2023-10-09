@@ -391,7 +391,7 @@ class ExportApp:
                 project: str = typer.Option(default="WiseData"),
                 job_name: str = typer.Option(default="search_wikidata"),
                 output_home: str = typer.Option(default="output-search_wikidata"),
-                logging_file: str = typer.Option(default="search.out"),
+                logging_file: str = typer.Option(default="export.out"),
                 debugging: bool = typer.Option(default=False),
                 # input
                 input_batch: int = typer.Option(default=1),
