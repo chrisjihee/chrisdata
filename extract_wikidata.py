@@ -109,8 +109,6 @@ class ExtractApp:
             for x in batch:
                 for r in extract_one(x, reader):
                     all_units.append(r)
-            for a in all_units:  # TODO: remove
-                print(a)
             rows = [row.to_dict() for row in all_units if row]
             if len(rows) > 0:
                 if isinstance(writer, ElasticStreamer):
@@ -131,9 +129,9 @@ class ExtractApp:
                 debugging: bool = typer.Option(default=False),
                 # input
                 input_start: int = typer.Option(default=0),
-                input_limit: int = typer.Option(default=10),
-                input_batch: int = typer.Option(default=2),
-                input_inter: int = typer.Option(default=100),
+                input_limit: int = typer.Option(default=-1),
+                input_batch: int = typer.Option(default=1000),
+                input_inter: int = typer.Option(default=5000),
                 input_index_home: str = typer.Option(default="localhost:9810"),
                 input_index_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
                 input_index_user: str = typer.Option(default="elastic"),
