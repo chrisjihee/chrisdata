@@ -178,17 +178,11 @@ class ExtractApp:
                 ),
             )
             output_opt = OutputOption(
-                index=IndexOption(
-                    home=output_index_home,
-                    user=output_index_user,
-                    pswd=output_index_pswd,
-                    name=output_index_name,
-                    reset=output_index_reset,
-                ),
                 table=TableOption(
                     home=output_table_home,
                     name=output_table_name,
                     reset=output_table_reset,
+                    strict=True,
                 ),
             )
             args = IOArguments(
@@ -203,11 +197,11 @@ class ExtractApp:
 
             with (
                 JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-                ElasticStreamer(args.output.index) as output_index, MongoStreamer(args.output.table) as output_table,
                 ElasticStreamer(args.input.index) as input_index, MongoStreamer(args.input.table) as input_table,
+                MongoStreamer(args.output.table) as output_table,
             ):
                 # extract connected triple pairs
-                writer = Streamer.first_usable(output_table, output_index)
+                writer = Streamer.first_usable(output_table)
                 reader = Streamer.first_usable(input_index, input_table)
                 input_items: InputOption.InputItems = args.input.ready_inputs(reader, len(reader))
                 logger.info(f"Run ExtractApp")
@@ -308,7 +302,7 @@ class ExportApp:
 
             with (
                 JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-                ElasticStreamer(args.input.index) as input_index, MongoStreamer(args.input.table) as input_table,
+                MongoStreamer(args.input.table) as input_table,
                 FileStreamer(args.output.file) as output_file,
             ):
                 # export search results
