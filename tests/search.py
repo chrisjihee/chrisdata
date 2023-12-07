@@ -152,7 +152,7 @@ def search(
     tqdm = mute_tqdm_cls()
 
     logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
-    with (JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='=')):
+    with (JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='=')):
         with ElasticStreamer(args.index) as client:
             # Search a query
             query1, query2, nbest = '63빌딩', '마천루', 5

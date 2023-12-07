@@ -98,7 +98,7 @@ class IndexApp:
             assert args.output.index, "output.index is required"
 
             with (
-                JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+                JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
                 MongoStreamer(args.input.table) as input_table, FileStreamer(args.input.file) as input_file,
                 ElasticStreamer(args.output.index) as output_index, FileStreamer(args.output.file) as output_file,
             ):

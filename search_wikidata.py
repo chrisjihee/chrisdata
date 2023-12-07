@@ -341,7 +341,7 @@ class SearchApp:
             assert args.output.index or args.output.table, "output.index or output.table is required"
 
             with (
-                JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+                JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
                 ElasticStreamer(args.output.index) as output_index, MongoStreamer(args.output.table) as output_table,
                 ElasticStreamer(args.input.index) as input_index, MongoStreamer(args.input.table) as input_table,
             ):
@@ -453,7 +453,7 @@ class ExportApp:
             assert args.output.file, "output.file is required"
 
             with (
-                JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+                JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
                 ElasticStreamer(args.input.index) as input_index, MongoStreamer(args.input.table) as input_table,
                 FileStreamer(args.output.file) as output_file,
             ):

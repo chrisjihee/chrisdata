@@ -152,7 +152,7 @@ def check(
     output_file = (args.env.output_home / f"{args.env.job_name}-{args.env.time_stamp}.jsonl")
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
-    with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
+    with JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
         with MongoStreamer(args.table) as out_table, output_file.open("w") as out_file:
             out_table.drop()
             num_input, inputs = args.data.total, args.data.items

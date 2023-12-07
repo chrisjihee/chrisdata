@@ -126,7 +126,7 @@ def check(
     output_file = (args.env.output_home / f"{args.env.job_name}-{args.env.time_stamp}.jsonl")
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
-    with JobTimer(f"python {args.env.running_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
+    with JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
         with MongoDB(db_name=args.env.project, tab_name=args.env.job_name, clear_table=True, pool=mongos, port=27017) as mongo:
             input_list = islice(args.data.items, args.data.limit) if args.data.limit > 0 else args.data.items
             input_size = min(args.data.total, args.data.limit) if args.data.limit > 0 else args.data.total
