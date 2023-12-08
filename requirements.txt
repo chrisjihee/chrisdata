@@ -1,3 +1,4 @@
 elasticsearch
 Wikipedia-API==0.6.0
 qwikidata
+jsonlines
