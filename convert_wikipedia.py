@@ -1,4 +1,5 @@
 import logging
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -49,14 +50,16 @@ with jsonlines.open(input_file) as reader, output_file.open("w") as writer:
         doc.title = doc.title.strip() if doc.title else ""
         if doc.page_id and doc.title and doc.section_list:
             definition = doc.section_list[0][-1]
-            writer.writelines([
-                WikipediaDefinition(
-                    page_id=doc.page_id,
-                    query=doc.query,
-                    title=doc.title,
-                    definition=definition,
-                ).to_json(ensure_ascii=False),
-                '\n'
-            ])
-            writer.flush()
+            definition = re.sub(r"\s+", " ", definition)
+            definition = re.sub("다\\..*?$", "다.", definition)
+            if not definition.endswith("다른 뜻은 다음과 같다."):
+                writer.writelines([
+                    WikipediaDefinition(
+                        page_id=doc.page_id,
+                        query=doc.query,
+                        title=doc.title,
+                        definition=definition,
+                    ).to_json(ensure_ascii=False),
+                    '\n'
+                ])
     logger.info(progress)
