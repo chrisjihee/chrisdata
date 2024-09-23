@@ -98,7 +98,7 @@ def process_many(batch: Iterable[str], args: ProgramArguments):
     rows = [row.to_dict() for row in rows if row]
     if len(rows) > 0:
         with MongoStreamer(args.table) as table:
-            table.insert_many(rows)
+            table.table.insert_many(rows)
 
 
 @app.command()
@@ -154,7 +154,7 @@ def check(
     logging.getLogger("httpx").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
         with MongoStreamer(args.table) as out_table, output_file.open("w") as out_file:
-            out_table.drop()
+            out_table.reset()
             num_input, inputs = args.data.total, args.data.items
             if args.data.limit > 0:
                 num_input, inputs = min(args.data.total, args.data.limit), islice(inputs, args.data.limit)
@@ -164,26 +164,26 @@ def check(
                 tqdm(batches, total=num_batch, unit="batch", pre="*", desc="visiting"),
                 math.ceil(args.data.prog_interval / args.data.batch)
             )
-            with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
-                def make_jobs() -> Iterable[Future]:
-                    for i, x in enumerate(progress):
-                        if i > 0 and i % interval == 0:
-                            logger.info(progress)
-                        yield pool.submit(process_many, batch=x, args=args)
-                    logger.info(progress)
-
-                for job in make_jobs():
-                    job.result(timeout=args.net.waiting_sec)
-                terminate_processes(pool)
-
-            # for i, x in enumerate(progress):
-            #     if i > 0 and i % interval == 0:
+            # with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
+            #     def make_jobs() -> Iterable[Future]:
+            #         for i, x in enumerate(progress):
+            #             if i > 0 and i % interval == 0:
+            #                 logger.info(progress)
+            #             yield pool.submit(process_many, batch=x, args=args)
             #         logger.info(progress)
-            #     process_many(batch=x, args=args)
-            # logger.info(progress)
+            #
+            #     for job in make_jobs():
+            #         job.result(timeout=args.net.waiting_sec)
+            #     terminate_processes(pool)
+
+            for i, x in enumerate(progress):
+                if i > 0 and i % interval == 0:
+                    logger.info(progress)
+                process_many(batch=x, args=args)
+            logger.info(progress)
 
             find_opt = {}
-            num_row, rows = out_table.count_documents(find_opt), out_table.find(find_opt).sort("_id")
+            num_row, rows = out_table.table.count_documents(find_opt), out_table.table.find(find_opt).sort("_id")
             progress, interval = (
                 tqdm(rows, unit="ea", pre="*", desc="exporting", total=num_row),
                 args.data.prog_interval * 10
