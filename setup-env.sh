@@ -9,7 +9,9 @@ pip install -U -r requirements.txt
 
 # chrisbase
 rm -rf chrisbase*; git clone git@github.com:chrisjihee/chrisbase.git
+rm -rf chrislab*; git clone git@github.com:chrisjihee/chrislab.git
 pip install -U -e chrisbase*
+pip install -U -e chrislab*
 
 # list
 pip list | grep -E "search|Wiki|wiki|json|chris"
