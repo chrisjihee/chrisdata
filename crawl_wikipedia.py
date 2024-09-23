@@ -15,11 +15,10 @@ from dataclasses_json import DataClassJsonMixin
 from wikipediaapi import Wikipedia
 from wikipediaapi import WikipediaPage
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, TableOption, MongoStreamer
 from chrisbase.io import LoggingFormat
-from chrisbase.util import MongoDB, to_dataframe, mute_tqdm_cls, wait_future_jobs, LF
+from chrisbase.util import to_dataframe, mute_tqdm_cls, wait_future_jobs, LF
 
-mongos: List[MongoDB] = []
 logger = logging.getLogger(__name__)
 app = AppTyper()
 
@@ -154,6 +153,7 @@ class NetOption(OptionData):
 @dataclass
 class ProgramArguments(CommonArguments):
     data: DataOption = field()
+    table: TableOption = field()
     net: NetOption | None = field(default=None)
 
     def __post_init__(self):
@@ -167,6 +167,7 @@ class ProgramArguments(CommonArguments):
             to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
             to_dataframe(columns=columns, raw=self.net, data_prefix="net") if self.net else None,
             to_dataframe(columns=columns, raw=self.data, data_prefix="data"),
+            to_dataframe(columns=columns, raw=self.table, data_prefix="table"),
         ]).reset_index(drop=True)
 
 
@@ -204,30 +205,31 @@ class ProcessResult(DataClassJsonMixin):
     passage_list: list = field(default_factory=list)
 
 
-def process_query(i: int, x: str, s: float | None = None):
-    is_done = all(mongo.table.count_documents({"_id": i, "query": x}, limit=1) > 0 for mongo in mongos)
-    if is_done:
-        return
-    if s and s > 0:
-        time.sleep(s)
-    api = api_list_per_ip[i % len(api_list_per_ip)]
-    page: WikipediaPage = api.page(x)
-    result = ProcessResult(_id=i, query=x)
-    page_exists = False
-    try:
-        page_exists = page.exists()
-    except KeyError:
-        logger.warning(f"KeyError on process_query(i={i}, x={x})")
-    if page_exists:
-        result.title = page.title
-        result.page_id = page.pageid
-        result.section_list.append((x, '', '', page.summary))
-        result.section_list += get_section_list_lv2(x, page.sections)
-        result.passage_list = get_passage_list(result.section_list, page.pageid)
-    for mongo in mongos:
-        if mongo.table.count_documents({"_id": i}, limit=1) > 0:
-            mongo.table.delete_one({"_id": i})
-        mongo.table.insert_one(result.to_dict())
+def process_query(i: int, x: str, args: ProgramArguments):
+    with MongoStreamer(args.table) as db:
+        is_done = db.table.count_documents({"_id": i, "query": x}, limit=1) > 0
+        if is_done:
+            return
+        if args.net and args.net.calling_sec > 0:
+            time.sleep(args.net.calling_sec)
+        api = api_list_per_ip[i % len(api_list_per_ip)]
+        page: WikipediaPage = api.page(x)
+        result = ProcessResult(_id=i, query=x)
+        page_exists = False
+        try:
+            page_exists = page.exists()
+        except KeyError:
+            logger.warning(f"KeyError on process_query(i={i}, x={x})")
+        if page_exists:
+            result.title = page.title
+            result.page_id = page.pageid
+            result.section_list.append((x, '', '', page.summary))
+            result.section_list += get_section_list_lv2(x, page.sections)
+            result.passage_list = get_passage_list(result.section_list, page.pageid)
+
+        if db.table.count_documents({"_id": i}, limit=1) > 0:
+            db.table.delete_one({"_id": i})
+        db.table.insert_one(result.to_dict())
 
 
 def table_name(args: ProgramArguments) -> str:
@@ -251,11 +253,13 @@ def crawl(
         max_retrial: int = typer.Option(default=10),
         # data
         input_home: str = typer.Option(default="input"),
-        input_name: str = typer.Option(default="kowiki-sample.txt"),
+        input_name: str = typer.Option(default="backup/kowiki-sample.txt"),
         input_lang: str = typer.Option(default="ko"),
         input_limit: int = typer.Option(default=100),
         from_scratch: bool = typer.Option(default=False),
         prog_interval: int = typer.Option(default=15),
+        # table
+        table_home: str = typer.Option(default="localhost:6382/wikipedia"),
 ):
     env = ProjectEnv(
         project=project,
@@ -283,6 +287,10 @@ def crawl(
             from_scratch=from_scratch,
             prog_interval=prog_interval if prog_interval > 0 else env.max_workers,
         ),
+        table=TableOption(
+            home=table_home,
+            name=env.job_name,
+        ),
     )
     tqdm = mute_tqdm_cls()
     output_file = (args.env.output_home / f"{args.data.name.stem}.jsonl")
@@ -290,19 +298,19 @@ def crawl(
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("wikipediaapi").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        with MongoDB(db_name=args.env.project, tab_name=table_name(args), clear_table=args.data.from_scratch, pool=mongos, port=6382) as mongo:
+        with MongoStreamer(args.table) as out_table:
             input_list = load_query_list(args=args)
             input_size = len(input_list)
             num_global_api = reset_global_api(args=args)
             logger.info(f"Use {num_global_api} apis and {args.env.max_workers} workers to crawl {input_size} wikipedia queries")
             with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
-                jobs = [(i, pool.submit(process_query, i=i, x=x, s=args.net.calling_sec)) for i, x in input_list]
+                jobs = [(i, pool.submit(process_query, i=i, x=x, args=args)) for i, x in input_list]
                 prog_bar = tqdm(jobs, unit="ea", pre="*", desc="visiting")
                 wait_future_jobs(prog_bar, timeout=args.net.waiting_sec, interval=args.data.prog_interval, pool=pool)
             done_ids = set()
             with output_file.open("w") as out:
                 row_filter = {}
-                num_row, rows = mongo.table.count_documents(row_filter), mongo.table.find(row_filter).sort("_id")
+                num_row, rows = out_table.table.count_documents(row_filter), out_table.table.find(row_filter).sort("_id")
                 prog_bar = tqdm(rows, unit="ea", pre="*", desc="exporting", total=num_row)
                 for i, row in enumerate(prog_bar, start=1):
                     done_ids.add(row.get("_id"))
