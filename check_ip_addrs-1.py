@@ -108,8 +108,8 @@ def check(
         job_name: str = typer.Option(default="check_ip_addrs"),
         output_home: str = typer.Option(default="output-check_ip_addrs"),
         logging_file: str = typer.Option(default="logging.out"),
-        debugging: bool = typer.Option(default=False),
         max_workers: int = typer.Option(default=10),
+        debugging: bool = typer.Option(default=False),
         # net
         calling_sec: float = typer.Option(default=0),
         waiting_sec: float = typer.Option(default=300.0),
@@ -130,6 +130,7 @@ def check(
         msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
         max_workers=1 if debugging else max(max_workers, 1),
     )
+    assert env.num_ip_addrs > 0, f"env.num_ip_addrs={env.num_ip_addrs}"
     args = ProgramArguments(
         env=env,
         net=NetOption(
