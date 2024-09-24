@@ -11,7 +11,7 @@ from dataclasses_json import DataClassJsonMixin
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, OptionData
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption
-from chrisbase.data import FileStreamer, MongoStreamer
+from chrisbase.data import Streamer, FileStreamer, MongoStreamer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 from crawl_wikipedia import ProcessResult as WikipediaProcessResult
@@ -115,7 +115,7 @@ def parse_one(x: dict, parsed_ids: set[int], opt: FilterOption) -> Iterable[Pass
     parsed_ids.add(doc.page_id)
 
 
-def parse_many(batch: Iterable[dict], wrapper: MongoStreamer | FileStreamer, parsed_ids: set[int], filter_opt: FilterOption):
+def parse_many(batch: Iterable[dict], wrapper: MongoStreamer, parsed_ids: set[int], filter_opt: FilterOption):
     batch_units = [x for x in [parse_one(x, parsed_ids, opt=filter_opt) for x in batch] if x]
     all_units = [unit for batch in batch_units for unit in batch]
     rows = [row.to_dict() for row in all_units if row]
@@ -137,18 +137,18 @@ def parse(
         input_batch: int = typer.Option(default=1000),
         input_inter: int = typer.Option(default=10000),
         input_total: int = typer.Option(default=1410203),
-        input_file_home: str = typer.Option(default="input/wikimedia"),
-        input_file_name: str = typer.Option(default="wikipedia-20230920-crawl-kowiki.jsonl"),
+        input_file_home: str = typer.Option(default="input/Wikipedia"),
+        input_file_name: str = typer.Option(default="kowiki-20230701-all-titles-in-ns0.jsonl"),
         # output
-        output_file_home: str = typer.Option(default="input/wikimedia"),
-        output_file_name: str = typer.Option(default="wikipedia-20230920-parse-kowiki-new.jsonl"),
+        output_file_home: str = typer.Option(default="input/Wikipedia"),
+        output_file_name: str = typer.Option(default="kowiki-20230701-all-titles-in-ns0-parse.jsonl"),
         output_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
-        output_table_name: str = typer.Option(default="wikipedia-20230920-parse-kowiki"),
+        output_table_name: str = typer.Option(default="kowiki-20230701-all-titles-in-ns0-parse"),
         output_table_reset: bool = typer.Option(default=True),
         # filter
         filter_min_char: int = typer.Option(default=40),
         filter_min_word: int = typer.Option(default=5),
-        filter_black_sect: str = typer.Option(default="input/wikimedia/wikipedia-black_sect.txt"),
+        filter_black_sect: str = typer.Option(default="input/Wikipedia/wikipedia-black_sect.txt"),
 ):
     env = ProjectEnv(
         project=project,
@@ -164,7 +164,6 @@ def parse(
         limit=input_limit,
         batch=input_batch,
         inter=input_inter,
-        total=input_total,
         file=FileOption(
             home=input_file_home,
             name=input_file_name,
@@ -205,25 +204,26 @@ def parse(
         FileStreamer(args.input.file) as input_file,
     ):
         # parse crawled data
-        inp: InputChannel = args.input.first_usable(input_file)
-        out: OutputChannel = args.output.first_usable(output_table)
-        logger.info(f"Parse from [{inp.wrapper.opt}] to [{out.rewriter.opt}]")
-        logger.info(f"- amount: inputs={inp.num_input}, batches={inp.total}")
+        reader = Streamer.first_usable(input_file)
+        writer = Streamer.first_usable(output_table)
+        input_items: InputOption.InputItems = args.input.ready_inputs(reader, input_total)
+        logger.info(f"Parse from [{reader.opt}] to [{writer.opt}]")
+        logger.info(f"- amount: total={input_total}, batch={args.input.batch}")
         logger.info(f"- filter: num_black_sect={args.filter.num_black_sect}, min_char={args.filter.min_char}, min_word={args.filter.min_word}")
         progress, interval = (
-            tqdm(inp.batches, total=inp.total, unit="batch", pre="*", desc="parsing"),
+            tqdm(input_items.items, total=input_items.total, unit="batch", pre="*", desc="parsing"),
             math.ceil(args.input.inter / args.input.batch),
         )
         parsed_ids = set()
         for i, x in enumerate(progress):
             if i > 0 and i % interval == 0:
                 logger.info(progress)
-            parse_many(batch=x, wrapper=out.rewriter, parsed_ids=parsed_ids, filter_opt=args.filter)
+            parse_many(batch=x, wrapper=output_table, parsed_ids=parsed_ids, filter_opt=args.filter)
         logger.info(progress)
 
         # save parsed data
         progress, interval = (
-            tqdm(out.rewriter, total=len(out.rewriter), unit="row", pre="*", desc="saving"),
+            tqdm(writer, total=len(writer), unit="row", pre="*", desc="saving"),
             args.input.inter * 100,
         )
         for i, x in enumerate(progress):
@@ -231,7 +231,7 @@ def parse(
                 logger.info(progress)
             output_file.fp.write(json.dumps(x, ensure_ascii=False) + '\n')
         logger.info(progress)
-        logger.info(f"Saved {len(out.rewriter)} rows to [{output_file.path}]")
+        logger.info(f"Saved {len(writer)} rows to [{output_file.path}]")
 
 
 if __name__ == "__main__":
