@@ -3,58 +3,22 @@ import logging
 import math
 import time
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from itertools import islice
 from typing import Iterable
 
 import httpx
-import pandas as pd
 import typer
 from dataclasses_json import DataClassJsonMixin
-from more_itertools import ichunked
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, TableOption, MongoStreamer
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv
+from chrisbase.data import FileStreamer, MongoStreamer
+from chrisbase.data import IOArguments, InputOption, OutputOption, FileOption, TableOption
 from chrisbase.io import LoggingFormat
-from chrisbase.util import to_dataframe, mute_tqdm_cls
+from chrisbase.util import mute_tqdm_cls
 
 logger = logging.getLogger(__name__)
 app = AppTyper()
-
-
-@dataclass
-class DataOption(OptionData):
-    items: Iterable[str] = field()
-    total: int = field(default=0)
-    limit: int = field(default=-1)
-    batch: int = field(default=1)
-    prog_interval: int = field(default=1)
-
-
-@dataclass
-class NetOption(OptionData):
-    calling_sec: float = field(default=0.001),
-    waiting_sec: float = field(default=300.0),
-
-
-@dataclass
-class ProgramArguments(CommonArguments):
-    data: DataOption = field()
-    table: TableOption = field()
-    net: NetOption | None = field(default=None)
-
-    def __post_init__(self):
-        super().__post_init__()
-
-    def dataframe(self, columns=None) -> pd.DataFrame:
-        if not columns:
-            columns = [self.data_type, "value"]
-        return pd.concat([
-            to_dataframe(columns=columns, raw=self.time, data_prefix="time"),
-            to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
-            to_dataframe(columns=columns, raw=self.net, data_prefix="net") if self.net else None,
-            to_dataframe(columns=columns, raw=self.data, data_prefix="data"),
-            to_dataframe(columns=columns, raw=self.table, data_prefix="table"),
-        ]).reset_index(drop=True)
 
 
 @dataclass
@@ -68,9 +32,9 @@ class ProcessResult(DataClassJsonMixin):
     elapsed: float | None = None
 
 
-def process_one(x: str, args: ProgramArguments):
-    if args.net and args.net.calling_sec > 0:
-        time.sleep(args.net.calling_sec)
+def process_one(x: str, args: IOArguments):
+    if args.env.calling_sec > 0:
+        time.sleep(args.env.calling_sec)
     remote_page = "https://api64.ipify.org?format=json"
     local_address = x
     _id = '.'.join(local_address.split('.')[-2:])
@@ -92,22 +56,20 @@ def process_one(x: str, args: ProgramArguments):
         return result
 
 
-def process_many1(batch: Iterable[str], args: ProgramArguments):
+def process_many1(batch: Iterable[str], args: IOArguments, writer: MongoStreamer):
     rows = [process_one(x, args) for x in batch]
     rows = [row.to_dict() for row in rows if row]
     if len(rows) > 0:
-        with MongoStreamer(args.table) as table:
-            table.table.insert_many(rows)
+        writer.table.insert_many(rows)
 
 
-def process_many2(batch: Iterable[str], args: ProgramArguments):
+def process_many2(batch: Iterable[str], args: IOArguments, writer: MongoStreamer):
     with ProcessPoolExecutor(max_workers=args.env.max_workers) as exe:
         jobs = [exe.submit(process_one, x=x, args=args) for x in batch]
-        rows = [job.result(timeout=args.net.waiting_sec) for job in jobs]
+        rows = [job.result(timeout=args.env.waiting_sec) for job in jobs]
     rows = [row.to_dict() for row in rows if row]
     if len(rows) > 0:
-        with MongoStreamer(args.table) as table:
-            table.table.insert_many(rows)
+        writer.table.insert_many(rows)
 
 
 @app.command()
@@ -119,15 +81,15 @@ def check(
         logging_file: str = typer.Option(default="logging.out"),
         max_workers: int = typer.Option(default=50),
         debugging: bool = typer.Option(default=False),
-        # net
-        calling_sec: float = typer.Option(default=0),
-        waiting_sec: float = typer.Option(default=300.0),
-        # data
+        # input
+        input_start: int = typer.Option(default=0),
         input_limit: int = typer.Option(default=-1),
         input_batch: int = typer.Option(default=10),
-        prog_interval: int = typer.Option(default=1),
-        # table
-        table_home: str = typer.Option(default="localhost:6382/check"),
+        input_inter: int = typer.Option(default=1),
+        # output
+        table_home: str = typer.Option(default="localhost:6382/device"),
+        table_name: str = typer.Option(default="check_ip_addrs"),
+        table_reset: bool = typer.Option(default=True),
 ):
     env = ProjectEnv(
         project=project,
@@ -140,52 +102,61 @@ def check(
         max_workers=1 if debugging else max(max_workers, 1),
     )
     assert env.num_ip_addrs > 0, f"env.num_ip_addrs={env.num_ip_addrs}"
-    args = ProgramArguments(
-        env=env,
-        net=NetOption(
-            calling_sec=calling_sec,
-            waiting_sec=waiting_sec,
-        ),
-        data=DataOption(
-            items=islice(env.ip_addrs, env.num_ip_addrs),
-            total=env.num_ip_addrs,
-            limit=input_limit,
-            batch=input_batch,
-            prog_interval=prog_interval,
+    input_opt = InputOption(
+        start=input_start,
+        limit=input_limit,
+        batch=input_batch,
+        inter=input_inter,
+        data=islice(env.ip_addrs, env.num_ip_addrs),
+    )
+    output_opt = OutputOption(
+        file=FileOption(
+            home=env.output_home,
+            name=f"{env.job_name}-{env.time_stamp}.jsonl",
+            mode="w",
+            strict=True,
         ),
         table=TableOption(
             home=table_home,
-            name=env.job_name,
+            name=table_name,
+            reset=table_reset,
+            strict=True,
         ),
     )
+    args = IOArguments(
+        env=env,
+        input=input_opt,
+        output=output_opt,
+    )
     tqdm = mute_tqdm_cls()
-    output_file = (args.env.output_home / f"{args.env.job_name}-{args.env.time_stamp}.jsonl")
-
     logging.getLogger("httpx").setLevel(logging.WARNING)
-    with JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        with MongoStreamer(args.table) as out_table, output_file.open("w") as out_file:
-            out_table.reset()
-            num_input, inputs = args.data.total, args.data.items
-            if args.data.limit > 0:
-                num_input, inputs = min(args.data.total, args.data.limit), islice(inputs, args.data.limit)
-            num_batch, batches = math.ceil(num_input / args.data.batch), ichunked(inputs, args.data.batch)
-            logger.info(f"Check {num_input} IP addresses with {num_batch} batches")
-            with tqdm(total=num_batch, unit="batch", pre="*", desc="checking", unit_divisor=math.ceil(args.data.prog_interval / args.data.batch)) as prog:
-                for batch in batches:
-                    process_many2(batch=batch, args=args)
-                    prog.update()
-                    if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
-                        logger.info(prog)
+    assert args.input.data, "input.data is required"
+    assert args.output.file, "output.file is required"
+    assert args.output.table, "output.table is required"
 
-            find_opt = {}
-            num_row, rows = out_table.table.count_documents(find_opt), out_table.table.find(find_opt).sort("_id")
-            with tqdm(total=num_row, unit="ea", pre="*", desc="exporting", unit_divisor=args.data.prog_interval * 10) as prog:
-                for row in rows:
-                    out_file.write(json.dumps(row, ensure_ascii=False) + '\n')
-                    prog.update()
-                    if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
-                        logger.info(prog)
-            logger.info(f"Export {num_row}/{num_input} rows to {output_file}")
+    with (
+        JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+        MongoStreamer(args.output.table) as output_table,
+        FileStreamer(args.output.file) as output_file,
+    ):
+        input_total = args.env.num_ip_addrs
+        input_items = args.input.ready_inputs(args.input.data, input_total)
+        logger.info(f"Check {input_total} addresses to [{output_table.opt}]")
+        logger.info(f"- amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
+        with tqdm(total=input_items.total, unit="batch", pre="=>", desc="checking", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
+            for batch in input_items.items:
+                process_many2(batch=batch, args=args, writer=output_table)
+                prog.update()
+                if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
+                    logger.info(prog)
+
+        with tqdm(total=len(output_table), unit="row", pre="=>", desc="exporting", unit_divisor=math.ceil(args.input.inter * 10)) as prog:
+            for row in output_table:
+                output_file.fp.write(json.dumps(row, ensure_ascii=False) + '\n')
+                prog.update()
+                if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
+                    logger.info(prog)
+            logger.info(f"Export {prog.n}/{input_total} rows to [{output_file.opt}]")
 
 
 if __name__ == "__main__":

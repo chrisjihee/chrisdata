@@ -5,9 +5,9 @@ import math
 import typer
 from elasticsearch.helpers import streaming_bulk
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, Streamer, IOArguments
-from chrisbase.data import FileStreamer, MongoStreamer, ElasticStreamer
-from chrisbase.data import InputOption, OutputOption, FileOption, TableOption, IndexOption
+from chrisbase.data import AppTyper, JobTimer, ProjectEnv
+from chrisbase.data import Streamer, FileStreamer, MongoStreamer, ElasticStreamer
+from chrisbase.data import IOArguments, InputOption, OutputOption, FileOption, TableOption, IndexOption
 from chrisbase.io import LoggingFormat
 from chrisbase.util import mute_tqdm_cls
 
