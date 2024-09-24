@@ -8,13 +8,15 @@ import pandas as pd
 import typer
 from dataclasses_json import DataClassJsonMixin
 from qwikidata.claim import WikidataClaim
+from qwikidata.datavalue import _DATAVALUE_TYPE_TO_CLASS
 from qwikidata.entity import WikidataItem, WikidataProperty, WikidataLexeme, ClaimsMixin
 from qwikidata.json_dump import WikidataJsonDump
+from qwikidata.snak import WikidataSnak
 from qwikidata.typedefs import LanguageCode
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, OptionData
-from chrisbase.data import InputOption, FileOption, TableOption
 from chrisbase.data import FileStreamer, MongoStreamer
+from chrisbase.data import InputOption, FileOption, TableOption
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 
@@ -22,15 +24,31 @@ logger = logging.getLogger(__name__)
 app = AppTyper()
 
 
+def datavalue_dict_to_obj(x: dict):
+    return _DATAVALUE_TYPE_TO_CLASS[x['type']](x)
+
+
+def datavalue_dict(x: WikidataSnak):
+    return x.datavalue._datavalue_dict
+
+
 class ClaimMixinEx(ClaimsMixin):
-    def get_truthy_claims(self) -> list[dict]:
-        res = list()
-        for claim_group in self.get_truthy_claim_groups().values():
+    def get_claims(self) -> list[dict]:
+        claims = list()
+        for claim_group in self.get_claim_groups().values():  # get_claim_groups() vs. get_truthy_claim_groups()
             for claim in claim_group:
                 claim: WikidataClaim = claim
+                # print('+', claim.mainsnak.property_id, '=', datavalue_dict(claim.mainsnak))  # claim.mainsnak.datavalue.value == datavalue_dict_to_obj(datavalue_dict(claim.mainsnak))
                 if claim.mainsnak.snaktype == "value" and claim.mainsnak.datavalue is not None:
-                    res.append({"property": claim.mainsnak.property_id, "datavalue": claim.mainsnak.datavalue._datavalue_dict})
-        return res
+                    qualifiers = list()
+                    for qualifier_group in claim.qualifiers.values():
+                        for qualifier in qualifier_group:
+                            if qualifier.snak.snaktype == "value" and qualifier.snak.datavalue is not None:
+                                # print("  -", qualifier.snak.property_id, '=', datavalue_dict(qualifier.snak))  # qualifier.snak.datavalue == datavalue_dict_to_obj(datavalue_dict(qualifier.snak))
+                                qualifiers.append({"property": qualifier.snak.property_id, "datavalue": datavalue_dict(qualifier.snak)})
+                    claims.append({"property": claim.mainsnak.property_id, "datavalue": datavalue_dict(claim.mainsnak), "qualifiers": qualifiers})
+                # print()
+        return claims
 
 
 class WikidataPropertyEx(WikidataProperty, ClaimMixinEx):
@@ -78,6 +96,7 @@ class WikidataUnit(DataClassJsonMixin):
 class FilterOption(OptionData):
     lang1: str = field(default="ko")
     lang2: str = field(default="en")
+    strict: bool = field(default=False)
 
 
 @dataclass
@@ -116,13 +135,13 @@ def parse_one(x: dict, args: ParseArguments):
         row.label2 = item.get_label(lang2_code)
         row.title1 = item.get_wiki_title(lang1_code)
         row.title2 = item.get_wiki_title(lang2_code)
-        if not row.label1 or not row.title1:
+        if args.filter.strict and (not row.label1 or not row.title1):
             return None
         row.alias1 = item.get_aliases(lang1_code)
         row.alias2 = item.get_aliases(lang2_code)
         row.descr1 = item.get_description(lang1_code)
         row.descr2 = item.get_description(lang2_code)
-        row.claims = item.get_truthy_claims()
+        row.claims = item.get_claims()
         return row
     elif row.type == "property":
         prop = WikidataPropertyEx(x)
@@ -132,17 +151,17 @@ def parse_one(x: dict, args: ParseArguments):
         row.alias2 = prop.get_aliases(lang2_code)
         row.descr1 = prop.get_description(lang1_code)
         row.descr2 = prop.get_description(lang2_code)
-        row.claims = prop.get_truthy_claims()
+        row.claims = prop.get_claims()
         return row
     elif row.type == "lexeme":
         lexm = WikidataLexemeEx(x)
         row.label1 = lexm.get_lemma(lang1_code)
         row.label2 = lexm.get_lemma(lang2_code)
-        if not row.label1:
+        if args.filter.strict and not row.label1:
             return None
         row.descr1 = lexm.get_gloss(lang1_code)
         row.descr2 = lexm.get_gloss(lang2_code)
-        row.claims = lexm.get_truthy_claims()
+        row.claims = lexm.get_claims()
         return row
     return None
 
