@@ -169,10 +169,10 @@ def parse(
         data_batch: int = typer.Option(default=1000),
         data_inter: int = typer.Option(default=10000),
         data_total: int = typer.Option(default=105485440),  # https://www.wikidata.org/wiki/Wikidata:Statistics
-        file_home: str = typer.Option(default="input/wikimedia"),
-        file_name: str = typer.Option(default="wikidata-20230920-dump.json.bz2"),
+        file_home: str = typer.Option(default="input/Wikidata"),
+        file_name: str = typer.Option(default="wikidata-20230911-all.json.bz2"),
         table_home: str = typer.Option(default="localhost:6382/wikimedia"),
-        table_name: str = typer.Option(default="wikidata-20230920-parse-kowiki"),
+        table_name: str = typer.Option(default="wikidata-20230911-all-parse-ko-en"),
         table_reset: bool = typer.Option(default=True),
         # filter
         filter_lang1: str = typer.Option(default="ko"),
@@ -192,7 +192,6 @@ def parse(
         limit=data_limit,
         batch=data_batch,
         inter=data_inter,
-        total=data_total,
         file=FileOption(
             home=file_home,
             name=file_name,
@@ -224,9 +223,9 @@ def parse(
         save_file.open("w") as writer,
     ):
         # parse dump data
-        inputs = args.data.ready_inputs(WikidataJsonDump(str(data_file.path)), args.data.total)
-        logger.info(f"Parse from [{args.data.file}] to [{args.data.table}]")
-        logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.total}")
+        inputs = args.data.ready_inputs(WikidataJsonDump(str(data_file.path)), data_total)
+        logger.info(f"Parse from [{data_file.opt}] to [{data_table.opt}]")
+        logger.info(f"- amount: inputs={data_total}, batches={inputs.total}")
         logger.info(f"- filter: lang1={args.filter.lang1}, lang2={args.filter.lang2}")
         progress, interval = (
             tqdm(inputs.batches, total=inputs.total, unit="batch", pre="*", desc="parsing"),
@@ -304,7 +303,6 @@ def restore(
         limit=data_limit,
         batch=data_batch,
         inter=data_inter,
-        total=data_total,
         file=FileOption(
             home=file_home,
             name=file_name,
@@ -331,7 +329,7 @@ def restore(
         save_file.open("w") as writer,
     ):
         # restore parsed data
-        inputs = args.data.ready_inputs(data_file, args.data.total)
+        inputs = args.data.ready_inputs(data_file, data_total)
         logger.info(f"Restore from [{args.data.file}] to [{args.data.table}]")
         logger.info(f"- amount: inputs={inputs.num_input}, batches={inputs.total}")
         progress, interval = (

@@ -206,12 +206,12 @@ def parse(
         # parse crawled data
         reader = Streamer.first_usable(input_file)
         writer = Streamer.first_usable(output_table)
-        input_items: InputOption.InputItems = args.input.ready_inputs(reader, input_total)
+        inputs = args.input.ready_inputs(reader, input_total)
         logger.info(f"Parse from [{reader.opt}] to [{writer.opt}]")
-        logger.info(f"- amount: total={input_total}, batch={args.input.batch}")
+        logger.info(f"- amount: inputs={input_total}, batches={args.input.batch}")
         logger.info(f"- filter: num_black_sect={args.filter.num_black_sect}, min_char={args.filter.min_char}, min_word={args.filter.min_word}")
         progress, interval = (
-            tqdm(input_items.items, total=input_items.total, unit="batch", pre="*", desc="parsing"),
+            tqdm(inputs.items, total=inputs.total, unit="batch", pre="*", desc="parsing"),
             math.ceil(args.input.inter / args.input.batch),
         )
         parsed_ids = set()
