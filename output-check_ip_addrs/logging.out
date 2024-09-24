@@ -1,0 +1,72 @@
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇ [INIT] python /home/chris/proj/WiseData-2023.08/check_ip_addrs.py 
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇ -----+----------------------+----------------------------------------------------------
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇    # | IOArguments          | value
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇ -----+----------------------+----------------------------------------------------------
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇    1 | tag                  |
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇    2 | env.project          | WiseData
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇    3 | env.job_name         | check_ip_addrs
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇    4 | env.job_version      |
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇    5 | env.hostname         | chris463
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇    6 | env.hostaddr         | 129.254.181.36
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇    7 | env.time_stamp       | 0925.025441
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇    8 | env.python_path      | /home/chris/miniforge3/envs/WiseData/bin/python
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇    9 | env.current_dir      | /mnt/dat/proj/WiseData-2023.08
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   10 | env.current_file     | /home/chris/proj/WiseData-2023.08/check_ip_addrs.py
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   11 | env.working_dir      | /mnt/dat/proj/WiseData-2023.08
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   12 | env.command_args     | []
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   13 | env.num_ip_addrs     | 41
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   14 | env.max_workers      | 50
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   15 | env.calling_sec      | 0.001
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   16 | env.waiting_sec      | 300.0
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   17 | env.debugging        | False
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   18 | env.msg_level        | 20
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   19 | env.msg_format       | %(asctime)s ┇ %(levelname)-8s ┇ %(name)24s ┇ %(message)s
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   20 | env.date_format      | [%m.%d %H:%M:%S]
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   21 | env.output_home      | /mnt/dat/proj/WiseData-2023.08/output-check_ip_addrs
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   22 | env.logging_file     | logging.out
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   23 | env.argument_file    |
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   24 | time.started         | [09.25 02:54:41]
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   25 | time.settled         |
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   26 | time.elapsed         |
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   27 | input.start          | 0
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   28 | input.limit          | -1
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   29 | input.batch          | 10
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   30 | input.inter          | 1
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   31 | input.data           | <itertools.islice object at 0x7f7ff6ba9300>
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   32 | output.file.name     | check_ip_addrs-0925.025441.jsonl
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   33 | output.file.home     | /mnt/dat/proj/WiseData-2023.08/output-check_ip_addrs
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   34 | output.file.user     |
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   35 | output.file.pswd     |
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   36 | output.file.reset    | False
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   37 | output.file.strict   | True
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   38 | output.file.mode     | w
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   39 | output.file.encoding | utf-8
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   40 | output.table.name    | check_ip_addrs
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   41 | output.table.home    | localhost:6382/device
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   42 | output.table.user    |
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   43 | output.table.pswd    |
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   44 | output.table.reset   | True
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   45 | output.table.strict  | True
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   46 | output.table.sort    | _id
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   47 | output.table.find    | {}
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇   48 | output.table.timeout | 5000
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇ -----+----------------------+----------------------------------------------------------
+[09.25 02:54:41] ┇ INFO     ┇           chrisbase.data ┇ Drop an existing table: localhost:6382/device/check_ip_addrs
+[09.25 02:54:41] ┇ INFO     ┇                 __main__ ┇ Check 41 addresses to [localhost:6382/device/check_ip_addrs]
+[09.25 02:54:41] ┇ INFO     ┇                 __main__ ┇ - amount: 5 * 10 (BatchItems)
+[09.25 02:54:42] ┇ INFO     ┇                 __main__ ┇ =>   checking:  20%|██████████                                        | 1/5 [00:00<00:03,  1.28batch/s]
+[09.25 02:54:43] ┇ INFO     ┇                 __main__ ┇ =>   checking:  40%|████████████████████                              | 2/5 [00:01<00:02,  1.26batch/s]
+[09.25 02:54:44] ┇ INFO     ┇                 __main__ ┇ =>   checking:  60%|██████████████████████████████                    | 3/5 [00:02<00:01,  1.25batch/s]
+[09.25 02:54:44] ┇ INFO     ┇                 __main__ ┇ =>   checking:  80%|████████████████████████████████████████          | 4/5 [00:03<00:00,  1.27batch/s]
+[09.25 02:54:45] ┇ INFO     ┇                 __main__ ┇ =>   checking: 100%|██████████████████████████████████████████████████| 5/5 [00:03<00:00,  1.33batch/s]
+[09.25 02:54:45] ┇ INFO     ┇                 __main__ ┇ =>  exporting:  24%|████████████▏                                     | 10/41 [00:00<00:00, 7096.96row/s]
+[09.25 02:54:45] ┇ INFO     ┇                 __main__ ┇ =>  exporting:  49%|████████████████████████▍                         | 20/41 [00:00<00:00, 12124.02row/s]
+[09.25 02:54:45] ┇ INFO     ┇                 __main__ ┇ =>  exporting:  73%|████████████████████████████████████▌             | 30/41 [00:00<00:00, 16094.80row/s]
+[09.25 02:54:45] ┇ INFO     ┇                 __main__ ┇ =>  exporting:  98%|████████████████████████████████████████████████▊ | 40/41 [00:00<00:00, 19054.19row/s]
+[09.25 02:54:45] ┇ INFO     ┇                 __main__ ┇ =>  exporting: 100%|██████████████████████████████████████████████████| 41/41 [00:00<00:00, 18325.50row/s]
+[09.25 02:54:45] ┇ INFO     ┇                 __main__ ┇ Export 41/41 rows to [/mnt/dat/proj/WiseData-2023.08/output-check_ip_addrs/check_ip_addrs-0925.025441.jsonl]
+[09.25 02:54:45] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
+[09.25 02:54:45] ┇ INFO     ┇           chrisbase.data ┇ [EXIT] python /home/chris/proj/WiseData-2023.08/check_ip_addrs.py  ($=00:00:03.874)
+[09.25 02:54:45] ┇ INFO     ┇           chrisbase.data ┇ =========================================================================================================================================
