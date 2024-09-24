@@ -2,7 +2,6 @@ import json
 import logging
 import math
 import time
-from concurrent.futures import Future
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
 from itertools import islice
@@ -16,7 +15,7 @@ from more_itertools import ichunked
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, TableOption, MongoStreamer
 from chrisbase.io import LoggingFormat
-from chrisbase.util import to_dataframe, mute_tqdm_cls, terminate_processes
+from chrisbase.util import to_dataframe, mute_tqdm_cls
 
 logger = logging.getLogger(__name__)
 app = AppTyper()
@@ -64,9 +63,9 @@ class ProcessResult(DataClassJsonMixin):
     uri: str
     local_address: str
     status: int | None = None
-    elapsed: float | None = None
     size: float | None = None
     text: str | None = None
+    elapsed: float | None = None
 
 
 def process_one(x: str, args: ProgramArguments):
@@ -93,8 +92,18 @@ def process_one(x: str, args: ProgramArguments):
         return result
 
 
-def process_many(batch: Iterable[str], args: ProgramArguments):
+def process_many1(batch: Iterable[str], args: ProgramArguments):
     rows = [process_one(x, args) for x in batch]
+    rows = [row.to_dict() for row in rows if row]
+    if len(rows) > 0:
+        with MongoStreamer(args.table) as table:
+            table.table.insert_many(rows)
+
+
+def process_many2(batch: Iterable[str], args: ProgramArguments):
+    with ProcessPoolExecutor(max_workers=args.env.max_workers) as exe:
+        jobs = [exe.submit(process_one, x=x, args=args) for x in batch]
+        rows = [job.result(timeout=args.net.waiting_sec) for job in jobs]
     rows = [row.to_dict() for row in rows if row]
     if len(rows) > 0:
         with MongoStreamer(args.table) as table:
@@ -108,14 +117,14 @@ def check(
         job_name: str = typer.Option(default="check_ip_addrs"),
         output_home: str = typer.Option(default="output-check_ip_addrs"),
         logging_file: str = typer.Option(default="logging.out"),
-        max_workers: int = typer.Option(default=10),
+        max_workers: int = typer.Option(default=50),
         debugging: bool = typer.Option(default=False),
         # net
         calling_sec: float = typer.Option(default=0),
         waiting_sec: float = typer.Option(default=300.0),
         # data
         input_limit: int = typer.Option(default=-1),
-        input_batch: int = typer.Option(default=5),
+        input_batch: int = typer.Option(default=10),
         prog_interval: int = typer.Option(default=1),
         # table
         table_home: str = typer.Option(default="localhost:6382/check"),
@@ -161,40 +170,22 @@ def check(
                 num_input, inputs = min(args.data.total, args.data.limit), islice(inputs, args.data.limit)
             num_batch, batches = math.ceil(num_input / args.data.batch), ichunked(inputs, args.data.batch)
             logger.info(f"Check {num_input} IP addresses with {num_batch} batches")
-            progress, interval = (
-                tqdm(batches, total=num_batch, unit="batch", pre="*", desc="visiting"),
-                math.ceil(args.data.prog_interval / args.data.batch)
-            )
-            # with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
-            #     def make_jobs() -> Iterable[Future]:
-            #         for i, x in enumerate(progress):
-            #             if i > 0 and i % interval == 0:
-            #                 logger.info(progress)
-            #             yield pool.submit(process_many, batch=x, args=args)
-            #         logger.info(progress)
-            #
-            #     for job in make_jobs():
-            #         job.result(timeout=args.net.waiting_sec)
-            #     terminate_processes(pool)
-
-            for i, x in enumerate(progress):
-                if i > 0 and i % interval == 0:
-                    logger.info(progress)
-                process_many(batch=x, args=args)
-            logger.info(progress)
+            with tqdm(total=num_batch, unit="batch", pre="*", desc="checking", unit_divisor=math.ceil(args.data.prog_interval / args.data.batch)) as prog:
+                for batch in batches:
+                    process_many2(batch=batch, args=args)
+                    prog.update()
+                    if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
+                        logger.info(prog)
 
             find_opt = {}
             num_row, rows = out_table.table.count_documents(find_opt), out_table.table.find(find_opt).sort("_id")
-            progress, interval = (
-                tqdm(rows, unit="ea", pre="*", desc="exporting", total=num_row),
-                args.data.prog_interval * 10
-            )
-            for i, row in enumerate(progress):
-                if i > 0 and i % interval == 0:
-                    logger.info(progress)
-                out_file.write(json.dumps(row, ensure_ascii=False) + '\n')
-            logger.info(progress)
-        logger.info(f"Export {num_row}/{num_input} rows to {output_file}")
+            with tqdm(total=num_row, unit="ea", pre="*", desc="exporting", unit_divisor=args.data.prog_interval * 10) as prog:
+                for row in rows:
+                    out_file.write(json.dumps(row, ensure_ascii=False) + '\n')
+                    prog.update()
+                    if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
+                        logger.info(prog)
+            logger.info(f"Export {num_row}/{num_input} rows to {output_file}")
 
 
 if __name__ == "__main__":
