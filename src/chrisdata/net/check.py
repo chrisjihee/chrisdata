@@ -124,8 +124,8 @@ def check(
 
     with (
         JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        MongoStreamer(args.output.table) as output_table,
         FileStreamer(args.output.file) as output_file,
+        MongoStreamer(args.output.table) as output_table,
     ):
         input_total = args.env.num_ip_addrs
         input_items = args.input.ready_inputs(args.input.data, input_total)

@@ -9,7 +9,7 @@ from qwikidata.json_dump import WikidataJsonDump
 from chrisbase.data import FileStreamer, MongoStreamer
 from chrisbase.data import IOArguments, InputOption, OutputOption, FileOption, TableOption
 from chrisbase.data import JobTimer, ProjectEnv, OptionData
-from chrisbase.io import LoggingFormat
+from chrisbase.io import LoggingFormat, new_path
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 from chrisdata.wikidata import *
 
@@ -160,12 +160,22 @@ def parse(
         file=FileOption(
             home=input_file_home,
             name=input_file_name,
-        ) if input_file_home and input_file_name else None,
+            strict=True,
+        ),
+    )
+    output_opt = OutputOption(
+        file=FileOption(
+            home=output_file_home,
+            name=new_path(output_file_name, post=env.time_stamp),
+            mode=output_file_mode,
+            strict=True,
+        ),
         table=TableOption(
             home=output_table_home,
             name=output_table_name,
             reset=output_table_reset,
-        ) if output_table_home and output_table_name else None,
+            strict=True,
+        )
     )
     filter_opt = FilterOption(
         lang1=filter_lang1,
@@ -176,19 +186,24 @@ def parse(
     args = ParseArguments(
         env=env,
         input=input_opt,
+        output=output_opt,
         filter=filter_opt,
     )
     tqdm = mute_tqdm_cls()
-    save_file = (args.env.output_home / f"{output_table_name}-{args.env.time_stamp}.jsonl")
-    assert args.input.file, "data.file is required"
-    assert args.input.table, "data.table is required"
+    assert args.input.file, "input.file is required"
+    assert args.output.file, "output.file is required"
+    assert args.output.table, "output.table is required"
 
     with (
         JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        MongoStreamer(args.input.table) as data_table,
-        FileStreamer(args.input.file) as data_file,
-        save_file.open("w") as writer,
+        FileStreamer(args.input.file) as input_file,
+        FileStreamer(args.output.file) as output_file,
+        MongoStreamer(args.output.table) as output_table,
     ):
+        print(input_file)
+        print(output_file)
+        print(output_table)
+        exit(12)
         # parse dump data
         inputs = args.input.ready_inputs(WikidataJsonDump(str(data_file.path)), input_total)
         logger.info(f"Parse from [{data_file.opt}] to [{data_table.opt}]")
