@@ -1,13 +1,10 @@
 from pathlib import Path
-import logging
-from dataclasses import dataclass
 
 import jsonlines
-from dataclasses_json import DataClassJsonMixin
 
 from chrisbase.io import num_lines, LoggingFormat, configure_unit_logger
 from chrisbase.util import mute_tqdm_cls
-from parse_wikidata import WikidataUnit
+from chrisdata.wikidata import *
 
 logger = logging.getLogger(__name__)
 configure_unit_logger(fmt=LoggingFormat.CHECK_12)

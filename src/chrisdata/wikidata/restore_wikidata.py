@@ -1,7 +1,4 @@
 import json
-import logging
-import math
-from dataclasses import dataclass, field
 
 import pandas as pd
 import typer
@@ -11,7 +8,7 @@ from chrisbase.data import InputOption, FileOption, TableOption
 from chrisbase.data import JobTimer, ProjectEnv, CommonArguments
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
-from chrisdata.wikidata import app
+from chrisdata.wikidata import *
 
 logger = logging.getLogger(__name__)
 

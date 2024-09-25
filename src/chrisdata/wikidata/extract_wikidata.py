@@ -1,18 +1,16 @@
 import json
-import logging
-import math
-from dataclasses import dataclass, field
 from typing import Optional, Iterable
 
 import bson.json_util
 import typer
 from elasticsearch.helpers import streaming_bulk
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, TypedData, FileOption, FileStreamer
 from chrisbase.data import InputOption, OutputOption, IOArguments, TableOption, IndexOption
+from chrisbase.data import JobTimer, ProjectEnv, FileOption, FileStreamer
 from chrisbase.data import Streamer, MongoStreamer, ElasticStreamer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import mute_tqdm_cls
+from chrisdata.wikidata import *
 from .search_wikidata import EntityInWiki, Relation
 
 logger = logging.getLogger(__name__)

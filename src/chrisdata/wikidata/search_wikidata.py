@@ -1,8 +1,5 @@
 import json
-import logging
-import math
 import re
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
@@ -11,54 +8,15 @@ import pandas as pd
 import typer
 from elasticsearch.helpers import streaming_bulk
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, TypedData, OptionData
 from chrisbase.data import InputOption, OutputOption, IOArguments, FileOption, TableOption, IndexOption
+from chrisbase.data import JobTimer, ProjectEnv, OptionData
 from chrisbase.data import Streamer, FileStreamer, MongoStreamer, ElasticStreamer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
-from .parse_wikidata import WikidataUnit
+from chrisdata.wikidata import *
 
 logger = logging.getLogger(__name__)
 app = AppTyper()
-
-
-@dataclass
-class EntityInWiki(TypedData):
-    entity: str
-    hits: int
-    score: float
-
-
-@dataclass
-class Relation(TypedData):
-    id: str
-    label1: str
-    label2: str
-
-    def __str__(self):
-        return f"{self.id}[{self.label2}]"
-
-
-@dataclass
-class TripleInWiki(TypedData):
-    entity1: EntityInWiki
-    entity2: EntityInWiki
-    relation: Relation
-    hits: int
-    score: float = field(default=0.0)
-    pmi: float = field(default=0.0)
-
-    @staticmethod
-    def calc_pmi(h_xy: float, h_x: float, h_y: float, n: int = 10000, e: float = 0.0000001) -> float:
-        p_xy = h_xy / n
-        p_x = h_x / n
-        p_y = h_y / n
-        return math.log2((p_xy + e) / ((p_x * p_y) + e))
-
-    def __post_init__(self):
-        if self.score is None:
-            self.score = 0.0
-        self.pmi = self.calc_pmi(self.hits, self.entity1.hits, self.entity2.hits)
 
 
 class SearchApp:
