@@ -15,3 +15,7 @@ pip install -U -e chrislab*
 
 # list
 pip list | grep -E "search|Wiki|wiki|json|chris"
+
+#bash script/setup-mongodb.sh
+#bash script/setup-elasticsearch8.sh
+#bash script/setup-elasticsearch7.sh
