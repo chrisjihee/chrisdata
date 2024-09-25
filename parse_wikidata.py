@@ -36,22 +36,23 @@ def datavalue_dict(x: WikidataSnak):
 class ClaimMixinEx(ClaimsMixin):
     def get_claims(self, args: "ParseArguments") -> list[dict]:
         claims = list()
-        for claim_group in self.get_claim_groups().values():  # get_claim_groups() vs. get_truthy_claim_groups()
+        claim_groups = self.get_claim_groups() if not args.filter.truthy else self.get_truthy_claim_groups()
+        for claim_group in claim_groups.values():
             for claim in claim_group:
                 claim: WikidataClaim = claim
                 if args.env.debugging:
-                    print('+', claim.mainsnak.property_id, '=', datavalue_dict(claim.mainsnak))  # claim.mainsnak.datavalue.value == datavalue_dict_to_obj(datavalue_dict(claim.mainsnak))
+                    logger.info(f"+ {claim.mainsnak.property_id} = {datavalue_dict(claim.mainsnak)}")  # claim.mainsnak.datavalue.value == datavalue_dict_to_obj(datavalue_dict(claim.mainsnak))
                 if claim.mainsnak.snaktype == "value" and claim.mainsnak.datavalue is not None:
                     qualifiers = list()
                     for qualifier_group in claim.qualifiers.values():
                         for qualifier in qualifier_group:
                             if qualifier.snak.snaktype == "value" and qualifier.snak.datavalue is not None:
                                 if args.env.debugging:
-                                    print("  -", qualifier.snak.property_id, '=', datavalue_dict(qualifier.snak))  # qualifier.snak.datavalue == datavalue_dict_to_obj(datavalue_dict(qualifier.snak))
+                                    logger.info(f"  - {qualifier.snak.property_id} = {datavalue_dict(qualifier.snak)}")  # qualifier.snak.datavalue == datavalue_dict_to_obj(datavalue_dict(qualifier.snak))
                                 qualifiers.append({"property": qualifier.snak.property_id, "datavalue": datavalue_dict(qualifier.snak)})
                     claims.append({"property": claim.mainsnak.property_id, "datavalue": datavalue_dict(claim.mainsnak), "qualifiers": qualifiers})
                 if args.env.debugging:
-                    print()
+                    logger.info('')
         return claims
 
 
@@ -101,6 +102,7 @@ class FilterOption(OptionData):
     lang1: str = field(default="ko")
     lang2: str = field(default="en")
     strict: bool = field(default=False)
+    truthy: bool = field(default=False)
 
 
 @dataclass
@@ -126,15 +128,15 @@ class ParseArguments(CommonArguments):
 
 def parse_one(x: dict, args: ParseArguments):
     if args.env.debugging:
-        print()
-        print("=" * 120)
-        print(f"parse_one:", x['type'], x['id'])
+        logger.info('')
+        logger.info("*" * 120)
+        logger.info(f"parse_one: {x['type']} {x['id']}")
         Path(f"debug-{x['id']}.json").write_text(json.dumps(x, ensure_ascii=False, indent=2))
-        print("-" * 120)
+        logger.info("-" * 120)
 
     def debug_return(r):
         if args.env.debugging:
-            print("=" * 120)
+            logger.info("*" * 120)
         return r
 
     lang1_code = LanguageCode(args.filter.lang1)
@@ -212,6 +214,8 @@ def parse(
         # filter
         filter_lang1: str = typer.Option(default="ko"),
         filter_lang2: str = typer.Option(default="en"),
+        filter_strict: bool = typer.Option(default=False),
+        filter_truthy: bool = typer.Option(default=False),
 ):
     env = ProjectEnv(
         project=project,
@@ -219,8 +223,8 @@ def parse(
         debugging=debugging,
         output_home=output_home,
         logging_file=logging_file,
-        msg_format=LoggingFormat.CHECK_24 if not debugging else LoggingFormat.DEBUG_24,
-        msg_level=logging.INFO  # if not debugging else logging.DEBUG,
+        msg_level=logging.INFO,  # if not debugging else logging.DEBUG,
+        msg_format=LoggingFormat.CHECK_24,  # if not debugging else LoggingFormat.DEBUG_24,
     )
     data_opt = InputOption(
         start=data_start,
@@ -240,6 +244,8 @@ def parse(
     filter_opt = FilterOption(
         lang1=filter_lang1,
         lang2=filter_lang2,
+        strict=filter_strict,
+        truthy=filter_truthy,
     )
     args = ParseArguments(
         env=env,
@@ -280,7 +286,7 @@ def parse(
         for i, x in enumerate(progress):
             if i > 0 and i % interval == 0:
                 logger.info(progress)
-            writer.write(json.dumps(x, ensure_ascii=False) + '\n')
+            writer.write(json.dumps(x, ensure_ascii=False, indent=None if not debugging else 2) + '\n')
         logger.info(progress)
         logger.info(f"Saved {len(data_table)} rows to [{save_file}]")
 
@@ -330,8 +336,8 @@ def restore(
         debugging=debugging,
         output_home=output_home,
         logging_file=logging_file,
-        msg_format=LoggingFormat.CHECK_24 if not debugging else LoggingFormat.DEBUG_24,
-        msg_level=logging.INFO  # if not debugging else logging.DEBUG,
+        msg_level=logging.INFO,  # if not debugging else logging.DEBUG,
+        msg_format=LoggingFormat.CHECK_24,  # if not debugging else LoggingFormat.DEBUG_24,
     )
     data_opt = InputOption(
         start=data_start,
