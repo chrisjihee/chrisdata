@@ -1,4 +1,5 @@
 import json
+import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Iterable
@@ -125,6 +126,16 @@ def parse_many2(batch: Iterable[dict], args: ParseArguments, writer: MongoStream
         writer.table.insert_many(rows)
 
 
+def parse_many3(batch: Iterable[dict], args: ParseArguments, writer: MongoStreamer):
+    with multiprocessing.Pool(processes=args.env.max_workers) as pool:
+        batch = [x for x in batch if writer.count({"_id": x['id']}) == 0]
+        jobs = [pool.apply_async(parse_one, (x, args)) for x in batch]
+        rows = [job.get(timeout=args.env.waiting_sec) for job in jobs]
+    rows = [row.to_dict() for row in rows if row]
+    if len(rows) > 0:
+        writer.table.insert_many(rows)
+
+
 @app.command()
 def parse(
         # env
@@ -132,7 +143,7 @@ def parse(
         job_name: str = typer.Option(default="parse_wikidata"),
         output_home: str = typer.Option(default="output/parse_wikidata"),
         logging_file: str = typer.Option(default="logging.out"),
-        max_workers: int = typer.Option(default=24),
+        max_workers: int = typer.Option(default=12),
         debugging: bool = typer.Option(default=False),  # TODO: change to False
         # input
         input_start: int = typer.Option(default=0),
@@ -141,6 +152,7 @@ def parse(
         input_inter: int = typer.Option(default=100),  # TODO: change to 10000
         input_total: int = typer.Option(default=105485440),  # https://www.wikidata.org/wiki/Wikidata:Statistics
         input_file_home: str = typer.Option(default="input/Wikidata"),
+        # input_file_name: str = typer.Option(default="wikidata-20230911-all.json"),
         input_file_name: str = typer.Option(default="wikidata-20230911-all.json.bz2"),
         # output
         output_file_home: str = typer.Option(default="output/Wikidata"),
@@ -223,7 +235,7 @@ def parse(
                 if args.env.max_workers <= 1:
                     parse_many1(batch=batch, args=args, writer=output_table)
                 else:
-                    parse_many2(batch=batch, args=args, writer=output_table)
+                    parse_many3(batch=batch, args=args, writer=output_table)
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
