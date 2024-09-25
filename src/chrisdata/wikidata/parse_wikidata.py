@@ -1,4 +1,5 @@
 import json
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Iterable
 
@@ -114,6 +115,16 @@ def parse_many1(batch: Iterable[dict], args: ParseArguments, writer: MongoStream
         writer.table.insert_many(rows)
 
 
+def parse_many2(batch: Iterable[dict], args: ParseArguments, writer: MongoStreamer):
+    with ProcessPoolExecutor(max_workers=args.env.max_workers) as exe:
+        batch = [x for x in batch if writer.count({"_id": x['id']}) == 0]
+        jobs = [exe.submit(parse_one, x, args) for x in batch]
+        rows = [job.result(timeout=args.env.waiting_sec) for job in jobs]
+    rows = [row.to_dict() for row in rows if row]
+    if len(rows) > 0:
+        writer.table.insert_many(rows)
+
+
 @app.command()
 def parse(
         # env
@@ -207,7 +218,7 @@ def parse(
         logger.info(f"- filter: lang1={args.filter.lang1}, lang2={args.filter.lang2}, strict={args.filter.strict}, truthy={args.filter.truthy}")
         with tqdm(total=input_items.total, unit="item", pre="=>", desc="parsing", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for batch in input_items.items:
-                parse_many1(batch=batch, args=args, writer=output_table)
+                parse_many2(batch=batch, args=args, writer=output_table)
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
