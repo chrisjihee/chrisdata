@@ -162,7 +162,7 @@ def parse(
         output_file_mode: str = typer.Option(default="w"),
         output_table_home: str = typer.Option(default="localhost:6382/Wikidata"),
         output_table_name: str = typer.Option(default="wikidata-20230911-all-parse-ko-en"),
-        output_table_reset: bool = typer.Option(default=True),
+        output_table_reset: bool = typer.Option(default=False),
         # filter
         filter_lang1: str = typer.Option(default="ko"),
         filter_lang2: str = typer.Option(default="en"),
