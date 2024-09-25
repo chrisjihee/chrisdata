@@ -109,16 +109,18 @@ def parse_one(x: dict, args: ParseArguments):
 
 
 def parse_many1(batch: Iterable[dict], args: ParseArguments, writer: MongoStreamer):
-    rows = [parse_one(x, args) if writer.count({"_id": x['id']}) == 0 else None
-            for x in batch]
+    if not writer.opt.reset:
+        batch = [x for x in batch if writer.count({"_id": x['id']}) == 0]
+    rows = [parse_one(x, args) for x in batch]
     rows = [row.to_dict() for row in rows if row]
     if len(rows) > 0:
         writer.table.insert_many(rows)
 
 
 def parse_many2(batch: Iterable[dict], args: ParseArguments, writer: MongoStreamer):
-    with ProcessPoolExecutor(max_workers=args.env.max_workers) as exe:
+    if not writer.opt.reset:
         batch = [x for x in batch if writer.count({"_id": x['id']}) == 0]
+    with ProcessPoolExecutor(max_workers=args.env.max_workers) as exe:
         jobs = [exe.submit(parse_one, x, args) for x in batch]
         rows = [job.result(timeout=args.env.waiting_sec) for job in jobs]
     rows = [row.to_dict() for row in rows if row]
@@ -127,8 +129,9 @@ def parse_many2(batch: Iterable[dict], args: ParseArguments, writer: MongoStream
 
 
 def parse_many3(batch: Iterable[dict], args: ParseArguments, writer: MongoStreamer):
-    with multiprocessing.Pool(processes=args.env.max_workers) as pool:
+    if not writer.opt.reset:
         batch = [x for x in batch if writer.count({"_id": x['id']}) == 0]
+    with multiprocessing.Pool(processes=args.env.max_workers) as pool:
         jobs = [pool.apply_async(parse_one, (x, args)) for x in batch]
         rows = [job.get(timeout=args.env.waiting_sec) for job in jobs]
     rows = [row.to_dict() for row in rows if row]
@@ -143,16 +146,15 @@ def parse(
         job_name: str = typer.Option(default="parse_wikidata"),
         output_home: str = typer.Option(default="output/parse_wikidata"),
         logging_file: str = typer.Option(default="logging.out"),
-        max_workers: int = typer.Option(default=12),
+        max_workers: int = typer.Option(default=1),
         debugging: bool = typer.Option(default=False),  # TODO: change to False
         # input
         input_start: int = typer.Option(default=0),
-        input_limit: int = typer.Option(default=50000),  # TODO: change to -1
-        input_batch: int = typer.Option(default=100),  # TODO: change to 1000
-        input_inter: int = typer.Option(default=100),  # TODO: change to 10000
+        input_limit: int = typer.Option(default=-1),  # TODO: change to -1
+        input_batch: int = typer.Option(default=1000),  # TODO: change to 1000
+        input_inter: int = typer.Option(default=10000),  # TODO: change to 10000
         input_total: int = typer.Option(default=105485440),  # https://www.wikidata.org/wiki/Wikidata:Statistics
         input_file_home: str = typer.Option(default="input/Wikidata"),
-        # input_file_name: str = typer.Option(default="wikidata-20230911-all.json"),
         input_file_name: str = typer.Option(default="wikidata-20230911-all.json.bz2"),
         # output
         output_file_home: str = typer.Option(default="output/Wikidata"),
@@ -235,7 +237,7 @@ def parse(
                 if args.env.max_workers <= 1:
                     parse_many1(batch=batch, args=args, writer=output_table)
                 else:
-                    parse_many3(batch=batch, args=args, writer=output_table)
+                    parse_many2(batch=batch, args=args, writer=output_table)
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
