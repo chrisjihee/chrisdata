@@ -131,14 +131,14 @@ def check(
         input_items = args.input.ready_inputs(args.input.data, input_total)
         logger.info(f"Check {input_total} addresses to [{output_table.opt}]")
         logger.info(f"- amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
-        with tqdm(total=input_items.total, unit="batch", pre="=>", desc="checking", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
+        with tqdm(total=input_items.total, unit="item", pre="=>", desc="checking", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for batch in input_items.items:
                 process_many2(batch=batch, args=args, writer=output_table)
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
 
-        with tqdm(total=len(output_table), unit="row", pre="=>", desc="exporting", unit_divisor=math.ceil(args.input.inter * 10)) as prog:
+        with tqdm(total=len(output_table), unit="row", pre="=>", desc="exporting", unit_divisor=args.input.inter * 10) as prog:
             for row in output_table:
                 output_file.fp.write(json.dumps(row, ensure_ascii=False) + '\n')
                 prog.update()

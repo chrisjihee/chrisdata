@@ -121,12 +121,12 @@ def parse(
         job_name: str = typer.Option(default="parse_wikidata"),
         output_home: str = typer.Option(default="output/parse_wikidata"),
         logging_file: str = typer.Option(default="logging.out"),
-        debugging: bool = typer.Option(default=True),
+        debugging: bool = typer.Option(default=False),  # TODO: change to False
         # input
         input_start: int = typer.Option(default=0),
-        input_limit: int = typer.Option(default=-1),
-        input_batch: int = typer.Option(default=1000),
-        input_inter: int = typer.Option(default=10000),
+        input_limit: int = typer.Option(default=10000),  # TODO: change to -1
+        input_batch: int = typer.Option(default=1000),  # TODO: change to 1000
+        input_inter: int = typer.Option(default=1000),  # TODO: change to 10000
         input_total: int = typer.Option(default=105485440),  # https://www.wikidata.org/wiki/Wikidata:Statistics
         input_file_home: str = typer.Option(default="input/Wikidata"),
         input_file_name: str = typer.Option(default="wikidata-20230911-all.json.bz2"),
@@ -150,7 +150,7 @@ def parse(
         output_home=output_home,
         logging_file=logging_file,
         msg_level=logging.INFO,  # if not debugging else logging.DEBUG,
-        msg_format=LoggingFormat.CHECK_24,  # if not debugging else LoggingFormat.DEBUG_24,
+        msg_format=LoggingFormat.CHECK_36,  # if not debugging else LoggingFormat.DEBUG_24,
     )
     input_opt = InputOption(
         start=input_start,
@@ -203,26 +203,20 @@ def parse(
         # parse dump data
         input_items = args.input.ready_inputs(WikidataJsonDump(str(input_file.path)), input_total)
         logger.info(f"Parse from [{input_file.opt}] to [{output_table.opt}]")
-        logger.info(f"- amount: inputs={input_total}, batches={input_items.total}")
-        logger.info(f"- filter: lang1={args.filter.lang1}, lang2={args.filter.lang2}")
-        progress, interval = (
-            tqdm(input_items.batches, total=input_items.total, unit="batch", pre="*", desc="parsing"),
-            math.ceil(args.input.inter / args.input.batch),
-        )
-        for i, x in enumerate(progress):
-            if i > 0 and i % interval == 0:
-                logger.info(progress)
-            parse_many1(batch=x, writer=output_table, args=args)
-        logger.info(progress)
+        logger.info(f"- amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
+        logger.info(f"- filter: lang1={args.filter.lang1}, lang2={args.filter.lang2}, strict={args.filter.strict}, truthy={args.filter.truthy}")
+        with tqdm(total=input_items.total, unit="item", pre="=>", desc="parsing", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
+            for batch in input_items.items:
+                parse_many1(batch=batch, args=args, writer=output_table)
+                prog.update()
+                if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
+                    logger.info(prog)
 
-        # save parsed data
-        progress, interval = (
-            tqdm(output_table, total=len(output_table), unit="row", pre="*", desc="saving"),
-            args.input.inter * 100,
-        )
-        for i, x in enumerate(progress):
-            if i > 0 and i % interval == 0:
-                logger.info(progress)
-            output_file.fp.write(json.dumps(x, ensure_ascii=False, indent=None if not debugging else 2) + '\n')
-        logger.info(progress)
-        logger.info(f"Saved {len(output_table)} rows to [{output_file}]")
+        # export parsed data
+        with tqdm(total=len(output_table), unit="row", pre="=>", desc="exporting", unit_divisor=args.input.inter * 100) as prog:
+            for row in output_table:
+                output_file.fp.write(json.dumps(row, ensure_ascii=False, indent=None if not debugging else 2) + '\n')
+                prog.update()
+                if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
+                    logger.info(prog)
+            logger.info(f"Export {prog.n}/{input_total} rows to [{output_file.opt}]")
