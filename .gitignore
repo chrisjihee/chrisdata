@@ -132,3 +132,4 @@ elasticsearch*/
 input/Wikidata*
 input/Wikipedia*
 input/wikimedia*
+debug-*

@@ -2,6 +2,7 @@ import json
 import logging
 import math
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
@@ -33,21 +34,24 @@ def datavalue_dict(x: WikidataSnak):
 
 
 class ClaimMixinEx(ClaimsMixin):
-    def get_claims(self) -> list[dict]:
+    def get_claims(self, args: "ParseArguments") -> list[dict]:
         claims = list()
         for claim_group in self.get_claim_groups().values():  # get_claim_groups() vs. get_truthy_claim_groups()
             for claim in claim_group:
                 claim: WikidataClaim = claim
-                # print('+', claim.mainsnak.property_id, '=', datavalue_dict(claim.mainsnak))  # claim.mainsnak.datavalue.value == datavalue_dict_to_obj(datavalue_dict(claim.mainsnak))
+                if args.env.debugging:
+                    print('+', claim.mainsnak.property_id, '=', datavalue_dict(claim.mainsnak))  # claim.mainsnak.datavalue.value == datavalue_dict_to_obj(datavalue_dict(claim.mainsnak))
                 if claim.mainsnak.snaktype == "value" and claim.mainsnak.datavalue is not None:
                     qualifiers = list()
                     for qualifier_group in claim.qualifiers.values():
                         for qualifier in qualifier_group:
                             if qualifier.snak.snaktype == "value" and qualifier.snak.datavalue is not None:
-                                # print("  -", qualifier.snak.property_id, '=', datavalue_dict(qualifier.snak))  # qualifier.snak.datavalue == datavalue_dict_to_obj(datavalue_dict(qualifier.snak))
+                                if args.env.debugging:
+                                    print("  -", qualifier.snak.property_id, '=', datavalue_dict(qualifier.snak))  # qualifier.snak.datavalue == datavalue_dict_to_obj(datavalue_dict(qualifier.snak))
                                 qualifiers.append({"property": qualifier.snak.property_id, "datavalue": datavalue_dict(qualifier.snak)})
                     claims.append({"property": claim.mainsnak.property_id, "datavalue": datavalue_dict(claim.mainsnak), "qualifiers": qualifiers})
-                # print()
+                if args.env.debugging:
+                    print()
         return claims
 
 
@@ -121,6 +125,18 @@ class ParseArguments(CommonArguments):
 
 
 def parse_one(x: dict, args: ParseArguments):
+    if args.env.debugging:
+        print()
+        print("=" * 120)
+        print(f"parse_one:", x['type'], x['id'])
+        Path(f"debug-{x['id']}.json").write_text(json.dumps(x, ensure_ascii=False, indent=2))
+        print("-" * 120)
+
+    def debug_return(r):
+        if args.env.debugging:
+            print("=" * 120)
+        return r
+
     lang1_code = LanguageCode(args.filter.lang1)
     lang2_code = LanguageCode(args.filter.lang2)
     row = WikidataUnit(
@@ -136,13 +152,13 @@ def parse_one(x: dict, args: ParseArguments):
         row.title1 = item.get_wiki_title(lang1_code)
         row.title2 = item.get_wiki_title(lang2_code)
         if args.filter.strict and (not row.label1 or not row.title1):
-            return None
+            return debug_return(None)
         row.alias1 = item.get_aliases(lang1_code)
         row.alias2 = item.get_aliases(lang2_code)
         row.descr1 = item.get_description(lang1_code)
         row.descr2 = item.get_description(lang2_code)
-        row.claims = item.get_claims()
-        return row
+        row.claims = item.get_claims(args)
+        return debug_return(row)
     elif row.type == "property":
         prop = WikidataPropertyEx(x)
         row.label1 = prop.get_label(lang1_code)
@@ -151,19 +167,19 @@ def parse_one(x: dict, args: ParseArguments):
         row.alias2 = prop.get_aliases(lang2_code)
         row.descr1 = prop.get_description(lang1_code)
         row.descr2 = prop.get_description(lang2_code)
-        row.claims = prop.get_claims()
-        return row
+        row.claims = prop.get_claims(args)
+        return debug_return(row)
     elif row.type == "lexeme":
         lexm = WikidataLexemeEx(x)
         row.label1 = lexm.get_lemma(lang1_code)
         row.label2 = lexm.get_lemma(lang2_code)
         if args.filter.strict and not row.label1:
-            return None
+            return debug_return(None)
         row.descr1 = lexm.get_gloss(lang1_code)
         row.descr2 = lexm.get_gloss(lang2_code)
-        row.claims = lexm.get_claims()
-        return row
-    return None
+        row.claims = lexm.get_claims(args)
+        return debug_return(row)
+    return debug_return(None)
 
 
 def parse_many(batch: Iterable[dict], wrapper: MongoStreamer, args: ParseArguments):
@@ -181,7 +197,7 @@ def parse(
         job_name: str = typer.Option(default="parse_wikidata"),
         output_home: str = typer.Option(default="output-parse_wikidata"),
         logging_file: str = typer.Option(default="logging.out"),
-        debugging: bool = typer.Option(default=False),
+        debugging: bool = typer.Option(default=True),
         # data
         data_start: int = typer.Option(default=0),
         data_limit: int = typer.Option(default=-1),
@@ -203,14 +219,14 @@ def parse(
         debugging=debugging,
         output_home=output_home,
         logging_file=logging_file,
-        msg_level=logging.DEBUG if debugging else logging.INFO,
-        msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
+        msg_format=LoggingFormat.CHECK_24 if not debugging else LoggingFormat.DEBUG_24,
+        msg_level=logging.INFO  # if not debugging else logging.DEBUG,
     )
     data_opt = InputOption(
         start=data_start,
-        limit=data_limit,
-        batch=data_batch,
-        inter=data_inter,
+        limit=data_limit if not debugging else 1,
+        batch=data_batch if not debugging else 2,
+        inter=data_inter if not debugging else 1,
         file=FileOption(
             home=file_home,
             name=file_name,
@@ -314,8 +330,8 @@ def restore(
         debugging=debugging,
         output_home=output_home,
         logging_file=logging_file,
-        msg_level=logging.DEBUG if debugging else logging.INFO,
-        msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_36,
+        msg_format=LoggingFormat.CHECK_24 if not debugging else LoggingFormat.DEBUG_24,
+        msg_level=logging.INFO  # if not debugging else logging.DEBUG,
     )
     data_opt = InputOption(
         start=data_start,
