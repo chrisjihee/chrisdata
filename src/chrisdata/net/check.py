@@ -64,7 +64,7 @@ def check(
         job_name: str = typer.Option(default="check_ip_addrs"),
         output_home: str = typer.Option(default="output/check_ip_addrs"),
         logging_file: str = typer.Option(default="logging.out"),
-        max_workers: int = typer.Option(default=50),
+        max_workers: int = typer.Option(default=24),
         debugging: bool = typer.Option(default=False),
         # input
         input_start: int = typer.Option(default=0),
@@ -134,7 +134,10 @@ def check(
         logger.info(f"- amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
         with tqdm(total=input_items.total, unit="item", pre="=>", desc="checking", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for batch in input_items.items:
-                process_many2(batch=batch, args=args, writer=output_table)
+                if args.env.max_workers <= 1:
+                    process_many1(batch=batch, args=args, writer=output_table)
+                else:
+                    process_many2(batch=batch, args=args, writer=output_table)
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)

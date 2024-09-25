@@ -132,12 +132,13 @@ def parse(
         job_name: str = typer.Option(default="parse_wikidata"),
         output_home: str = typer.Option(default="output/parse_wikidata"),
         logging_file: str = typer.Option(default="logging.out"),
+        max_workers: int = typer.Option(default=24),
         debugging: bool = typer.Option(default=False),  # TODO: change to False
         # input
         input_start: int = typer.Option(default=0),
-        input_limit: int = typer.Option(default=10000),  # TODO: change to -1
-        input_batch: int = typer.Option(default=1000),  # TODO: change to 1000
-        input_inter: int = typer.Option(default=1000),  # TODO: change to 10000
+        input_limit: int = typer.Option(default=50000),  # TODO: change to -1
+        input_batch: int = typer.Option(default=100),  # TODO: change to 1000
+        input_inter: int = typer.Option(default=100),  # TODO: change to 10000
         input_total: int = typer.Option(default=105485440),  # https://www.wikidata.org/wiki/Wikidata:Statistics
         input_file_home: str = typer.Option(default="input/Wikidata"),
         input_file_name: str = typer.Option(default="wikidata-20230911-all.json.bz2"),
@@ -162,6 +163,7 @@ def parse(
         logging_file=logging_file,
         msg_level=logging.INFO,  # if not debugging else logging.DEBUG,
         msg_format=LoggingFormat.CHECK_36,  # if not debugging else LoggingFormat.DEBUG_24,
+        max_workers=1 if debugging else max(max_workers, 1),
     )
     input_opt = InputOption(
         start=input_start,
@@ -218,7 +220,10 @@ def parse(
         logger.info(f"- filter: lang1={args.filter.lang1}, lang2={args.filter.lang2}, strict={args.filter.strict}, truthy={args.filter.truthy}")
         with tqdm(total=input_items.total, unit="item", pre="=>", desc="parsing", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for batch in input_items.items:
-                parse_many2(batch=batch, args=args, writer=output_table)
+                if args.env.max_workers <= 1:
+                    parse_many1(batch=batch, args=args, writer=output_table)
+                else:
+                    parse_many2(batch=batch, args=args, writer=output_table)
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
