@@ -106,12 +106,12 @@ def parse_one(x: dict, args: ParseArguments):
     return debug_return(None)
 
 
-def parse_many(batch: Iterable[dict], wrapper: MongoStreamer, args: ParseArguments):
-    rows = [parse_one(x, args) if wrapper.count({"_id": x['id']}) == 0 else None
+def parse_many1(batch: Iterable[dict], args: ParseArguments, writer: MongoStreamer):
+    rows = [parse_one(x, args) if writer.count({"_id": x['id']}) == 0 else None
             for x in batch]
     rows = [row.to_dict() for row in rows if row]
     if len(rows) > 0:
-        wrapper.table.insert_many(rows)
+        writer.table.insert_many(rows)
 
 
 @app.command()
@@ -200,33 +200,29 @@ def parse(
         FileStreamer(args.output.file) as output_file,
         MongoStreamer(args.output.table) as output_table,
     ):
-        print(input_file)
-        print(output_file)
-        print(output_table)
-        exit(12)
         # parse dump data
-        inputs = args.input.ready_inputs(WikidataJsonDump(str(data_file.path)), input_total)
-        logger.info(f"Parse from [{data_file.opt}] to [{data_table.opt}]")
-        logger.info(f"- amount: inputs={input_total}, batches={inputs.total}")
+        input_items = args.input.ready_inputs(WikidataJsonDump(str(input_file.path)), input_total)
+        logger.info(f"Parse from [{input_file.opt}] to [{output_table.opt}]")
+        logger.info(f"- amount: inputs={input_total}, batches={input_items.total}")
         logger.info(f"- filter: lang1={args.filter.lang1}, lang2={args.filter.lang2}")
         progress, interval = (
-            tqdm(inputs.batches, total=inputs.total, unit="batch", pre="*", desc="parsing"),
+            tqdm(input_items.batches, total=input_items.total, unit="batch", pre="*", desc="parsing"),
             math.ceil(args.input.inter / args.input.batch),
         )
         for i, x in enumerate(progress):
             if i > 0 and i % interval == 0:
                 logger.info(progress)
-            parse_many(batch=x, wrapper=data_table, args=args)
+            parse_many1(batch=x, writer=output_table, args=args)
         logger.info(progress)
 
         # save parsed data
         progress, interval = (
-            tqdm(data_table, total=len(data_table), unit="row", pre="*", desc="saving"),
+            tqdm(output_table, total=len(output_table), unit="row", pre="*", desc="saving"),
             args.input.inter * 100,
         )
         for i, x in enumerate(progress):
             if i > 0 and i % interval == 0:
                 logger.info(progress)
-            writer.write(json.dumps(x, ensure_ascii=False, indent=None if not debugging else 2) + '\n')
+            output_file.fp.write(json.dumps(x, ensure_ascii=False, indent=None if not debugging else 2) + '\n')
         logger.info(progress)
-        logger.info(f"Saved {len(data_table)} rows to [{save_file}]")
+        logger.info(f"Saved {len(output_table)} rows to [{output_file}]")
