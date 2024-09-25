@@ -127,6 +127,7 @@ def check(
         FileStreamer(args.output.file) as output_file,
         MongoStreamer(args.output.table) as output_table,
     ):
+        # check local ip addresses
         input_total = args.env.num_ip_addrs
         input_items = args.input.ready_inputs(args.input.data, input_total)
         logger.info(f"Check {input_total} addresses to [{output_table.opt}]")
@@ -138,6 +139,7 @@ def check(
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
 
+        # export results
         with tqdm(total=len(output_table), unit="row", pre="=>", desc="exporting", unit_divisor=args.input.inter * 10) as prog:
             for row in output_table:
                 output_file.fp.write(json.dumps(row, ensure_ascii=False) + '\n')
