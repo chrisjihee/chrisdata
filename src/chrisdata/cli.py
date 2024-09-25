@@ -1,8 +1,10 @@
 import chrisdata.net.check
-
 from chrisbase.data import AppTyper
+from chrisdata.wikidata import wikidata_app
 
 main = AppTyper()
+main.add_typer(chrisdata.net.check.app, name="net")
+main.add_typer(wikidata_app, name="wikidata")
 
 
 @main.command()
@@ -16,5 +18,4 @@ def bye(name: str):
 
 
 if __name__ == "__main__":
-    main.add_typer(chrisdata.net.check.app, name="net")
     main()

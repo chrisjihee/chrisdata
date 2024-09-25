@@ -16,9 +16,10 @@ from chrisbase.data import InputOption, OutputOption, IOArguments, FileOption, T
 from chrisbase.data import Streamer, FileStreamer, MongoStreamer, ElasticStreamer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
-from parse_wikidata import WikidataUnit
+from .parse_wikidata import WikidataUnit
 
 logger = logging.getLogger(__name__)
+app = AppTyper()
 
 
 @dataclass
@@ -479,8 +480,8 @@ class ExportApp:
         return cls.app
 
 
+app.add_typer(SearchApp.typer(), name="search")
+app.add_typer(ExportApp.typer(), name="export")
+
 if __name__ == "__main__":
-    main = AppTyper()
-    main.add_typer(SearchApp.typer(), name="search")
-    main.add_typer(ExportApp.typer(), name="export")
-    main()
+    app()
