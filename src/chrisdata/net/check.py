@@ -12,7 +12,7 @@ import typer
 from chrisbase.data import FileStreamer, MongoStreamer
 from chrisbase.data import IOArguments, InputOption, OutputOption, FileOption, TableOption
 from chrisbase.data import JobTimer, ProjectEnv
-from chrisbase.io import LoggingFormat
+from chrisbase.io import LoggingFormat, new_path
 from chrisbase.util import mute_tqdm_cls
 from chrisdata.net import app, IPCheckResult
 
@@ -72,9 +72,12 @@ def check(
         input_batch: int = typer.Option(default=10),
         input_inter: int = typer.Option(default=1),
         # output
-        table_home: str = typer.Option(default="localhost:6382/device"),
-        table_name: str = typer.Option(default="check_ip_addrs"),
-        table_reset: bool = typer.Option(default=True),
+        output_file_home: str = typer.Option(default="output/check_ip_addrs"),
+        output_file_name: str = typer.Option(default="check_ip_addrs.jsonl"),
+        output_file_mode: str = typer.Option(default="w"),
+        output_table_home: str = typer.Option(default="localhost:6382/device"),
+        output_table_name: str = typer.Option(default="check_ip_addrs"),
+        output_table_reset: bool = typer.Option(default=True),
 ):
     env = ProjectEnv(
         project=project,
@@ -96,15 +99,15 @@ def check(
     )
     output_opt = OutputOption(
         file=FileOption(
-            home=env.output_home,
-            name=f"{env.job_name}-{env.time_stamp}.jsonl",
-            mode="w",
+            home=output_file_home,
+            name=new_path(output_file_name, post=env.time_stamp),
+            mode=output_file_mode,
             strict=True,
         ),
         table=TableOption(
-            home=table_home,
-            name=table_name,
-            reset=table_reset,
+            home=output_table_home,
+            name=output_table_name,
+            reset=output_table_reset,
             strict=True,
         ),
     )

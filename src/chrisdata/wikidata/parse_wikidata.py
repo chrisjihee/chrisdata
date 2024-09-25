@@ -7,8 +7,8 @@ import typer
 from qwikidata.json_dump import WikidataJsonDump
 
 from chrisbase.data import FileStreamer, MongoStreamer
-from chrisbase.data import InputOption, FileOption, TableOption
-from chrisbase.data import JobTimer, ProjectEnv, CommonArguments, OptionData
+from chrisbase.data import IOArguments, InputOption, OutputOption, FileOption, TableOption
+from chrisbase.data import JobTimer, ProjectEnv, OptionData
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
 from chrisdata.wikidata import *
@@ -25,8 +25,7 @@ class FilterOption(OptionData):
 
 
 @dataclass
-class ParseArguments(CommonArguments):
-    data: InputOption = field()
+class ParseArguments(IOArguments):
     filter: FilterOption | None = field(default=None)
 
     def __post_init__(self):
@@ -37,10 +36,14 @@ class ParseArguments(CommonArguments):
             columns = [self.data_type, "value"]
         return pd.concat([
             to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
-            to_dataframe(columns=columns, raw=self.data, data_prefix="data", data_exclude=["file", "table", "index"]),
-            to_dataframe(columns=columns, raw=self.data.file, data_prefix="data.file") if self.data.file else None,
-            to_dataframe(columns=columns, raw=self.data.table, data_prefix="data.table") if self.data.table else None,
-            to_dataframe(columns=columns, raw=self.data.index, data_prefix="data.index") if self.data.index else None,
+            to_dataframe(columns=columns, raw=self.input, data_prefix="input", data_exclude=["file", "table", "index"]),
+            to_dataframe(columns=columns, raw=self.input.file, data_prefix="input.file") if self.input.file else None,
+            to_dataframe(columns=columns, raw=self.input.table, data_prefix="input.table") if self.input.table else None,
+            to_dataframe(columns=columns, raw=self.input.index, data_prefix="input.index") if self.input.index else None,
+            to_dataframe(columns=columns, raw=self.output, data_prefix="input", data_exclude=["file", "table", "index"]),
+            to_dataframe(columns=columns, raw=self.output.file, data_prefix="output.file") if self.output.file else None,
+            to_dataframe(columns=columns, raw=self.output.table, data_prefix="output.table") if self.output.table else None,
+            to_dataframe(columns=columns, raw=self.output.index, data_prefix="output.index") if self.output.index else None,
             to_dataframe(columns=columns, raw=self.filter, data_prefix="filter"),
         ]).reset_index(drop=True)
 
@@ -116,20 +119,24 @@ def parse(
         # env
         project: str = typer.Option(default="WiseData"),
         job_name: str = typer.Option(default="parse_wikidata"),
-        output_home: str = typer.Option(default="output-parse_wikidata"),
+        output_home: str = typer.Option(default="output/parse_wikidata"),
         logging_file: str = typer.Option(default="logging.out"),
         debugging: bool = typer.Option(default=True),
-        # data
-        data_start: int = typer.Option(default=0),
-        data_limit: int = typer.Option(default=-1),
-        data_batch: int = typer.Option(default=1000),
-        data_inter: int = typer.Option(default=10000),
-        data_total: int = typer.Option(default=105485440),  # https://www.wikidata.org/wiki/Wikidata:Statistics
-        file_home: str = typer.Option(default="input/Wikidata"),
-        file_name: str = typer.Option(default="wikidata-20230911-all.json.bz2"),
-        table_home: str = typer.Option(default="localhost:6382/wikimedia"),
-        table_name: str = typer.Option(default="wikidata-20230911-all-parse-ko-en"),
-        table_reset: bool = typer.Option(default=True),
+        # input
+        input_start: int = typer.Option(default=0),
+        input_limit: int = typer.Option(default=-1),
+        input_batch: int = typer.Option(default=1000),
+        input_inter: int = typer.Option(default=10000),
+        input_total: int = typer.Option(default=105485440),  # https://www.wikidata.org/wiki/Wikidata:Statistics
+        input_file_home: str = typer.Option(default="input/Wikidata"),
+        input_file_name: str = typer.Option(default="wikidata-20230911-all.json.bz2"),
+        # output
+        output_file_home: str = typer.Option(default="output/Wikidata"),
+        output_file_name: str = typer.Option(default="wikidata-20230911-all-parse-ko-en.jsonl"),
+        output_file_mode: str = typer.Option(default="w"),
+        output_table_home: str = typer.Option(default="localhost:6382/Wikidata"),
+        output_table_name: str = typer.Option(default="wikidata-20230911-all-parse-ko-en"),
+        output_table_reset: bool = typer.Option(default=True),
         # filter
         filter_lang1: str = typer.Option(default="ko"),
         filter_lang2: str = typer.Option(default="en"),
@@ -145,20 +152,20 @@ def parse(
         msg_level=logging.INFO,  # if not debugging else logging.DEBUG,
         msg_format=LoggingFormat.CHECK_24,  # if not debugging else LoggingFormat.DEBUG_24,
     )
-    data_opt = InputOption(
-        start=data_start,
-        limit=data_limit if not debugging else 1,
-        batch=data_batch if not debugging else 2,
-        inter=data_inter if not debugging else 1,
+    input_opt = InputOption(
+        start=input_start,
+        limit=input_limit if not debugging else 1,
+        batch=input_batch if not debugging else 2,
+        inter=input_inter if not debugging else 1,
         file=FileOption(
-            home=file_home,
-            name=file_name,
-        ) if file_home and file_name else None,
+            home=input_file_home,
+            name=input_file_name,
+        ) if input_file_home and input_file_name else None,
         table=TableOption(
-            home=table_home,
-            name=table_name,
-            reset=table_reset,
-        ) if table_home and table_name else None,
+            home=output_table_home,
+            name=output_table_name,
+            reset=output_table_reset,
+        ) if output_table_home and output_table_name else None,
     )
     filter_opt = FilterOption(
         lang1=filter_lang1,
@@ -168,28 +175,28 @@ def parse(
     )
     args = ParseArguments(
         env=env,
-        data=data_opt,
+        input=input_opt,
         filter=filter_opt,
     )
     tqdm = mute_tqdm_cls()
-    save_file = (args.env.output_home / f"{table_name}-{args.env.time_stamp}.jsonl")
-    assert args.data.file, "data.file is required"
-    assert args.data.table, "data.table is required"
+    save_file = (args.env.output_home / f"{output_table_name}-{args.env.time_stamp}.jsonl")
+    assert args.input.file, "data.file is required"
+    assert args.input.table, "data.table is required"
 
     with (
         JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        MongoStreamer(args.data.table) as data_table,
-        FileStreamer(args.data.file) as data_file,
+        MongoStreamer(args.input.table) as data_table,
+        FileStreamer(args.input.file) as data_file,
         save_file.open("w") as writer,
     ):
         # parse dump data
-        inputs = args.data.ready_inputs(WikidataJsonDump(str(data_file.path)), data_total)
+        inputs = args.input.ready_inputs(WikidataJsonDump(str(data_file.path)), input_total)
         logger.info(f"Parse from [{data_file.opt}] to [{data_table.opt}]")
-        logger.info(f"- amount: inputs={data_total}, batches={inputs.total}")
+        logger.info(f"- amount: inputs={input_total}, batches={inputs.total}")
         logger.info(f"- filter: lang1={args.filter.lang1}, lang2={args.filter.lang2}")
         progress, interval = (
             tqdm(inputs.batches, total=inputs.total, unit="batch", pre="*", desc="parsing"),
-            math.ceil(args.data.inter / args.data.batch),
+            math.ceil(args.input.inter / args.input.batch),
         )
         for i, x in enumerate(progress):
             if i > 0 and i % interval == 0:
@@ -200,7 +207,7 @@ def parse(
         # save parsed data
         progress, interval = (
             tqdm(data_table, total=len(data_table), unit="row", pre="*", desc="saving"),
-            args.data.inter * 100,
+            args.input.inter * 100,
         )
         for i, x in enumerate(progress):
             if i > 0 and i % interval == 0:
