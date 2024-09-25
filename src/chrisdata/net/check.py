@@ -3,51 +3,36 @@ import logging
 import math
 import time
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import dataclass
 from itertools import islice
 from typing import Iterable
 
 import httpx
 import typer
-from dataclasses_json import DataClassJsonMixin
 
 from chrisbase.data import FileStreamer, MongoStreamer
 from chrisbase.data import IOArguments, InputOption, OutputOption, FileOption, TableOption
 from chrisbase.data import JobTimer, ProjectEnv
 from chrisbase.io import LoggingFormat
 from chrisbase.util import mute_tqdm_cls
-from chrisdata.net import app
+from chrisdata.net import app, IPCheckResult
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class ProcessResult(DataClassJsonMixin):
-    _id: str
-    uri: str
-    local_address: str
-    status: int | None = None
-    size: float | None = None
-    text: str | None = None
-    elapsed: float | None = None
-
-
-def process_one(x: str, args: IOArguments):
+def process_one(ip: str, args: IOArguments):
     if args.env.calling_sec > 0:
         time.sleep(args.env.calling_sec)
-    remote_page = "https://api64.ipify.org?format=json"
-    local_address = x
-    _id = '.'.join(local_address.split('.')[-2:])
+    uri = "https://api64.ipify.org?format=json"
+    _id = '.'.join(f"{int(a):03d}" for a in ip.split('.')[-2:])
     with httpx.Client(
-            transport=httpx.HTTPTransport(local_address=local_address),
+            transport=httpx.HTTPTransport(local_address=ip),
             timeout=httpx.Timeout(timeout=120.0)
     ) as cli:
-        uri = remote_page
         response = cli.get(uri)
-        result = ProcessResult(
+        result = IPCheckResult(
             _id=_id,
             uri=uri,
-            local_address=local_address,
+            ip=ip,
             status=response.status_code,
             elapsed=round(response.elapsed.total_seconds(), 3),
             size=round(response.num_bytes_downloaded / 1024, 6),
@@ -65,7 +50,7 @@ def process_many1(batch: Iterable[str], args: IOArguments, writer: MongoStreamer
 
 def process_many2(batch: Iterable[str], args: IOArguments, writer: MongoStreamer):
     with ProcessPoolExecutor(max_workers=args.env.max_workers) as exe:
-        jobs = [exe.submit(process_one, x=x, args=args) for x in batch]
+        jobs = [exe.submit(process_one, x, args) for x in batch]
         rows = [job.result(timeout=args.env.waiting_sec) for job in jobs]
     rows = [row.to_dict() for row in rows if row]
     if len(rows) > 0:
