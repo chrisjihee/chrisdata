@@ -11,14 +11,14 @@ import httpx
 import typer
 from dataclasses_json import DataClassJsonMixin
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv
 from chrisbase.data import FileStreamer, MongoStreamer
 from chrisbase.data import IOArguments, InputOption, OutputOption, FileOption, TableOption
+from chrisbase.data import JobTimer, ProjectEnv
 from chrisbase.io import LoggingFormat
 from chrisbase.util import mute_tqdm_cls
+from chrisdata.net import app
 
 logger = logging.getLogger(__name__)
-app = AppTyper()
 
 
 @dataclass
@@ -77,7 +77,7 @@ def check(
         # env
         project: str = typer.Option(default="WiseData"),
         job_name: str = typer.Option(default="check_ip_addrs"),
-        output_home: str = typer.Option(default="output-check_ip_addrs"),
+        output_home: str = typer.Option(default="output/check_ip_addrs"),
         logging_file: str = typer.Option(default="logging.out"),
         max_workers: int = typer.Option(default=50),
         debugging: bool = typer.Option(default=False),
@@ -157,7 +157,3 @@ def check(
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
             logger.info(f"Export {prog.n}/{input_total} rows to [{output_file.opt}]")
-
-
-if __name__ == "__main__":
-    app()

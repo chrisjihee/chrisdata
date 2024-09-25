@@ -1,10 +1,10 @@
-import chrisdata.net.check
+import chrisdata.net
+import chrisdata.wikidata
 from chrisbase.data import AppTyper
-from chrisdata.wikidata import wikidata_app
 
 main = AppTyper()
-main.add_typer(chrisdata.net.check.app, name="net")
-main.add_typer(wikidata_app, name="wikidata")
+main.add_typer(chrisdata.net.app, name="net")
+main.add_typer(chrisdata.wikidata.app, name="wikidata")
 
 
 @main.command()

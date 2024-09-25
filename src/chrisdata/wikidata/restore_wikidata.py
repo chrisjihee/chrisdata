@@ -11,7 +11,7 @@ from chrisbase.data import InputOption, FileOption, TableOption
 from chrisbase.data import JobTimer, ProjectEnv, CommonArguments
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
-from chrisdata.wikidata import wikidata_app
+from chrisdata.wikidata import app
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class RestoreArguments(CommonArguments):
         ]).reset_index(drop=True)
 
 
-@wikidata_app.command()
+@app.command()
 def restore(
         # env
         project: str = typer.Option(default="WiseData"),
