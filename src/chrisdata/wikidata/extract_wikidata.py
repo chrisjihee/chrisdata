@@ -181,7 +181,7 @@ class ExtractApp:
                     home=output_table_home,
                     name=output_table_name,
                     reset=output_table_reset,
-                    strict=True,
+                    required=True,
                 ),
             )
             args = IOArguments(
@@ -205,10 +205,10 @@ class ExtractApp:
                 input_items: InputOption.InputItems = args.input.ready_inputs(reader, len(reader))
                 logger.info(f"Run ExtractApp")
                 logger.info(f"- from: [{type(reader).__name__}] [{reader.opt}]({len(reader)})")
-                logger.info(f"  => amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
+                logger.info(f"  => amount: {input_items.num_item}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
                 logger.info(f"- into: [{type(writer).__name__}] [{writer.opt}]({len(writer)})")
                 progress, interval = (
-                    tqdm(input_items.items, total=input_items.total, unit="batch", pre="*", desc="extracting"),
+                    tqdm(input_items.items, total=input_items.num_item, unit="batch", pre="*", desc="extracting"),
                     math.ceil(args.input.inter / args.input.batch),
                 )
                 for i, batch in enumerate(progress):
@@ -286,7 +286,7 @@ class ExportApp:
                     name=output_file_name,
                     mode=output_file_mode,
                     reset=output_file_reset,
-                    strict=True,
+                    required=True,
                 ),
             )
             args = IOArguments(
@@ -310,10 +310,10 @@ class ExportApp:
                 input_items: InputOption.InputItems = args.input.ready_inputs(reader, len(reader))
                 logger.info(f"Run ExportApp")
                 logger.info(f"- from: [{type(reader).__name__}] [{reader.opt}]({len(reader)})")
-                logger.info(f"  => amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
+                logger.info(f"  => amount: {input_items.num_item}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
                 logger.info(f"- into: [{type(writer).__name__}] [{writer.opt}]({len(writer)})")
                 progress, interval = (
-                    tqdm(input_items.items, total=input_items.total, unit="batch", pre="*", desc="exporting"),
+                    tqdm(input_items.items, total=input_items.num_item, unit="batch", pre="*", desc="exporting"),
                     math.ceil(args.input.inter / args.input.batch)
                 )
                 for i, x in enumerate(progress):

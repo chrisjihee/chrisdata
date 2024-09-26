@@ -22,7 +22,7 @@ class ParseWikidataOption(OptionData):
     processor: str = field(default="parse_many1")
     lang1: str = field(default="ko")
     lang2: str = field(default="en")
-    strict: bool = field(default=False)
+    filter: bool = field(default=False)
     truthy: bool = field(default=False)
 
 
@@ -53,7 +53,7 @@ def parse_one(x: dict, args: IOArguments):
         row.label2 = item.get_label(lang2_code)
         row.title1 = item.get_wiki_title(lang1_code)
         row.title2 = item.get_wiki_title(lang2_code)
-        if args.option.strict and (not row.label1 or not row.title1):
+        if args.option.filter and (not row.label1 or not row.title1):
             return debug_return(None)
         row.alias1 = item.get_aliases(lang1_code)
         row.alias2 = item.get_aliases(lang2_code)
@@ -83,7 +83,7 @@ def parse_one(x: dict, args: IOArguments):
         lexm = WikidataLexemeEx(x)
         row.label1 = lexm.get_lemma(lang1_code)
         row.label2 = lexm.get_lemma(lang2_code)
-        if args.option.strict and not row.label1:
+        if args.option.filter and not row.label1:
             return debug_return(None)
         row.descr1 = lexm.get_gloss(lang1_code)
         row.descr2 = lexm.get_gloss(lang2_code)
@@ -155,7 +155,7 @@ def parse(
         processor: str = typer.Option(default="parse_many1"),
         lang1: str = typer.Option(default="ko"),
         lang2: str = typer.Option(default="en"),
-        strict: bool = typer.Option(default=False),
+        filter: bool = typer.Option(default=False),
         truthy: bool = typer.Option(default=False),
 ):
     env = ProjectEnv(
@@ -173,10 +173,11 @@ def parse(
         limit=input_limit if not debugging else 1,
         batch=input_batch if not debugging else 2,
         inter=input_inter if not debugging else 1,
+        total=input_total,
         file=FileOption(
             home=input_file_home,
             name=input_file_name,
-            strict=True,
+            required=True,
         ),
     )
     output_opt = OutputOption(
@@ -184,20 +185,20 @@ def parse(
             home=output_file_home,
             name=new_path(output_file_name, post=env.time_stamp),
             mode=output_file_mode,
-            strict=True,
+            required=True,
         ),
         table=TableOption(
             home=output_table_home,
             name=output_table_name,
             reset=output_table_reset,
-            strict=True,
+            required=True,
         )
     )
     parse_opt = ParseWikidataOption(
         processor=processor,
         lang1=lang1,
         lang2=lang2,
-        strict=strict,
+        filter=filter,
         truthy=truthy,
     )
     args = IOArguments(
@@ -218,12 +219,15 @@ def parse(
         MongoStreamer(args.output.table) as output_table,
     ):
         # parse dump data
-        input_items = args.input.ready_inputs(WikidataJsonDump(str(input_file.path)), input_total)
+        input_data = args.input.ready_inputs(WikidataJsonDump(f"{input_file.path}"))
         logger.info(f"Parse from [{input_file.opt}] to [{output_table.opt}]")
-        logger.info(f"- amount: total={input_total}, items={input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
-        logger.info(f"- option: lang1={args.option.lang1}, lang2={args.option.lang2}, strict={args.option.strict}, truthy={args.option.truthy}")
-        with tqdm(total=input_items.total, unit="item", pre="=>", desc="parsing", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
-            for batch in input_items.items:
+        logger.info(f"- [input] total={args.input.total} | start={args.input.start} | limit={args.input.limit}"
+                    f" | {type(input_data).__name__}={input_data.num_item}{f'x{args.input.batch}ea' if input_data.has_batch_items() else ''}")
+        logger.info(f"- [output] table.reset={args.output.table.reset} | table.timeout={args.output.table.timeout}")
+        logger.info(f"- [option] processor={args.option.processor} | lang1={args.option.lang1} | lang2={args.option.lang2}"
+                    f" | filter={args.option.filter} | truthy={args.option.truthy}")
+        with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="parsing", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
+            for batch in input_data.items:
                 if args.option.processor == "parse_many1" or args.env.max_workers <= 1:
                     parse_many1(batch=batch, args=args, writer=output_table)
                 elif args.option.processor == "parse_many2":
@@ -243,4 +247,4 @@ def parse(
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
-            logger.info(f"Export {prog.n}/{input_total} rows to [{output_file.opt}]")
+            logger.info(f"Export {prog.n}/{args.input.total} rows to [{output_file.opt}]")

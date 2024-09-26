@@ -102,13 +102,13 @@ def check(
             home=output_file_home,
             name=new_path(output_file_name, post=env.time_stamp),
             mode=output_file_mode,
-            strict=True,
+            required=True,
         ),
         table=TableOption(
             home=output_table_home,
             name=output_table_name,
             reset=output_table_reset,
-            strict=True,
+            required=True,
         ),
     )
     args = IOArguments(

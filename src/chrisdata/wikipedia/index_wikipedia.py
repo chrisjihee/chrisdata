@@ -106,9 +106,9 @@ class IndexApp:
                 reader = Streamer.first_usable(input_table, input_file)
                 input_items: InputOption.InputItems = args.input.ready_inputs(reader, len(reader))
                 logger.info(f"Index from [{reader.opt}] to [{writer.opt}]")
-                logger.info(f"- amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
+                logger.info(f"- amount: {input_items.num_item}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
                 progress, interval = (
-                    tqdm(input_items.items, total=input_items.total, unit="batch", pre="*", desc="indexing"),
+                    tqdm(input_items.items, total=input_items.num_item, unit="batch", pre="*", desc="indexing"),
                     math.ceil(args.input.inter / args.input.batch)
                 )
                 for i, x in enumerate(progress):

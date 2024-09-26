@@ -310,12 +310,12 @@ class SearchApp:
                 input_items: InputOption.InputItems = args.input.ready_inputs(reader, len(reader))
                 logger.info(f"Run SearchApp")
                 logger.info(f"- from: [{type(reader).__name__}] [{reader.opt}]({len(reader)})")
-                logger.info(f"  => amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
+                logger.info(f"  => amount: {input_items.num_item}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
                 logger.info(f"- with: [{type(input_index).__name__}] [{input_index.opt}]({len(input_index)})")
                 logger.info(f"  => filter: set_black_prop={args.filter.set_black_prop}, ...")  # TODO: Bridge Entity가 없으면 black_prop를 줄여보자!
                 logger.info(f"- into: [{type(writer).__name__}] [{writer.opt}]({len(writer)})")
                 progress, interval = (
-                    tqdm(input_items.items, total=input_items.total, unit="batch", pre="*", desc="searching"),
+                    tqdm(input_items.items, total=input_items.num_item, unit="batch", pre="*", desc="searching"),
                     math.ceil(args.input.inter / args.input.batch)
                 )
                 relation_cache = dict()
@@ -398,7 +398,7 @@ class ExportApp:
                     name=output_file_name,
                     mode=output_file_mode,
                     reset=output_file_reset,
-                    strict=True,
+                    required=True,
                 ),
             )
             args = IOArguments(
@@ -422,10 +422,10 @@ class ExportApp:
                 input_items: InputOption.InputItems = args.input.ready_inputs(reader, len(reader))
                 logger.info(f"Run ExportApp")
                 logger.info(f"- from: [{type(reader).__name__}] [{reader.opt}]({len(reader)})")
-                logger.info(f"  => amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
+                logger.info(f"  => amount: {input_items.num_item}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
                 logger.info(f"- into: [{type(writer).__name__}] [{writer.opt}]({len(writer)})")
                 progress, interval = (
-                    tqdm(input_items.items, total=input_items.total, unit="batch", pre="*", desc="exporting"),
+                    tqdm(input_items.items, total=input_items.num_item, unit="batch", pre="*", desc="exporting"),
                     math.ceil(args.input.inter / args.input.batch)
                 )
                 for i, x in enumerate(progress):
