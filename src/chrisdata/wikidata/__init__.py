@@ -9,7 +9,7 @@ from qwikidata.entity import WikidataItem, WikidataProperty, WikidataLexeme, Cla
 from qwikidata.snak import WikidataSnak
 from qwikidata.typedefs import LanguageCode
 
-from chrisbase.data import AppTyper, TypedData
+from chrisbase.data import AppTyper, TypedData, IOArguments
 
 app = AppTyper()
 logger = logging.getLogger(__name__)
@@ -24,9 +24,9 @@ def datavalue_dict(x: WikidataSnak):
 
 
 class ClaimMixinEx(ClaimsMixin):
-    def get_claims(self, args: "ParseArguments") -> list[dict]:
+    def get_claims(self, args: IOArguments) -> list[dict]:
         claims = list()
-        claim_groups = self.get_claim_groups() if not args.custom.truthy else self.get_truthy_claim_groups()
+        claim_groups = self.get_claim_groups() if not args.option.truthy else self.get_truthy_claim_groups()
         for claim_group in claim_groups.values():
             for claim in claim_group:
                 claim: WikidataClaim = claim

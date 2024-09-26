@@ -4,40 +4,26 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Iterable
 
-import pandas as pd
 import typer
 from qwikidata.json_dump import WikidataJsonDump
 
 from chrisbase.data import FileStreamer, MongoStreamer
-from chrisbase.data import IOArguments, InputOption, OutputOption, FileOption, TableOption
+from chrisbase.data import InputOption, OutputOption, FileOption, TableOption
 from chrisbase.data import JobTimer, ProjectEnv, OptionData
 from chrisbase.io import LoggingFormat, new_path
-from chrisbase.util import to_dataframe, mute_tqdm_cls
+from chrisbase.util import mute_tqdm_cls
 from chrisdata.wikidata import *
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class CustomOption(OptionData):
+class ParseWikidataOption(OptionData):
     processor: str = field(default="parse_many1")
     lang1: str = field(default="ko")
     lang2: str = field(default="en")
     strict: bool = field(default=False)
     truthy: bool = field(default=False)
-
-
-@dataclass
-class ProgramArguments(IOArguments):
-    custom: CustomOption | None = field(default=None)
-
-    def dataframe(self, columns=None) -> pd.DataFrame:
-        if not columns:
-            columns = [self.data_type, "value"]
-        return pd.concat([
-            super().dataframe(columns=columns),
-            to_dataframe(columns=columns, raw=self.custom, data_prefix="custom"),
-        ]).reset_index(drop=True)
 
 
 def parse_one(x: dict, args: IOArguments):
@@ -53,8 +39,8 @@ def parse_one(x: dict, args: IOArguments):
             logger.info("*" * 120)
         return r
 
-    lang1_code = LanguageCode(args.custom.lang1)
-    lang2_code = LanguageCode(args.custom.lang2)
+    lang1_code = LanguageCode(args.option.lang1)
+    lang2_code = LanguageCode(args.option.lang2)
     row = WikidataUnit(
         _id=x['id'],
         ns=x['ns'],
@@ -67,7 +53,7 @@ def parse_one(x: dict, args: IOArguments):
         row.label2 = item.get_label(lang2_code)
         row.title1 = item.get_wiki_title(lang1_code)
         row.title2 = item.get_wiki_title(lang2_code)
-        if args.custom.strict and (not row.label1 or not row.title1):
+        if args.option.strict and (not row.label1 or not row.title1):
             return debug_return(None)
         row.alias1 = item.get_aliases(lang1_code)
         row.alias2 = item.get_aliases(lang2_code)
@@ -97,7 +83,7 @@ def parse_one(x: dict, args: IOArguments):
         lexm = WikidataLexemeEx(x)
         row.label1 = lexm.get_lemma(lang1_code)
         row.label2 = lexm.get_lemma(lang2_code)
-        if args.custom.strict and not row.label1:
+        if args.option.strict and not row.label1:
             return debug_return(None)
         row.descr1 = lexm.get_gloss(lang1_code)
         row.descr2 = lexm.get_gloss(lang2_code)
@@ -154,7 +140,7 @@ def parse(
         input_start: int = typer.Option(default=0),
         input_limit: int = typer.Option(default=-1),  # TODO: change to -1
         input_batch: int = typer.Option(default=1000),  # TODO: change to 1000
-        input_inter: int = typer.Option(default=10000),  # TODO: change to 10000
+        input_inter: int = typer.Option(default=1000),  # TODO: change to 10000
         input_total: int = typer.Option(default=105485440),  # https://www.wikidata.org/wiki/Wikidata:Statistics
         input_file_home: str = typer.Option(default="input/Wikidata"),
         input_file_name: str = typer.Option(default="wikidata-20230911-all.json.bz2"),
@@ -165,12 +151,12 @@ def parse(
         output_table_home: str = typer.Option(default="localhost:6382/Wikidata"),
         output_table_name: str = typer.Option(default="wikidata-20230911-all-parse-ko-en"),
         output_table_reset: bool = typer.Option(default=False),
-        # other
+        # option
         processor: str = typer.Option(default="parse_many1"),
-        filter_lang1: str = typer.Option(default="ko"),
-        filter_lang2: str = typer.Option(default="en"),
-        filter_strict: bool = typer.Option(default=False),
-        filter_truthy: bool = typer.Option(default=False),
+        lang1: str = typer.Option(default="ko"),
+        lang2: str = typer.Option(default="en"),
+        strict: bool = typer.Option(default=False),
+        truthy: bool = typer.Option(default=False),
 ):
     env = ProjectEnv(
         project=project,
@@ -179,7 +165,7 @@ def parse(
         logging_home=logging_home,
         logging_file=logging_file,
         message_level=logging.INFO,
-        message_format=LoggingFormat.BRIEF_00,  # if not debugging else LoggingFormat.DEBUG_36,
+        message_format=LoggingFormat.CHECK_00,  # if not debugging else LoggingFormat.DEBUG_36,
         max_workers=1 if debugging else max(max_workers, 1),
     )
     input_opt = InputOption(
@@ -207,19 +193,18 @@ def parse(
             strict=True,
         )
     )
-    parse_opt = CustomOption(
+    parse_opt = ParseWikidataOption(
         processor=processor,
-        lang1=filter_lang1,
-        lang2=filter_lang2,
-        strict=filter_strict,
-        truthy=filter_truthy,
+        lang1=lang1,
+        lang2=lang2,
+        strict=strict,
+        truthy=truthy,
     )
-    args = ProgramArguments(
+    args = IOArguments(
         env=env,
         input=input_opt,
         output=output_opt,
-        other="other",
-        custom=parse_opt,
+        option=parse_opt,
     )
     tqdm = mute_tqdm_cls()
     assert args.input.file, "input.file is required"
@@ -235,18 +220,18 @@ def parse(
         # parse dump data
         input_items = args.input.ready_inputs(WikidataJsonDump(str(input_file.path)), input_total)
         logger.info(f"Parse from [{input_file.opt}] to [{output_table.opt}]")
-        logger.info(f"- amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
-        logger.info(f"- filter: lang1={args.custom.lang1}, lang2={args.custom.lang2}, strict={args.custom.strict}, truthy={args.custom.truthy}")
+        logger.info(f"- amount: total={input_total}, items={input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
+        logger.info(f"- option: lang1={args.option.lang1}, lang2={args.option.lang2}, strict={args.option.strict}, truthy={args.option.truthy}")
         with tqdm(total=input_items.total, unit="item", pre="=>", desc="parsing", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for batch in input_items.items:
                 if args.env.max_workers <= 1:
                     parse_many1(batch=batch, args=args, writer=output_table)
-                elif args.custom.processor == "parse_many2":
+                elif args.option.processor == "parse_many2":
                     parse_many2(batch=batch, args=args, writer=output_table)
-                elif args.custom.processor == "parse_many3":
+                elif args.option.processor == "parse_many3":
                     parse_many3(batch=batch, args=args, writer=output_table)
                 else:
-                    assert False, f"Unknown processor: {args.custom.processor}"
+                    assert False, f"Unknown processor: {args.option.processor}"
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
