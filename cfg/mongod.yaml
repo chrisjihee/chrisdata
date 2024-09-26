@@ -1,6 +1,6 @@
 net:
   bindIp: 127.0.0.1
-  port: 6382
+  port: 8800
 storage:
   dbPath: "mongodb/data"
 systemLog:
