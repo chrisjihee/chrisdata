@@ -28,7 +28,7 @@ def extract(
         input_table_home: str = typer.Option(default="localhost:6382/Wikidata"),
         input_table_name: str = typer.Option(default="wikidata-20230911-all-parse-ko-en"),
         # output
-        output_file_home: str = typer.Option(default="output/Wikidata"),
+        output_file_home: str = typer.Option(default="output/wikidata"),
         output_file_name: str = typer.Option(default="wikidata-20230911-all-extract.jsonl"),
         output_file_mode: str = typer.Option(default="w"),
         output_table_home: str = typer.Option(default="localhost:6382/Wikidata"),

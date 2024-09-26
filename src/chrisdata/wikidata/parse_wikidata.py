@@ -142,10 +142,10 @@ def parse(
         input_batch: int = typer.Option(default=1000),
         input_inter: int = typer.Option(default=10000),
         input_total: int = typer.Option(default=105485440),  # https://www.wikidata.org/wiki/Wikidata:Statistics
-        input_file_home: str = typer.Option(default="input/Wikidata"),
+        input_file_home: str = typer.Option(default="input/wikidata"),
         input_file_name: str = typer.Option(default="wikidata-20230911-all.json.bz2"),
         # output
-        output_file_home: str = typer.Option(default="output/Wikidata"),
+        output_file_home: str = typer.Option(default="output/wikidata"),
         output_file_name: str = typer.Option(default="wikidata-20230911-all-parse-ko-en.jsonl"),
         output_file_mode: str = typer.Option(default="w"),
         output_table_home: str = typer.Option(default="localhost:8800/Wikidata"),
