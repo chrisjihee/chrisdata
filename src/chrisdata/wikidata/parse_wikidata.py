@@ -42,7 +42,7 @@ def parse_one(x: dict, args: IOArguments):
     lang1_code = LanguageCode(args.option.lang1)
     lang2_code = LanguageCode(args.option.lang2)
     row = WikidataUnit(
-        _id=x['id'],
+        _id=x['id'],  # TODO: 정렬을 위해 0을 붙여줄 필요가 있음: _id(zero starting) and id(original)
         ns=x['ns'],
         type=x['type'],
         time=x['modified'],
@@ -132,7 +132,7 @@ def parse(
         # env
         project: str = typer.Option(default="WiseData"),
         job_name: str = typer.Option(default="parse_wikidata"),
-        logging_home: str = typer.Option(default="output/parse_wikidata"),
+        logging_home: str = typer.Option(default="output/wikidata/parse"),
         logging_file: str = typer.Option(default="logging.out"),
         max_workers: int = typer.Option(default=1),
         debugging: bool = typer.Option(default=False),

@@ -1,6 +1,7 @@
 import logging
 import math
 from dataclasses import dataclass, field
+from typing import Optional
 
 from dataclasses_json import DataClassJsonMixin
 from qwikidata.claim import WikidataClaim
@@ -126,5 +127,66 @@ class TripleInWiki(TypedData):
         self.pmi = self.calc_pmi(self.hits, self.entity1.hits, self.entity2.hits)
 
 
+@dataclass
+class SingleTriple(TypedData):
+    entity1: EntityInWiki
+    entity2: EntityInWiki
+    relation: Relation
+    hits: int = field(default=0)
+    pmi: float = field(default=0.0)
+    score: float = field(default=0.0)
+
+    @staticmethod
+    def calc_pmi(h_xy: float, h_x: float, h_y: float, n: int = 10000, e: float = 0.0000001) -> float:
+        p_xy = h_xy / n
+        p_x = h_x / n
+        p_y = h_y / n
+        return math.log2((p_xy + e) / ((p_x * p_y) + e))
+
+    def __post_init__(self):
+        if self.score is None:
+            self.score = 0.0
+        self.pmi = self.calc_pmi(self.hits, self.entity1.hits, self.entity2.hits)
+
+
+@dataclass
+class DoubleTriple(TypedData):
+    entity1: EntityInWiki
+    entity2: EntityInWiki
+    entity3: EntityInWiki
+    relation1: Relation
+    relation2: Relation
+    hits1: int = field(default=0)
+    hits2: int = field(default=0)
+    pmi1: float = field(default=0.0)
+    pmi2: float = field(default=0.0)
+    score1: float = field(default=0.0)
+    score2: float = field(default=0.0)
+
+    @staticmethod
+    def from_triples(
+            triple1: "SingleTriple",
+            triple2: "SingleTriple"
+    ) -> Optional["DoubleTriple"]:
+        if (triple2.entity2.entity != triple1.entity1.entity
+                and triple2.relation.id != triple1.relation.id):
+            return DoubleTriple(
+                entity1=triple1.entity1,
+                entity2=triple1.entity2,
+                entity3=triple2.entity2,
+                relation1=triple1.relation,
+                relation2=triple2.relation,
+                hits1=triple1.hits,
+                hits2=triple2.hits,
+                score1=triple1.score,
+                score2=triple2.score,
+                pmi1=triple1.pmi,
+                pmi2=triple2.pmi,
+            )
+        else:
+            return None
+
+
 import chrisdata.wikidata.parse_wikidata
+import chrisdata.wikidata.extract_wikidata2
 import chrisdata.wikidata.restore_wikidata
