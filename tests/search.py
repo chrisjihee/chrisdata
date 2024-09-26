@@ -113,10 +113,10 @@ def search(
         project=project,
         job_name=job_name,
         debugging=debugging,
-        output_home=output_home,
+        logging_home=output_home,
         logging_file=logging_file,
-        msg_level=logging.DEBUG if debugging else logging.INFO,
-        msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_36,
+        message_level=logging.DEBUG if debugging else logging.INFO,
+        message_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_36,
     )
     data_opt = DataOption(
         home=data_home,

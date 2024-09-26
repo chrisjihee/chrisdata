@@ -265,10 +265,10 @@ def crawl(
         project=project,
         job_name=job_name,
         debugging=debugging,
-        output_home=output_home,
+        logging_home=output_home,
         logging_file=logging_file,
-        msg_level=logging.DEBUG if debugging else logging.INFO,
-        msg_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
+        message_level=logging.DEBUG if debugging else logging.INFO,
+        message_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
         max_workers=1 if debugging else max(max_workers, 1),
     )
     args = ProgramArguments(
@@ -293,7 +293,7 @@ def crawl(
         ),
     )
     tqdm = mute_tqdm_cls()
-    output_file = (args.env.output_home / f"{args.data.name.stem}.jsonl")
+    output_file = (args.env.logging_home / f"{args.data.name.stem}.jsonl")
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("wikipediaapi").setLevel(logging.WARNING)

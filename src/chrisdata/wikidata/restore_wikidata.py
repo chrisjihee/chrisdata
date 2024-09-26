@@ -56,10 +56,10 @@ def restore(
         project=project,
         job_name=job_name,
         debugging=debugging,
-        output_home=output_home,
+        logging_home=output_home,
         logging_file=logging_file,
-        msg_level=logging.INFO,  # if not debugging else logging.DEBUG,
-        msg_format=LoggingFormat.CHECK_24,  # if not debugging else LoggingFormat.DEBUG_24,
+        message_level=logging.INFO,  # if not debugging else logging.DEBUG,
+        message_format=LoggingFormat.CHECK_24,  # if not debugging else LoggingFormat.DEBUG_24,
     )
     data_opt = InputOption(
         start=data_start,
@@ -81,7 +81,7 @@ def restore(
         data=data_opt,
     )
     tqdm = mute_tqdm_cls()
-    save_file = (args.env.output_home / f"{table_name}-{args.env.time_stamp}.jsonl")
+    save_file = (args.env.logging_home / f"{table_name}-{args.env.time_stamp}.jsonl")
     assert args.data.file, "data.file is required"
     assert args.data.table, "data.table is required"
 

@@ -26,7 +26,7 @@ def datavalue_dict(x: WikidataSnak):
 class ClaimMixinEx(ClaimsMixin):
     def get_claims(self, args: "ParseArguments") -> list[dict]:
         claims = list()
-        claim_groups = self.get_claim_groups() if not args.filter.truthy else self.get_truthy_claim_groups()
+        claim_groups = self.get_claim_groups() if not args.parse.truthy else self.get_truthy_claim_groups()
         for claim_group in claim_groups.values():
             for claim in claim_group:
                 claim: WikidataClaim = claim
