@@ -83,8 +83,12 @@ def parse_one(x: dict, args: ParseArguments):
         row.alias2 = item.get_aliases(lang2_code)
         row.descr1 = item.get_description(lang1_code)
         row.descr2 = item.get_description(lang2_code)
-        row.claims = item.get_claims(args)
-        return debug_return(row)
+        try:
+            row.claims = item.get_claims(args)
+            return debug_return(row)
+        except Exception as e:
+            logger.error(f"Error on parse_one(id={x['id']}, ns={x['ns']}, type={x['type']}): [{type(e).__name__}] {e}")
+            return debug_return(None)
     elif row.type == "property":
         prop = WikidataPropertyEx(x)
         row.label1 = prop.get_label(lang1_code)
@@ -93,8 +97,12 @@ def parse_one(x: dict, args: ParseArguments):
         row.alias2 = prop.get_aliases(lang2_code)
         row.descr1 = prop.get_description(lang1_code)
         row.descr2 = prop.get_description(lang2_code)
-        row.claims = prop.get_claims(args)
-        return debug_return(row)
+        try:
+            row.claims = prop.get_claims(args)
+            return debug_return(row)
+        except Exception as e:
+            logger.error(f"Error on parse_one(id={x['id']}, ns={x['ns']}, type={x['type']}): [{type(e).__name__}] {e}")
+            return debug_return(None)
     elif row.type == "lexeme":
         lexm = WikidataLexemeEx(x)
         row.label1 = lexm.get_lemma(lang1_code)
@@ -103,8 +111,12 @@ def parse_one(x: dict, args: ParseArguments):
             return debug_return(None)
         row.descr1 = lexm.get_gloss(lang1_code)
         row.descr2 = lexm.get_gloss(lang2_code)
-        row.claims = lexm.get_claims(args)
-        return debug_return(row)
+        try:
+            row.claims = lexm.get_claims(args)
+            return debug_return(row)
+        except Exception as e:
+            logger.error(f"Error on parse_one(id={x['id']}, ns={x['ns']}, type={x['type']}): [{type(e).__name__}] {e}")
+            return debug_return(None)
     return debug_return(None)
 
 
