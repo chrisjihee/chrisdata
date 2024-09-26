@@ -237,7 +237,7 @@ def parse(
                 if args.env.max_workers <= 1:
                     parse_many1(batch=batch, args=args, writer=output_table)
                 else:
-                    parse_many2(batch=batch, args=args, writer=output_table)
+                    parse_many3(batch=batch, args=args, writer=output_table)
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
