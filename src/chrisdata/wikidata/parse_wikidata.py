@@ -135,12 +135,12 @@ def parse(
         logging_home: str = typer.Option(default="output/parse_wikidata"),
         logging_file: str = typer.Option(default="logging.out"),
         max_workers: int = typer.Option(default=1),
-        debugging: bool = typer.Option(default=False),  # TODO: change to False
+        debugging: bool = typer.Option(default=False),
         # input
         input_start: int = typer.Option(default=0),
-        input_limit: int = typer.Option(default=-1),  # TODO: change to -1
-        input_batch: int = typer.Option(default=1000),  # TODO: change to 1000
-        input_inter: int = typer.Option(default=1000),  # TODO: change to 10000
+        input_limit: int = typer.Option(default=-1),
+        input_batch: int = typer.Option(default=1000),
+        input_inter: int = typer.Option(default=10000),
         input_total: int = typer.Option(default=105485440),  # https://www.wikidata.org/wiki/Wikidata:Statistics
         input_file_home: str = typer.Option(default="input/Wikidata"),
         input_file_name: str = typer.Option(default="wikidata-20230911-all.json.bz2"),
@@ -224,7 +224,7 @@ def parse(
         logger.info(f"- option: lang1={args.option.lang1}, lang2={args.option.lang2}, strict={args.option.strict}, truthy={args.option.truthy}")
         with tqdm(total=input_items.total, unit="item", pre="=>", desc="parsing", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for batch in input_items.items:
-                if args.env.max_workers <= 1:
+                if args.option.processor == "parse_many1" or args.env.max_workers <= 1:
                     parse_many1(batch=batch, args=args, writer=output_table)
                 elif args.option.processor == "parse_many2":
                     parse_many2(batch=batch, args=args, writer=output_table)
