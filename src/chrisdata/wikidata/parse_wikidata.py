@@ -175,8 +175,8 @@ def parse(
         debugging=debugging,
         output_home=output_home,
         logging_file=logging_file,
-        msg_level=logging.INFO,  # if not debugging else logging.DEBUG,
-        msg_format=LoggingFormat.CHECK_36,  # if not debugging else LoggingFormat.DEBUG_24,
+        msg_level=logging.INFO,
+        msg_format=LoggingFormat.BRIEF_00,  # if not debugging else LoggingFormat.DEBUG_36,
         max_workers=1 if debugging else max(max_workers, 1),
     )
     input_opt = InputOption(
