@@ -1,6 +1,5 @@
 # for elasticsearch8
-mkdir elasticsearch8
-cd elasticsearch8 || exit
+mkdir elasticsearch8; cd elasticsearch8
 if [ "$(uname)" = "Linux" ]; then
   aria2c https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.10.2-linux-x86_64.tar.gz
 elif [ "$(uname)" = "Darwin" ]; then

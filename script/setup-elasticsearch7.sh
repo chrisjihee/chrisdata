@@ -1,6 +1,5 @@
 # for elasticsearch7
-mkdir elasticsearch7
-cd elasticsearch7 || exit
+mkdir elasticsearch7; cd elasticsearch7
 if [ "$(uname)" = "Linux" ]; then
   aria2c https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.17.10-linux-x86_64.tar.gz
 elif [ "$(uname)" = "Darwin" ]; then
