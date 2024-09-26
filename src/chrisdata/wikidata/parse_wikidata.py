@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class FilterOption(OptionData):
+class CustomOption(OptionData):
+    processor: str = field(default="parse_many1")
     lang1: str = field(default="ko")
     lang2: str = field(default="en")
     strict: bool = field(default=False)
@@ -27,30 +28,19 @@ class FilterOption(OptionData):
 
 
 @dataclass
-class ParseArguments(IOArguments):
-    filter: FilterOption | None = field(default=None)
-
-    def __post_init__(self):
-        super().__post_init__()
+class ProgramArguments(IOArguments):
+    custom: CustomOption | None = field(default=None)
 
     def dataframe(self, columns=None) -> pd.DataFrame:
         if not columns:
             columns = [self.data_type, "value"]
         return pd.concat([
-            to_dataframe(columns=columns, raw=self.env, data_prefix="env"),
-            to_dataframe(columns=columns, raw=self.input, data_prefix="input", data_exclude=["file", "table", "index"]),
-            to_dataframe(columns=columns, raw=self.input.file, data_prefix="input.file") if self.input.file else None,
-            to_dataframe(columns=columns, raw=self.input.table, data_prefix="input.table") if self.input.table else None,
-            to_dataframe(columns=columns, raw=self.input.index, data_prefix="input.index") if self.input.index else None,
-            to_dataframe(columns=columns, raw=self.output, data_prefix="input", data_exclude=["file", "table", "index"]),
-            to_dataframe(columns=columns, raw=self.output.file, data_prefix="output.file") if self.output.file else None,
-            to_dataframe(columns=columns, raw=self.output.table, data_prefix="output.table") if self.output.table else None,
-            to_dataframe(columns=columns, raw=self.output.index, data_prefix="output.index") if self.output.index else None,
-            to_dataframe(columns=columns, raw=self.filter, data_prefix="filter"),
+            super().dataframe(columns=columns),
+            to_dataframe(columns=columns, raw=self.custom, data_prefix="custom"),
         ]).reset_index(drop=True)
 
 
-def parse_one(x: dict, args: ParseArguments):
+def parse_one(x: dict, args: IOArguments):
     if args.env.debugging:
         logger.info('')
         logger.info("*" * 120)
@@ -63,8 +53,8 @@ def parse_one(x: dict, args: ParseArguments):
             logger.info("*" * 120)
         return r
 
-    lang1_code = LanguageCode(args.filter.lang1)
-    lang2_code = LanguageCode(args.filter.lang2)
+    lang1_code = LanguageCode(args.custom.lang1)
+    lang2_code = LanguageCode(args.custom.lang2)
     row = WikidataUnit(
         _id=x['id'],
         ns=x['ns'],
@@ -77,7 +67,7 @@ def parse_one(x: dict, args: ParseArguments):
         row.label2 = item.get_label(lang2_code)
         row.title1 = item.get_wiki_title(lang1_code)
         row.title2 = item.get_wiki_title(lang2_code)
-        if args.filter.strict and (not row.label1 or not row.title1):
+        if args.custom.strict and (not row.label1 or not row.title1):
             return debug_return(None)
         row.alias1 = item.get_aliases(lang1_code)
         row.alias2 = item.get_aliases(lang2_code)
@@ -107,7 +97,7 @@ def parse_one(x: dict, args: ParseArguments):
         lexm = WikidataLexemeEx(x)
         row.label1 = lexm.get_lemma(lang1_code)
         row.label2 = lexm.get_lemma(lang2_code)
-        if args.filter.strict and not row.label1:
+        if args.custom.strict and not row.label1:
             return debug_return(None)
         row.descr1 = lexm.get_gloss(lang1_code)
         row.descr2 = lexm.get_gloss(lang2_code)
@@ -120,7 +110,7 @@ def parse_one(x: dict, args: ParseArguments):
     return debug_return(None)
 
 
-def parse_many1(batch: Iterable[dict], args: ParseArguments, writer: MongoStreamer):
+def parse_many1(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer):
     if not writer.opt.reset:
         batch = [x for x in batch if writer.count({"_id": x['id']}) == 0]
     rows = [parse_one(x, args) for x in batch]
@@ -129,7 +119,7 @@ def parse_many1(batch: Iterable[dict], args: ParseArguments, writer: MongoStream
         writer.table.insert_many(rows)
 
 
-def parse_many2(batch: Iterable[dict], args: ParseArguments, writer: MongoStreamer):
+def parse_many2(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer):
     if not writer.opt.reset:
         batch = [x for x in batch if writer.count({"_id": x['id']}) == 0]
     with ProcessPoolExecutor(max_workers=args.env.max_workers) as exe:
@@ -140,7 +130,7 @@ def parse_many2(batch: Iterable[dict], args: ParseArguments, writer: MongoStream
         writer.table.insert_many(rows)
 
 
-def parse_many3(batch: Iterable[dict], args: ParseArguments, writer: MongoStreamer):
+def parse_many3(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer):
     if not writer.opt.reset:
         batch = [x for x in batch if writer.count({"_id": x['id']}) == 0]
     with multiprocessing.Pool(processes=args.env.max_workers) as pool:
@@ -156,7 +146,7 @@ def parse(
         # env
         project: str = typer.Option(default="WiseData"),
         job_name: str = typer.Option(default="parse_wikidata"),
-        output_home: str = typer.Option(default="output/parse_wikidata"),
+        logging_home: str = typer.Option(default="output/parse_wikidata"),
         logging_file: str = typer.Option(default="logging.out"),
         max_workers: int = typer.Option(default=1),
         debugging: bool = typer.Option(default=False),  # TODO: change to False
@@ -175,7 +165,8 @@ def parse(
         output_table_home: str = typer.Option(default="localhost:6382/Wikidata"),
         output_table_name: str = typer.Option(default="wikidata-20230911-all-parse-ko-en"),
         output_table_reset: bool = typer.Option(default=False),
-        # filter
+        # other
+        processor: str = typer.Option(default="parse_many1"),
         filter_lang1: str = typer.Option(default="ko"),
         filter_lang2: str = typer.Option(default="en"),
         filter_strict: bool = typer.Option(default=False),
@@ -185,10 +176,10 @@ def parse(
         project=project,
         job_name=job_name,
         debugging=debugging,
-        output_home=output_home,
+        logging_home=logging_home,
         logging_file=logging_file,
-        msg_level=logging.INFO,
-        msg_format=LoggingFormat.BRIEF_00,  # if not debugging else LoggingFormat.DEBUG_36,
+        message_level=logging.INFO,
+        message_format=LoggingFormat.BRIEF_00,  # if not debugging else LoggingFormat.DEBUG_36,
         max_workers=1 if debugging else max(max_workers, 1),
     )
     input_opt = InputOption(
@@ -216,17 +207,19 @@ def parse(
             strict=True,
         )
     )
-    filter_opt = FilterOption(
+    parse_opt = CustomOption(
+        processor=processor,
         lang1=filter_lang1,
         lang2=filter_lang2,
         strict=filter_strict,
         truthy=filter_truthy,
     )
-    args = ParseArguments(
+    args = ProgramArguments(
         env=env,
         input=input_opt,
         output=output_opt,
-        filter=filter_opt,
+        other="other",
+        custom=parse_opt,
     )
     tqdm = mute_tqdm_cls()
     assert args.input.file, "input.file is required"
@@ -243,13 +236,17 @@ def parse(
         input_items = args.input.ready_inputs(WikidataJsonDump(str(input_file.path)), input_total)
         logger.info(f"Parse from [{input_file.opt}] to [{output_table.opt}]")
         logger.info(f"- amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
-        logger.info(f"- filter: lang1={args.filter.lang1}, lang2={args.filter.lang2}, strict={args.filter.strict}, truthy={args.filter.truthy}")
+        logger.info(f"- filter: lang1={args.custom.lang1}, lang2={args.custom.lang2}, strict={args.custom.strict}, truthy={args.custom.truthy}")
         with tqdm(total=input_items.total, unit="item", pre="=>", desc="parsing", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for batch in input_items.items:
                 if args.env.max_workers <= 1:
                     parse_many1(batch=batch, args=args, writer=output_table)
-                else:
+                elif args.custom.processor == "parse_many2":
+                    parse_many2(batch=batch, args=args, writer=output_table)
+                elif args.custom.processor == "parse_many3":
                     parse_many3(batch=batch, args=args, writer=output_table)
+                else:
+                    assert False, f"Unknown processor: {args.custom.processor}"
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
