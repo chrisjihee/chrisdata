@@ -1,3 +1,4 @@
+from itertools import groupby
 from typing import Iterable
 
 import typer
@@ -7,7 +8,7 @@ from chrisbase.data import FileStreamer, MongoStreamer
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption
 from chrisbase.data import JobTimer, ProjectEnv
 from chrisbase.io import LoggingFormat, new_path
-from chrisbase.util import mute_tqdm_cls
+from chrisbase.util import mute_tqdm_cls, grouped
 from chrisdata.wikidata import *
 
 logger = logging.getLogger(__name__)
@@ -49,28 +50,30 @@ def extract_one(x: dict, args: IOArguments, reader: MongoStreamer) -> TimeSensit
         claims = subject.claims
         subject: Entity = Entity.from_wikidata_item(subject)
         print("=" * 80)
-        print(f"* subject: {subject.to_dict()}")
-        for claim in claims:
-            relation: Relation = get_relation(claim['property'], reader)
+        print(f"* subject: {subject}")
+
+        grouped_claims = {k: list(vs) for k, vs in grouped(claims, key=lambda i: i['property'])}
+        for property, claim_group in grouped_claims.items():
+            relation: Relation = get_relation(property, reader)
             if not relation:
                 continue
-            print(f"  + relation={relation}")
-            datavalue: WikidataDatavalue = datavalue_dict_to_obj(claim['datavalue'])
-            print(f"    - datavalue={datavalue}")
-            if datavalue.datatype == "wikibase-entityid" and datavalue.value['entity-type'] == "item":
-                object: Entity = get_entity(datavalue.value['id'], reader)
-                if object:
-                    print(f"    - object={object.to_dict()}")
-            time_qualifiers = list()
-            for qualifier in claim['qualifiers']:
-                relation: Relation = get_relation(qualifier['property'], reader)
-                datavalue: WikidataDatavalue = datavalue_dict_to_obj(qualifier['datavalue'])
-                if relation and isinstance(datavalue, Time):
-                    time_qualifiers.append({"relation": relation, "datavalue": datavalue})
-            if time_qualifiers:
-                print(f"    - time_qualifiers:")
-                for qualifier in time_qualifiers:
-                    print(f"      + {qualifier['relation']} = {qualifier['datavalue']}")
+            num_claim = len(claim_group)
+            print(f"  + {relation}: #object={num_claim}")
+            for claim in claim_group:
+                datavalue: WikidataDatavalue = datavalue_dict_to_obj(claim['datavalue'])
+                object: Entity | None = None
+                if datavalue.datatype == "wikibase-entityid" and datavalue.value['entity-type'] == "item":
+                    object = get_entity(datavalue.value['id'], reader)
+                time_qualifiers = list()
+                for qualifier in claim['qualifiers']:
+                    relation: Relation = get_relation(qualifier['property'], reader)
+                    datavalue: WikidataDatavalue = datavalue_dict_to_obj(qualifier['datavalue'])
+                    if relation and isinstance(datavalue, Time):
+                        time_qualifiers.append({"relation": relation, "datavalue": datavalue})
+                print(f"    = [object] {datavalue} -> {object}")
+                if time_qualifiers:
+                    for qualifier in time_qualifiers:
+                        print(f"      - {qualifier['relation']} = {qualifier['datavalue']}")
             print()
     return None
 
