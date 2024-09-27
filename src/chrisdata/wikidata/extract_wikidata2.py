@@ -25,13 +25,13 @@ def extract(
         input_batch: int = typer.Option(default=1000),
         input_inter: int = typer.Option(default=5000),
         input_total: int = typer.Option(default=105485440),  # https://www.wikidata.org/wiki/Wikidata:Statistics  # TODO: Replace with (actual count)
-        input_table_home: str = typer.Option(default="localhost:6382/Wikidata"),
+        input_table_home: str = typer.Option(default="localhost:8800/Wikidata"),
         input_table_name: str = typer.Option(default="wikidata-20230911-all-parse-ko-en"),
         # output
         output_file_home: str = typer.Option(default="output/wikidata"),
         output_file_name: str = typer.Option(default="wikidata-20230911-all-extract.jsonl"),
         output_file_mode: str = typer.Option(default="w"),
-        output_table_home: str = typer.Option(default="localhost:6382/Wikidata"),
+        output_table_home: str = typer.Option(default="localhost:8800/Wikidata"),
         output_table_name: str = typer.Option(default="wikidata-20230911-all-extract"),
         output_table_reset: bool = typer.Option(default=True),
 ):
