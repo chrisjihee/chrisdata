@@ -1,3 +1,5 @@
+from typing import Iterable
+
 import typer
 
 from chrisbase.data import FileStreamer, MongoStreamer
@@ -8,6 +10,30 @@ from chrisbase.util import mute_tqdm_cls
 from chrisdata.wikidata import *
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class TimeSensitiveEntity(DataClassJsonMixin):
+    _id: str
+    id: str
+
+
+def extract_one(x: dict, args: IOArguments) -> TimeSensitiveEntity | None:
+    unit = WikidataUnit.from_dict(x)
+    if unit.type == "item":
+        print(unit)
+        # for claim in unit.claims:
+        #     print(claim)
+        pass
+    return None
+
+
+def extract_many(item: dict | Iterable[dict], args: IOArguments, writer: MongoStreamer, item_is_batch: bool = True):
+    batch = item if item_is_batch else [item]
+    rows = [extract_one(x, args) for x in batch]
+    rows = [row.to_dict() for row in rows if row]
+    if len(rows) > 0:
+        writer.table.insert_many(rows)
 
 
 @app.command()
@@ -46,9 +72,9 @@ def extract(
         max_workers=1 if debugging else max(max_workers, 1),
     )
     input_opt = InputOption(
-        start=input_start,
-        limit=input_limit if not debugging else 1000,
-        batch=input_batch if not debugging else 10,
+        start=input_start if not debugging else 10751,
+        limit=input_limit if not debugging else 10,
+        batch=input_batch if not debugging else 1,
         inter=input_inter if not debugging else 1,
         total=input_total,
         table=TableOption(
@@ -94,9 +120,8 @@ def extract(
                     f" | {type(input_data).__name__}={input_data.num_item}{f'x{args.input.batch}ea' if input_data.has_batch_items() else ''}")
         logger.info(f"- [output] table.reset={args.output.table.reset} | table.timeout={args.output.table.timeout}")
         with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="extracting", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
-            for batch in input_data.items:
-                for x in batch:
-                    logger.info(f"id={x['_id']}, label={x['label1'] or x['label2']}")
+            for item in input_data.items:
+                extract_many(item=item, args=args, writer=output_table, item_is_batch=input_data.has_batch_items())
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
