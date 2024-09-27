@@ -1,7 +1,7 @@
 from typing import Iterable
 
 import typer
-from qwikidata.datavalue import WikibaseEntityId
+from qwikidata.datavalue import WikibaseEntityId, Time
 
 from chrisbase.data import FileStreamer, MongoStreamer
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption
@@ -48,22 +48,30 @@ def extract_one(x: dict, args: IOArguments, reader: MongoStreamer) -> TimeSensit
     if subject.type == "item":
         claims = subject.claims
         subject: Entity = Entity.from_wikidata_item(subject)
+        print("=" * 80)
         print(f"* subject: {subject.to_dict()}")
         for claim in claims:
             relation: Relation = get_relation(claim['property'], reader)
             if not relation:
                 continue
-            print(f"  + relation={relation.to_dict()}")
-            datavalue: WikibaseEntityId = datavalue_dict_to_obj(claim['datavalue'])
-            # print(f"  - datavalue={claim['datavalue']}")
+            print(f"  + relation={relation}")
+            datavalue: WikidataDatavalue = datavalue_dict_to_obj(claim['datavalue'])
             print(f"    - datavalue={datavalue}")
             if datavalue.datatype == "wikibase-entityid" and datavalue.value['entity-type'] == "item":
                 object: Entity = get_entity(datavalue.value['id'], reader)
                 if object:
                     print(f"    - object={object.to_dict()}")
-            qualifiers = claim['qualifiers']
-            print(f"    - qualifiers={qualifiers}")
-            # print()
+            time_qualifiers = list()
+            for qualifier in claim['qualifiers']:
+                relation: Relation = get_relation(qualifier['property'], reader)
+                datavalue: WikidataDatavalue = datavalue_dict_to_obj(qualifier['datavalue'])
+                if relation and isinstance(datavalue, Time):
+                    time_qualifiers.append({"relation": relation, "datavalue": datavalue})
+            if time_qualifiers:
+                print(f"    - time_qualifiers:")
+                for qualifier in time_qualifiers:
+                    print(f"      + {qualifier['relation']} = {qualifier['datavalue']}")
+            print()
     return None
 
 

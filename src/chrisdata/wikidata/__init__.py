@@ -5,7 +5,7 @@ from typing import Optional
 
 from dataclasses_json import DataClassJsonMixin
 from qwikidata.claim import WikidataClaim
-from qwikidata.datavalue import _DATAVALUE_TYPE_TO_CLASS
+from qwikidata.datavalue import _DATAVALUE_TYPE_TO_CLASS, WikidataDatavalue
 from qwikidata.entity import WikidataItem, WikidataProperty, WikidataLexeme, ClaimsMixin
 from qwikidata.snak import WikidataSnak
 from qwikidata.typedefs import LanguageCode
@@ -17,7 +17,7 @@ app = AppTyper()
 logger = logging.getLogger(__name__)
 
 
-def datavalue_dict_to_obj(x: dict):
+def datavalue_dict_to_obj(x: dict) -> WikidataDatavalue:
     return _DATAVALUE_TYPE_TO_CLASS[x['type']](x)
 
 
