@@ -15,7 +15,7 @@ entity_cache: dict[str, Entity | None] = dict()
 relation_cache: dict[str, Relation | None] = dict()
 
 
-def get_entity(_id: str, reader: MongoStreamer):
+def get_entity(_id: str, reader: MongoStreamer) -> Entity | None:
     if _id not in entity_cache:
         row: dict | None = reader.table.find_one({'_id': _id})
         if not row:
@@ -26,7 +26,7 @@ def get_entity(_id: str, reader: MongoStreamer):
     return entity_cache[_id]
 
 
-def get_relation(_id: str, reader: MongoStreamer):
+def get_relation(_id: str, reader: MongoStreamer) -> Relation | None:
     if _id not in relation_cache:
         row: dict | None = reader.table.find_one({'_id': _id})
         if not row:
@@ -46,21 +46,24 @@ class TimeSensitiveEntity(DataClassJsonMixin):
 def extract_one(x: dict, args: IOArguments, reader: MongoStreamer) -> TimeSensitiveEntity | None:
     subject: WikidataUnit = WikidataUnit.from_dict(x)
     if subject.type == "item":
-        print(subject)
-        for claim in subject.claims:
+        claims = subject.claims
+        subject: Entity = Entity.from_wikidata_item(subject)
+        print(f"* subject: {subject.to_dict()}")
+        for claim in claims:
             relation: Relation = get_relation(claim['property'], reader)
             if not relation:
                 continue
-            print(f"* relation={relation.to_dict()}")
+            print(f"  + relation={relation.to_dict()}")
             datavalue: WikibaseEntityId = datavalue_dict_to_obj(claim['datavalue'])
             # print(f"  - datavalue={claim['datavalue']}")
-            print(f"  - datavalue={datavalue}")
+            print(f"    - datavalue={datavalue}")
             if datavalue.datatype == "wikibase-entityid" and datavalue.value['entity-type'] == "item":
                 object: Entity = get_entity(datavalue.value['id'], reader)
-                print(f"  - object={object.to_dict()}")
+                if object:
+                    print(f"    - object={object.to_dict()}")
             qualifiers = claim['qualifiers']
-            print(f"  - qualifiers={qualifiers}")
-            print()
+            print(f"    - qualifiers={qualifiers}")
+            # print()
     return None
 
 
@@ -110,7 +113,7 @@ def extract(
     input_opt = InputOption(
         # start=input_start if not debugging else 10751,
         start=input_start if not debugging else 0,
-        limit=input_limit if not debugging else 1,
+        limit=input_limit if not debugging else 2,
         batch=input_batch if not debugging else 1,
         inter=input_inter if not debugging else 1,
         total=input_total,
