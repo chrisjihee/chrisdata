@@ -1,17 +1,16 @@
 import json
-from typing import Optional, Iterable
+from typing import Iterable
 
 import bson.json_util
 import typer
 from elasticsearch.helpers import streaming_bulk
 
-from chrisbase.data import InputOption, OutputOption, IOArguments, TableOption, IndexOption
+from chrisbase.data import InputOption, OutputOption, TableOption, IndexOption
 from chrisbase.data import JobTimer, ProjectEnv, FileOption, FileStreamer
 from chrisbase.data import Streamer, MongoStreamer, ElasticStreamer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import mute_tqdm_cls
 from chrisdata.wikidata import *
-from .search_wikidata import EntityInWiki, Relation
 
 logger = logging.getLogger(__name__)
 app = AppTyper()

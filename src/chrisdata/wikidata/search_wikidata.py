@@ -8,7 +8,7 @@ import pandas as pd
 import typer
 from elasticsearch.helpers import streaming_bulk
 
-from chrisbase.data import InputOption, OutputOption, IOArguments, FileOption, TableOption, IndexOption
+from chrisbase.data import InputOption, OutputOption, FileOption, TableOption, IndexOption
 from chrisbase.data import JobTimer, ProjectEnv, OptionData
 from chrisbase.data import Streamer, FileStreamer, MongoStreamer, ElasticStreamer
 from chrisbase.io import LoggingFormat
