@@ -72,11 +72,12 @@ class WikidataLexemeEx(WikidataLexeme, ClaimMixinEx):
 
 
 @dataclass
-class WikidataUnit(DataClassJsonMixin):
+class WikidataUnit(TypedData):
     _id: str
     ns: int
     type: str
     time: str
+    # id: str | None = None
     label1: str | None = None
     label2: str | None = None
     title1: str | None = None
@@ -89,10 +90,19 @@ class WikidataUnit(DataClassJsonMixin):
 
 
 @dataclass
-class EntityInWiki(TypedData):
-    entity: str
-    hits: int
-    score: float
+class Entity(TypedData):
+    id: str
+    label1: str
+    label2: str
+    title1: str | None = None
+    title2: str | None = None
+    # alias1: list = field(default_factory=list)
+    # alias2: list = field(default_factory=list)
+    # descr1: str | None = None
+    # descr2: str | None = None
+
+    def __str__(self):
+        return f"{self.id}[{self.title1 or self.title2}]"
 
 
 @dataclass
@@ -103,6 +113,13 @@ class Relation(TypedData):
 
     def __str__(self):
         return f"{self.id}[{self.label2}]"
+
+
+@dataclass
+class EntityInWiki(TypedData):
+    entity: str
+    hits: int
+    score: float
 
 
 @dataclass

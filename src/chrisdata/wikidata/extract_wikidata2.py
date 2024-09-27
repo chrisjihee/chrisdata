@@ -1,6 +1,7 @@
 from typing import Iterable
 
 import typer
+from qwikidata.datavalue import WikibaseEntityId
 
 from chrisbase.data import FileStreamer, MongoStreamer
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption
@@ -10,6 +11,30 @@ from chrisbase.util import mute_tqdm_cls
 from chrisdata.wikidata import *
 
 logger = logging.getLogger(__name__)
+entity_cache: dict[str, Entity | None] = dict()
+relation_cache: dict[str, Relation | None] = dict()
+
+
+def get_entity(_id: str, reader: MongoStreamer):
+    if _id not in entity_cache:
+        row: dict | None = reader.table.find_one({'_id': _id})
+        if not row:
+            entity_cache[_id] = None
+        else:
+            row['id'] = row['_id']
+            entity_cache[_id] = Entity.from_dict(row)
+    return entity_cache[_id]
+
+
+def get_relation(_id: str, reader: MongoStreamer):
+    if _id not in relation_cache:
+        row: dict | None = reader.table.find_one({'_id': _id})
+        if not row:
+            relation_cache[_id] = None
+        else:
+            row['id'] = row['_id']
+            relation_cache[_id] = Relation.from_dict(row)
+    return relation_cache[_id]
 
 
 @dataclass
@@ -18,19 +43,30 @@ class TimeSensitiveEntity(DataClassJsonMixin):
     id: str
 
 
-def extract_one(x: dict, args: IOArguments) -> TimeSensitiveEntity | None:
-    unit = WikidataUnit.from_dict(x)
-    if unit.type == "item":
-        print(unit)
-        # for claim in unit.claims:
-        #     print(claim)
-        pass
+def extract_one(x: dict, args: IOArguments, reader: MongoStreamer) -> TimeSensitiveEntity | None:
+    subject: WikidataUnit = WikidataUnit.from_dict(x)
+    if subject.type == "item":
+        print(subject)
+        for claim in subject.claims:
+            relation: Relation = get_relation(claim['property'], reader)
+            if not relation:
+                continue
+            print(f"* relation={relation.to_dict()}")
+            datavalue: WikibaseEntityId = datavalue_dict_to_obj(claim['datavalue'])
+            # print(f"  - datavalue={claim['datavalue']}")
+            print(f"  - datavalue={datavalue}")
+            if datavalue.datatype == "wikibase-entityid" and datavalue.value['entity-type'] == "item":
+                object: Entity = get_entity(datavalue.value['id'], reader)
+                print(f"  - object={object.to_dict()}")
+            qualifiers = claim['qualifiers']
+            print(f"  - qualifiers={qualifiers}")
+            print()
     return None
 
 
-def extract_many(item: dict | Iterable[dict], args: IOArguments, writer: MongoStreamer, item_is_batch: bool = True):
+def extract_many(item: dict | Iterable[dict], args: IOArguments, reader: MongoStreamer, writer: MongoStreamer, item_is_batch: bool = True):
     batch = item if item_is_batch else [item]
-    rows = [extract_one(x, args) for x in batch]
+    rows = [extract_one(x, args, reader) for x in batch]
     rows = [row.to_dict() for row in rows if row]
     if len(rows) > 0:
         writer.table.insert_many(rows)
@@ -72,8 +108,9 @@ def extract(
         max_workers=1 if debugging else max(max_workers, 1),
     )
     input_opt = InputOption(
-        start=input_start if not debugging else 10751,
-        limit=input_limit if not debugging else 10,
+        # start=input_start if not debugging else 10751,
+        start=input_start if not debugging else 0,
+        limit=input_limit if not debugging else 1,
         batch=input_batch if not debugging else 1,
         inter=input_inter if not debugging else 1,
         total=input_total,
@@ -114,14 +151,17 @@ def extract(
         MongoStreamer(args.output.table) as output_table,
     ):
         # extract time-sensitive triples
-        input_data = args.input.ready_inputs(input_table, total=len(input_table))
+        test_data = input_table.table.find({'_id': {'$in': ['Q50184', 'Q884']}})
+        # input_data = args.input.ready_inputs(input_table, total=len(input_table))
+        input_data = args.input.ready_inputs(test_data, total=len(input_table))
         logger.info(f"Extract from [{input_table.opt}] to [{output_table.opt}]")
         logger.info(f"- [input] total={args.input.total} | start={args.input.start} | limit={args.input.limit}"
                     f" | {type(input_data).__name__}={input_data.num_item}{f'x{args.input.batch}ea' if input_data.has_batch_items() else ''}")
         logger.info(f"- [output] table.reset={args.output.table.reset} | table.timeout={args.output.table.timeout}")
         with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="extracting", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for item in input_data.items:
-                extract_many(item=item, args=args, writer=output_table, item_is_batch=input_data.has_batch_items())
+                extract_many(item=item, item_is_batch=input_data.has_batch_items(), args=args,
+                             reader=input_table, writer=output_table)
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
