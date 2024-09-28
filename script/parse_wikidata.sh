@@ -1,1 +1,1 @@
-python -m chrisdata.cli wikidata parse
+python -m chrisdata.cli wikidata parse --output-table-reset
