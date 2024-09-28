@@ -1,1 +1,1 @@
-python src/chrisdata/cli.py wikidata parse --input-limit 10000000 --output-table-reset
+python -m chrisdata.cli wikidata parse --input-limit 70000000 --output-table-reset --no-export

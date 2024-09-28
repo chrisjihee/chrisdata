@@ -1,2 +1,0 @@
-python src/chrisdata/cli.py wikidata parse --input-limit 10000000 --input-start 100000000
-#                                                                               105485440

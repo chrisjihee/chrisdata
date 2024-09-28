@@ -1,7 +1,6 @@
-import re
-
 import json
 import multiprocessing
+import re
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Iterable
@@ -20,12 +19,13 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class ParseWikidataOption(OptionData):
+class ExtraOption(OptionData):
     processor: str = field(default="parse_many1")
     lang1: str = field(default="ko")
     lang2: str = field(default="en")
-    filter: bool = field(default=False)
     truthy: bool = field(default=False)
+    filter: bool = field(default=False)
+    export: bool = field(default=True)
 
 
 wikidata_unit_id = re.compile(r"^([A-Z])([0-9]+)$")
@@ -183,8 +183,9 @@ def parse(
         processor: str = typer.Option(default="parse_many1"),
         lang1: str = typer.Option(default="ko"),
         lang2: str = typer.Option(default="en"),
-        filter: bool = typer.Option(default=False),
         truthy: bool = typer.Option(default=False),
+        filter: bool = typer.Option(default=False),
+        export: bool = typer.Option(default=True),
 ):
     env = ProjectEnv(
         project=project,
@@ -222,18 +223,19 @@ def parse(
             required=True,
         )
     )
-    parse_opt = ParseWikidataOption(
-        processor=processor,
+    extra_opt = ExtraOption(
+        processor=processor if env.max_workers > 1 else "parse_many1",
         lang1=lang1,
         lang2=lang2,
-        filter=filter,
         truthy=truthy,
+        filter=filter,
+        export=export,
     )
     args = IOArguments(
         env=env,
         input=input_opt,
         output=output_opt,
-        option=parse_opt,
+        option=extra_opt,
     )
     tqdm = mute_tqdm_cls()
     assert args.input.file, "input.file is required"
@@ -253,10 +255,10 @@ def parse(
                     f" | {type(input_data).__name__}={input_data.num_item}{f'x{args.input.batch}ea' if input_data.has_batch_items() else ''}")
         logger.info(f"- [output] table.reset={args.output.table.reset} | table.timeout={args.output.table.timeout}")
         logger.info(f"- [option] processor={args.option.processor} | lang1={args.option.lang1} | lang2={args.option.lang2}"
-                    f" | filter={args.option.filter} | truthy={args.option.truthy}")
+                    f" | truthy={args.option.truthy} | filter={args.option.filter} | export={args.option.export}")
         with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="parsing", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for batch in input_data.items:
-                if args.option.processor == "parse_many1" or args.env.max_workers <= 1:
+                if args.option.processor == "parse_many1":
                     parse_many1(batch=batch, args=args, writer=output_table)
                 elif args.option.processor == "parse_many2":
                     parse_many2(batch=batch, args=args, writer=output_table)
@@ -269,10 +271,11 @@ def parse(
                     logger.info(prog)
 
         # export parsed data
-        with tqdm(total=len(output_table), unit="row", pre="=>", desc="exporting", unit_divisor=args.input.inter * 100) as prog:
-            for row in output_table:
-                output_file.fp.write(json.dumps(row, ensure_ascii=False, indent=None if not debugging else 2) + '\n')
-                prog.update()
-                if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
-                    logger.info(prog)
-            logger.info(f"Export {prog.n}/{args.input.total} rows to [{output_file.opt}]")
+        if args.option.export:
+            with tqdm(total=len(output_table), unit="row", pre="=>", desc="exporting", unit_divisor=args.input.inter * 100) as prog:
+                for row in output_table:
+                    output_file.fp.write(json.dumps(row, ensure_ascii=False, indent=None if not debugging else 2) + '\n')
+                    prog.update()
+                    if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
+                        logger.info(prog)
+                logger.info(f"Export {prog.n}/{args.input.total} rows to [{output_file.opt}]")

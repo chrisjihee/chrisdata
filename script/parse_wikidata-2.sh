@@ -1,1 +1,1 @@
-python src/chrisdata/cli.py wikidata parse --input-limit 10000000 --input-start 10000000
+python -m chrisdata.cli wikidata parse --input-start 70000000 --no-export
