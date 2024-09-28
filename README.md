@@ -5,11 +5,10 @@ Data processing tools for data analysis
 
 ## Installation
 
-1. Install Miniforge and create a new environment
+1. Install Miniforge
     ```bash
     wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
     bash Miniforge3-$(uname)-$(uname -m).sh
-    mamba create -n chrisdata python=3.11 -y; mamba activate chrisdata
     ```
 
 2. Clone the repository
@@ -19,15 +18,17 @@ Data processing tools for data analysis
     cd chrisdata*
     ```
 
-3. Install the required packages
+3. Create a new environment
+    ```bash
+    mamba create -n chrisdata python=3.11 -y
+    mamba activate chrisdata
+    ```
+
+4. Install the required packages
     ```bash
     pip install -U -e .
     rm -rf chrisbase*; git clone git@github.com:chrisjihee/chrisbase.git
     pip install -U -e chrisbase*
-    ```
-
-4. List installed packages
-    ```bash
     pip list | grep -E "search|Wiki|wiki|json|chris|Data"
     ```
 
