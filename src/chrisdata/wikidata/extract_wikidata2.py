@@ -1,8 +1,8 @@
-from itertools import groupby
 from typing import Iterable
 
 import typer
-from qwikidata.datavalue import WikibaseEntityId, Time
+from dataclasses_json import DataClassJsonMixin
+from qwikidata.datavalue import Time
 
 from chrisbase.data import FileStreamer, MongoStreamer
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption

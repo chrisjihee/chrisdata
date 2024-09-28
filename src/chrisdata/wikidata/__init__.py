@@ -3,7 +3,6 @@ import math
 from dataclasses import dataclass, field
 from typing import Optional
 
-from dataclasses_json import DataClassJsonMixin
 from qwikidata.claim import WikidataClaim
 from qwikidata.datavalue import _DATAVALUE_TYPE_TO_CLASS, WikidataDatavalue
 from qwikidata.entity import WikidataItem, WikidataProperty, WikidataLexeme, ClaimsMixin
@@ -75,10 +74,12 @@ class WikidataLexemeEx(WikidataLexeme, ClaimMixinEx):
 @dataclass
 class WikidataUnit(TypedData):
     _id: str
+    id: str
     ns: int
+    pre: str
+    post: int
     type: str
     time: str
-    # id: str | None = None
     label1: str | None = None
     label2: str | None = None
     title1: str | None = None

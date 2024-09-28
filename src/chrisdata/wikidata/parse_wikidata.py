@@ -1,3 +1,5 @@
+import re
+
 import json
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
@@ -26,6 +28,20 @@ class ParseWikidataOption(OptionData):
     truthy: bool = field(default=False)
 
 
+wikidata_unit_id = re.compile(r"^([A-Z])([0-9]+)$")
+
+
+def split_wikidata_id(x: str):
+    match = wikidata_unit_id.fullmatch(x)
+    if match:
+        try:
+            return match.group(1), int(match.group(2))
+        except Exception as e:
+            raise ValueError(f"No numeric part: [{type(e).__name__}] {e}")
+    else:
+        raise ValueError(f"Not matched Wikidata ID: {x}")
+
+
 def parse_one(x: dict, args: IOArguments):
     if args.env.debugging:
         logger.info('')
@@ -41,12 +57,21 @@ def parse_one(x: dict, args: IOArguments):
 
     lang1_code = LanguageCode(args.option.lang1)
     lang2_code = LanguageCode(args.option.lang2)
+    try:
+        id_pre, id_post = split_wikidata_id(x['id'])
+    except Exception as e:
+        logger.error(f"Error on parse_one(id={x['id']}, ns={x['ns']}, type={x['type']}): [{type(e).__name__}] {e}")
+        return debug_return(None)
     row = WikidataUnit(
-        _id=x['id'],  # TODO: 정렬을 위해 0을 붙여줄 필요가 있음: _id(zero starting) and id(original)
+        _id=f"{id_pre}{id_post:09d}",
+        id=x['id'],
         ns=x['ns'],
+        pre=id_pre,
+        post=id_post,
         type=x['type'],
         time=x['modified'],
     )
+
     if row.type == "item" and row.ns == 0:
         item = WikidataItemEx(x)
         row.label1 = item.get_label(lang1_code)
@@ -65,6 +90,7 @@ def parse_one(x: dict, args: IOArguments):
         except Exception as e:
             logger.error(f"Error on parse_one(id={x['id']}, ns={x['ns']}, type={x['type']}): [{type(e).__name__}] {e}")
             return debug_return(None)
+
     elif row.type == "property":
         prop = WikidataPropertyEx(x)
         row.label1 = prop.get_label(lang1_code)
@@ -79,6 +105,7 @@ def parse_one(x: dict, args: IOArguments):
         except Exception as e:
             logger.error(f"Error on parse_one(id={x['id']}, ns={x['ns']}, type={x['type']}): [{type(e).__name__}] {e}")
             return debug_return(None)
+
     elif row.type == "lexeme":
         lexm = WikidataLexemeEx(x)
         row.label1 = lexm.get_lemma(lang1_code)
@@ -93,6 +120,7 @@ def parse_one(x: dict, args: IOArguments):
         except Exception as e:
             logger.error(f"Error on parse_one(id={x['id']}, ns={x['ns']}, type={x['type']}): [{type(e).__name__}] {e}")
             return debug_return(None)
+
     return debug_return(None)
 
 
