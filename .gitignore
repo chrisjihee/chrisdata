@@ -129,7 +129,6 @@ chrislab/
 output*/
 mongodb*/
 elasticsearch*/
-input/Wikidata*
-input/Wikipedia*
-input/wikimedia*
+input/Wiki*
+input/wiki*
 debug-*
