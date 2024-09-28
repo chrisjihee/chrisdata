@@ -1,4 +1,4 @@
-# WiseData
+# chrisdata
 
 Data processing tools for data analysis
 
@@ -9,14 +9,14 @@ Data processing tools for data analysis
     ```bash
     wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
     bash Miniforge3-$(uname)-$(uname -m).sh
-    mamba create -n WiseData python=3.11 -y; mamba activate WiseData
+    mamba create -n chrisdata python=3.11 -y; mamba activate chrisdata
     ```
 
 2. Clone the repository
     ```bash
-    rm -rf WiseData*
-    git clone git@github.com:chrisjihee/WiseData-2023.08.git
-    cd WiseData*
+    rm -rf chrisdata*
+    git clone git@github.com:chrisjihee/chrisdata.git
+    cd chrisdata*
     ```
 
 3. Install the required packages
@@ -94,5 +94,5 @@ Data processing tools for data analysis
 
 ## Reference
 
-* https://github.com/chrisjihee/WiseData-2023.08/
+* https://github.com/chrisjihee/chrisdata/
 * https://github.com/chrisjihee/chrisbase/
