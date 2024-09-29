@@ -126,7 +126,7 @@ def parse_one(x: dict, args: IOArguments):
 
 def parse_many1(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer):
     if not writer.opt.reset:
-        batch = [x for x in batch if writer.count({"_id": x['id']}) == 0]
+        batch = [x for x in batch if writer.count({"id": x['id']}) == 0]
     rows = [parse_one(x, args) for x in batch]
     rows = [row.to_dict() for row in rows if row]
     if len(rows) > 0:
@@ -135,7 +135,7 @@ def parse_many1(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer)
 
 def parse_many2(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer):
     if not writer.opt.reset:
-        batch = [x for x in batch if writer.count({"_id": x['id']}) == 0]
+        batch = [x for x in batch if writer.count({"id": x['id']}) == 0]
     with ProcessPoolExecutor(max_workers=args.env.max_workers) as exe:
         jobs = [exe.submit(parse_one, x, args) for x in batch]
         rows = [job.result(timeout=args.env.waiting_sec) for job in jobs]
@@ -146,7 +146,7 @@ def parse_many2(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer)
 
 def parse_many3(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer):
     if not writer.opt.reset:
-        batch = [x for x in batch if writer.count({"_id": x['id']}) == 0]
+        batch = [x for x in batch if writer.count({"id": x['id']}) == 0]
     with multiprocessing.Pool(processes=args.env.max_workers) as pool:
         jobs = [pool.apply_async(parse_one, (x, args)) for x in batch]
         rows = [job.get(timeout=args.env.waiting_sec) for job in jobs]
