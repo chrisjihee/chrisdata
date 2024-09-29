@@ -89,7 +89,7 @@ def extract_many(item: dict | Iterable[dict], args: IOArguments, reader: MongoSt
 @app.command()
 def extract(
         # env
-        project: str = typer.Option(default="WiseData"),
+        project: str = typer.Option(default="chrisdata"),
         job_name: str = typer.Option(default="extract_wikidata"),
         logging_home: str = typer.Option(default="output/wikidata/extract"),
         logging_file: str = typer.Option(default="logging.out"),

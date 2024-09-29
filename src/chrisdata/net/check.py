@@ -60,7 +60,7 @@ def process_many2(batch: Iterable[str], args: IOArguments, writer: MongoStreamer
 @app.command()
 def check(
         # env
-        project: str = typer.Option(default="WiseData"),
+        project: str = typer.Option(default="chrisdata"),
         job_name: str = typer.Option(default="check_ip_addrs"),
         output_home: str = typer.Option(default="output/check_ip_addrs"),
         logging_file: str = typer.Option(default="logging.out"),

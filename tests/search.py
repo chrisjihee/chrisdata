@@ -86,7 +86,7 @@ def print_search_results(response: ObjectApiResponse):
 @app.command()
 def search(
         # env
-        project: str = typer.Option(default="WiseData"),
+        project: str = typer.Option(default="chrisdata"),
         job_name: str = typer.Option(default="search_wikidata"),
         output_home: str = typer.Option(default="output-search_wikidata"),
         logging_file: str = typer.Option(default="logging.out"),

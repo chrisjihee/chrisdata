@@ -23,7 +23,7 @@ class IndexApp:
         @cls.app.command()
         def wikipedia(
                 # env
-                project: str = typer.Option(default="WiseData"),
+                project: str = typer.Option(default="chrisdata"),
                 job_name: str = typer.Option(default="index_wikipedia"),
                 output_home: str = typer.Option(default="output-index_wikipedia"),
                 logging_file: str = typer.Option(default="logging.out"),

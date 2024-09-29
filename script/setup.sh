@@ -1,6 +1,6 @@
 # for running program
-mamba create -n WiseData-2023.08 python=3.10 -y
-mamba activate WiseData-2023.08
+mamba create -n chrisdata python=3.10 -y
+mamba activate chrisdata
 pip install -r requirements.txt
 pip list
 

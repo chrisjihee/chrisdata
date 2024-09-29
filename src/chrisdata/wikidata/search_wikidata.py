@@ -205,7 +205,7 @@ class SearchApp:
         @cls.app.command()
         def run(
                 # env
-                project: str = typer.Option(default="WiseData"),
+                project: str = typer.Option(default="chrisdata"),
                 job_name: str = typer.Option(default="search_wikidata"),
                 output_home: str = typer.Option(default="output-search_wikidata"),
                 logging_file: str = typer.Option(default="search.out"),
@@ -347,7 +347,7 @@ class ExportApp:
         @cls.app.command()
         def run(
                 # env
-                project: str = typer.Option(default="WiseData"),
+                project: str = typer.Option(default="chrisdata"),
                 job_name: str = typer.Option(default="search_wikidata"),
                 output_home: str = typer.Option(default="output-search_wikidata"),
                 logging_file: str = typer.Option(default="export.out"),

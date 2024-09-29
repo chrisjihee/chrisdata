@@ -158,7 +158,7 @@ def parse_many3(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer)
 @app.command()
 def parse(
         # env
-        project: str = typer.Option(default="WiseData"),
+        project: str = typer.Option(default="chrisdata"),
         job_name: str = typer.Option(default="parse_wikidata"),
         logging_home: str = typer.Option(default="output/wikidata/parse"),
         logging_file: str = typer.Option(default="logging.out"),

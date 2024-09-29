@@ -240,7 +240,7 @@ def table_name(args: ProgramArguments) -> str:
 @app.command()
 def crawl(
         # env
-        project: str = typer.Option(default="WiseData"),
+        project: str = typer.Option(default="chrisdata"),
         job_name: str = typer.Option(default="crawl_wikipedia"),
         output_home: str = typer.Option(default="output-crawl_wikipedia"),
         logging_file: str = typer.Option(default="logging.out"),

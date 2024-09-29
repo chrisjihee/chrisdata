@@ -62,7 +62,7 @@ class ExtractApp:
         @cls.app.command()
         def run(
                 # env
-                project: str = typer.Option(default="WiseData"),
+                project: str = typer.Option(default="chrisdata"),
                 job_name: str = typer.Option(default="extract_wikidata"),
                 output_home: str = typer.Option(default="output-extract_wikidata"),
                 logging_file: str = typer.Option(default="extract.out"),
@@ -176,7 +176,7 @@ class ExportApp:
         @cls.app.command()
         def run(
                 # env
-                project: str = typer.Option(default="WiseData"),
+                project: str = typer.Option(default="chrisdata"),
                 job_name: str = typer.Option(default="extract_wikidata"),
                 output_home: str = typer.Option(default="output-extract_wikidata"),
                 logging_file: str = typer.Option(default="export.out"),

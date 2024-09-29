@@ -35,7 +35,7 @@ class RestoreArguments(CommonArguments):
 @app.command()
 def restore(
         # env
-        project: str = typer.Option(default="WiseData"),
+        project: str = typer.Option(default="chrisdata"),
         job_name: str = typer.Option(default="restore_wikidata"),
         output_home: str = typer.Option(default="output-restore_wikidata"),
         logging_file: str = typer.Option(default="logging.out"),

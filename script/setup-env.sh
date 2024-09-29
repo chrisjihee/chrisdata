@@ -4,7 +4,7 @@ wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforg
 bash Miniforge3-$(uname)-$(uname -m).sh
 
 # basic
-mamba create -n WiseData python=3.11 -y; mamba activate WiseData
+mamba create -n chrisdata python=3.11 -y; mamba activate chrisdata
 pip install -U -r requirements.txt
 
 # chrisbase

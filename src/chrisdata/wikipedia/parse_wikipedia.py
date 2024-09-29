@@ -126,7 +126,7 @@ def parse_many(batch: Iterable[dict], wrapper: MongoStreamer, parsed_ids: set[in
 @app.command()
 def parse(
         # env
-        project: str = typer.Option(default="WiseData"),
+        project: str = typer.Option(default="chrisdata"),
         job_name: str = typer.Option(default="parse_wikipedia"),
         output_home: str = typer.Option(default="output-parse_wikipedia"),
         logging_file: str = typer.Option(default="logging.out"),
