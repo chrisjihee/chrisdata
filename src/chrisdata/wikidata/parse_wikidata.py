@@ -169,7 +169,7 @@ def parse(
         input_limit: int = typer.Option(default=-1),
         input_batch: int = typer.Option(default=100),
         input_inter: int = typer.Option(default=10000),
-        input_total: int = typer.Option(default=105485440),  # https://www.wikidata.org/wiki/Wikidata:Statistics
+        input_total: int = typer.Option(default=113850250),  # https://www.wikidata.org/wiki/Wikidata:Statistics
         input_file_home: str = typer.Option(default="input/wikidata"),
         input_file_name: str = typer.Option(default="wikidata-20240916-all.json"),
         # output
