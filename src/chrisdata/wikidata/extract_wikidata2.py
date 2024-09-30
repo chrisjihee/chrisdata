@@ -101,14 +101,14 @@ def extract(
         input_batch: int = typer.Option(default=1000),
         input_inter: int = typer.Option(default=5000),
         input_total: int = typer.Option(default=105485440),  # https://www.wikidata.org/wiki/Wikidata:Statistics  # TODO: Replace with (actual count)
-        input_table_home: str = typer.Option(default="localhost:8800/Wikidata"),
-        input_table_name: str = typer.Option(default="wikidata-20230911-all-parse-ko-en"),
+        input_table_home: str = typer.Option(default="localhost:8801/Wikidata"),
+        input_table_name: str = typer.Option(default="wikidata-20240916-parse"),
         # output
         output_file_home: str = typer.Option(default="output/wikidata"),
-        output_file_name: str = typer.Option(default="wikidata-20230911-all-extract.jsonl"),
+        output_file_name: str = typer.Option(default="wikidata-20240916-extract.jsonl"),
         output_file_mode: str = typer.Option(default="w"),
-        output_table_home: str = typer.Option(default="localhost:8800/Wikidata"),
-        output_table_name: str = typer.Option(default="wikidata-20230911-all-extract"),
+        output_table_home: str = typer.Option(default="localhost:8801/Wikidata"),
+        output_table_name: str = typer.Option(default="wikidata-20240916-extract"),
         output_table_reset: bool = typer.Option(default=True),
 ):
     env = ProjectEnv(
@@ -158,14 +158,19 @@ def extract(
     assert args.output.file, "output.file is required"
     assert args.output.table, "output.table is required"
 
-    with(
+    with (
         JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
         MongoStreamer(args.input.table) as input_table,
         FileStreamer(args.output.file) as output_file,
         MongoStreamer(args.output.table) as output_table,
     ):
+        for x in input_table.cli.list_database_names():
+            print(f"- DB: {x}")
+        for x in input_table.db.list_collection_names():
+            print(f"- collection: {x}")
         # extract time-sensitive triples
-        test_data = input_table.table.find({'_id': {'$in': ['Q50184', 'Q884']}})
+        test_data = input_table.table.find({'_id': {'$in': ['Q000050184', 'Q000000884']}})
+        # test_data = input_table.table.find({'id': {'$in': ['Q50184', 'Q884']}})
         # input_data = args.input.ready_inputs(input_table, total=len(input_table))
         input_data = args.input.ready_inputs(test_data, total=len(input_table))
         logger.info(f"Extract from [{input_table.opt}] to [{output_table.opt}]")
