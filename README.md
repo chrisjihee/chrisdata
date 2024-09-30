@@ -46,7 +46,8 @@ Data processing tools for data analysis
 
 6. Run MongoDB
     ```bash
-    mongodb/bin/mongod --config cfg/mongod.yaml
+    cd mongodb
+    bin/mongod --config ../cfg/mongod-8800.yaml
     ```
 
 7. Install Elasticsearch

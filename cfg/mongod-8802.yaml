@@ -1,11 +1,11 @@
 net:
   bindIp: 127.0.0.1
-  port: 8800
+  port: 8802
 storage:
-  dbPath: "mongodb/data"
+  dbPath: "data"
 systemLog:
   destination: file
-  path: "mongodb/log/mongod.log"
+  path: "log/mongod.log"
   logAppend: true
 processManagement:
-  fork: true
+  fork: false
