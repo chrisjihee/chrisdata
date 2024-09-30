@@ -69,28 +69,28 @@ Data processing tools for data analysis
 
 1. Show help
     ```bash
-    chrisdata --help
+    python -m chrisdata.cli --help
     ```
 
 2. Run command
   * To check local IP addresses
     ```bash
-    chrisdata hello-chrisdata
+    python -m chrisdata.cli net check
     ```
 
   * To crawl Wikipedia articles
     ```bash
-    chrisdata hello-chrisdata
+    python -m chrisdata.cli hello
     ```
 
   * To parse Wikipedia articles
     ```bash
-    chrisdata hello-chrisdata
+    python -m chrisdata.cli bye Chris
     ```
 
   * To parse Wikidata dump
     ```bash
-    chrisdata hello-chrisdata
+    python -m chrisdata.cli wikidata parse --output-table-reset --no-export
     ```
 
 
