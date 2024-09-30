@@ -76,8 +76,6 @@ class WikidataUnit(TypedData):
     _id: str
     id: str
     ns: int
-    pre: str
-    post: int
     type: str
     time: str
     label1: str | None = None

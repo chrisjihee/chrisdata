@@ -37,9 +37,18 @@ def split_wikidata_id(x: str):
         try:
             return match.group(1), int(match.group(2))
         except Exception as e:
-            raise ValueError(f"No numeric part: [{type(e).__name__}] {e}")
+            raise ValueError(f"No numeric part: x={x}: [{type(e).__name__}] {e}")
     else:
-        raise ValueError(f"Not matched Wikidata ID: {x}")
+        raise ValueError(f"Not matched Wikidata ID: x={x}")
+
+
+def to_normalized_id(x: str):
+    try:
+        pre, post = split_wikidata_id(x)
+        return f"{pre}{post:09d}"
+    except Exception as e:
+        logger.error(f"Error on to_normalized_id(x={x}): [{type(e).__name__}] {e}")
+        return None
 
 
 def parse_one(x: dict, args: IOArguments):
@@ -57,17 +66,10 @@ def parse_one(x: dict, args: IOArguments):
 
     lang1_code = LanguageCode(args.option.lang1)
     lang2_code = LanguageCode(args.option.lang2)
-    try:
-        id_pre, id_post = split_wikidata_id(x['id'])
-    except Exception as e:
-        logger.error(f"Error on parse_one(id={x['id']}, ns={x['ns']}, type={x['type']}): [{type(e).__name__}] {e}")
-        return debug_return(None)
     row = WikidataUnit(
-        _id=f"{id_pre}{id_post:09d}",
+        _id=x['_id'],
         id=x['id'],
         ns=x['ns'],
-        pre=id_pre,
-        post=id_post,
         type=x['type'],
         time=x['modified'],
     )
@@ -125,8 +127,9 @@ def parse_one(x: dict, args: IOArguments):
 
 
 def parse_many1(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer):
+    batch = [merge_dicts({"_id": to_normalized_id(x['id'])}, x) for x in batch]
     if not writer.opt.reset:
-        batch = [x for x in batch if writer.count({"id": x['id']}) == 0]
+        batch = [x for x in batch if x['_id'] and writer.count({"_id": x['_id']}) == 0]
     rows = [parse_one(x, args) for x in batch]
     rows = [row.to_dict() for row in rows if row]
     if len(rows) > 0:
@@ -134,8 +137,9 @@ def parse_many1(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer)
 
 
 def parse_many2(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer):
+    batch = [merge_dicts({"_id": to_normalized_id(x['id'])}, x) for x in batch]
     if not writer.opt.reset:
-        batch = [x for x in batch if writer.count({"id": x['id']}) == 0]
+        batch = [x for x in batch if x['_id'] and writer.count({"_id": x['_id']}) == 0]
     with ProcessPoolExecutor(max_workers=args.env.max_workers) as exe:
         jobs = [exe.submit(parse_one, x, args) for x in batch]
         rows = [job.result(timeout=args.env.waiting_sec) for job in jobs]
@@ -145,8 +149,9 @@ def parse_many2(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer)
 
 
 def parse_many3(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer):
+    batch = [merge_dicts({"_id": to_normalized_id(x['id'])}, x) for x in batch]
     if not writer.opt.reset:
-        batch = [x for x in batch if writer.count({"id": x['id']}) == 0]
+        batch = [x for x in batch if x['_id'] and writer.count({"_id": x['_id']}) == 0]
     with multiprocessing.Pool(processes=args.env.max_workers) as pool:
         jobs = [pool.apply_async(parse_one, (x, args)) for x in batch]
         rows = [job.get(timeout=args.env.waiting_sec) for job in jobs]
@@ -176,7 +181,7 @@ def parse(
         output_file_home: str = typer.Option(default="output/wikidata"),
         output_file_name: str = typer.Option(default="wikidata-20240916-parse.jsonl"),
         output_file_mode: str = typer.Option(default="w"),
-        output_table_home: str = typer.Option(default="localhost:8800/Wikidata"),
+        output_table_home: str = typer.Option(default="localhost:8800/wikidata"),
         output_table_name: str = typer.Option(default="wikidata-20240916-parse"),
         output_table_reset: bool = typer.Option(default=False),
         # option

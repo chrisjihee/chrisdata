@@ -48,6 +48,7 @@ Data processing tools for data analysis
     ```bash
     cd mongodb
     bin/mongod --config ../cfg/mongod-8800.yaml
+    cd ..
     ```
 
 7. Install Elasticsearch
@@ -61,6 +62,14 @@ Data processing tools for data analysis
     tar zxf elasticsearch-*.tar.gz --strip-components 1
     sed -i '' 's/#http.port: 9200/http.port: 9717/g' ./config/elasticsearch.yml
     echo "xpack.security.enabled: true" >> ./config/elasticsearch.yml
+    cd ..
+    ```
+
+8. Link input data
+    ```bash
+    cd input
+    ln -s /mnt/geo/data/wikidata .
+    ln -s /mnt/geo/data/wikipedia .
     cd ..
     ```
 
