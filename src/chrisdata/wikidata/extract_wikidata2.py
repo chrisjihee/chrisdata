@@ -48,7 +48,7 @@ def extract_one(x: dict, args: IOArguments, reader: MongoStreamer) -> TimeSensit
     subject: WikidataUnit = WikidataUnit.from_dict(x)
     if subject.type == "item":
         claims = subject.claims
-        subject: Entity = Entity.from_wikidata_item(subject)
+        subject: Entity = Entity.from_wikidata_unit(subject)
         print("=" * 80)
         print(f"* subject: {subject}")
 

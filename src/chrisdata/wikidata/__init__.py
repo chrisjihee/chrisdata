@@ -10,7 +10,6 @@ from qwikidata.snak import WikidataSnak
 from qwikidata.typedefs import LanguageCode
 
 from chrisbase.data import AppTyper, TypedData, IOArguments
-from chrisbase.io import merge_dicts
 
 app = AppTyper()
 logger = logging.getLogger(__name__)
@@ -103,8 +102,8 @@ class Entity(TypedData):
     # descr2: str | None = None
 
     @staticmethod
-    def from_wikidata_item(unit: WikidataUnit) -> "Entity":
-        return Entity.from_dict(merge_dicts(unit.to_dict(), {"id": unit._id}))
+    def from_wikidata_unit(unit: WikidataUnit) -> "Entity":
+        return Entity.from_dict(unit.to_dict())
 
     def __str__(self):
         return f"{self.id}[{self.title1 or self.title2}]"
