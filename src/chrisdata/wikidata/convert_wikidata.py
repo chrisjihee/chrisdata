@@ -1,6 +1,9 @@
 from typing import Iterable
 
+import httpx
+import pandas as pd
 import typer
+from bs4 import BeautifulSoup
 from dataclasses_json import DataClassJsonMixin
 from qwikidata.datavalue import Time
 
@@ -14,6 +17,26 @@ from chrisdata.wikidata import *
 logger = logging.getLogger(__name__)
 entity_cache: dict[str, Entity | None] = dict()
 relation_cache: dict[str, Relation | None] = dict()
+
+
+def get_wikidata_properties() -> pd.DataFrame:
+    uri = "https://www.wikidata.org/wiki/Wikidata:Database_reports/List_of_properties/all"
+    with httpx.Client(
+            timeout=httpx.Timeout(timeout=120.0)
+    ) as cli:
+        response = cli.get(uri)
+        # from pathlib import Path
+        # Path("test.html").write_text(response.text)
+        soup = BeautifulSoup(response.text, "html.parser")
+        columns = [
+            ([sup.decompose() for sup in th.select("sup")], th.text.strip())[-1]
+            for th in soup.select_one("table.wikitable tr").select("th")
+        ]
+        data = []
+        for tr in soup.select("table.wikitable tr")[1:]:
+            body_values = [' | '.join(td.stripped_strings) for td in tr.select("td")]
+            data.append(body_values)
+        return pd.DataFrame(data, columns=columns)
 
 
 def get_entity(_id: str, reader: MongoStreamer) -> Entity | None:
@@ -103,6 +126,8 @@ def convert(
         input_total: int = typer.Option(default=113850250),  # https://www.wikidata.org/wiki/Wikidata:Statistics  # TODO: Replace with (actual count)
         input_table_home: str = typer.Option(default="localhost:8800/wikidata"),
         input_table_name: str = typer.Option(default="wikidata-20240916-parse"),
+        input_resource_home: str = typer.Option(default="input/wikidata"),
+        input_resource_name: str = typer.Option(default="wikidata-properties.jsonl"),
         # output
         output_file_home: str = typer.Option(default="output/wikidata"),
         output_file_name: str = typer.Option(default="wikidata-20240916-extract.jsonl"),
@@ -160,12 +185,20 @@ def convert(
 
     with (
         JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+        FileStreamer(FileOption(home=input_resource_home, name=input_resource_name)) as input_resource,
         MongoStreamer(args.input.table) as input_table,
         FileStreamer(args.output.file) as output_file,
         MongoStreamer(args.output.table) as output_table,
     ):
+        if input_resource.fp:
+            properties: pd.DataFrame = pd.read_json(input_resource.path, orient='records', lines=True)
+        else:
+            properties: pd.DataFrame = get_wikidata_properties()
+            properties.to_json(input_resource.path, orient='records', lines=True)
+        logger.info(f"Loading Wikidata properties: {'x'.join(str(a) for a in list(properties.shape))}")
+
         # extract time-sensitive triples
-        test_data = input_table.table.find({'_id': {'$in': ['Q000050184', 'Q000000884']}})
+        test_data = input_table.table.find({'_id': {'$in': [norm_wikidata_id('Q50184'), norm_wikidata_id('Q884')]}})
         # input_data = args.input.ready_inputs(input_table, total=len(input_table))
         input_data = args.input.ready_inputs(test_data, total=len(input_table))
         logger.info(f"Extract from [{input_table.opt}] to [{output_table.opt}]")
