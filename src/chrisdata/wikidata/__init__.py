@@ -1,3 +1,4 @@
+import re
 import logging
 import math
 from dataclasses import dataclass, field
@@ -68,6 +69,29 @@ class WikidataLexemeEx(WikidataLexeme, ClaimMixinEx):
         for sense in self.get_senses():
             res.append({"sense_id": sense.sense_id, "gloss": sense.get_gloss(lang)})
         return res
+
+
+wikidata_unit_id = re.compile(r"^([A-Z])([0-9]+)$")
+
+
+def split_wikidata_id(x: str):
+    match = wikidata_unit_id.fullmatch(x)
+    if match:
+        try:
+            return match.group(1), int(match.group(2))
+        except Exception as e:
+            raise ValueError(f"No numeric part: x={x}: [{type(e).__name__}] {e}")
+    else:
+        raise ValueError(f"Not matched Wikidata ID: x={x}")
+
+
+def norm_wikidata_id(x: str):
+    try:
+        pre, post = split_wikidata_id(x)
+        return f"{pre}{post:09d}"
+    except Exception as e:
+        logger.error(f"Error on to_normalized_id(x={x}): [{type(e).__name__}] {e}")
+        return None
 
 
 @dataclass
@@ -209,5 +233,5 @@ class DoubleTriple(TypedData):
 
 
 import chrisdata.wikidata.parse_wikidata
-import chrisdata.wikidata.extract_wikidata2
+import chrisdata.wikidata.convert_wikidata
 import chrisdata.wikidata.restore_wikidata

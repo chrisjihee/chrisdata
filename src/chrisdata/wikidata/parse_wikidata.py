@@ -1,6 +1,5 @@
 import json
 import multiprocessing
-import re
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Iterable
@@ -26,29 +25,6 @@ class ExtraOption(OptionData):
     truthy: bool = field(default=False)
     filter: bool = field(default=False)
     export: bool = field(default=True)
-
-
-wikidata_unit_id = re.compile(r"^([A-Z])([0-9]+)$")
-
-
-def split_wikidata_id(x: str):
-    match = wikidata_unit_id.fullmatch(x)
-    if match:
-        try:
-            return match.group(1), int(match.group(2))
-        except Exception as e:
-            raise ValueError(f"No numeric part: x={x}: [{type(e).__name__}] {e}")
-    else:
-        raise ValueError(f"Not matched Wikidata ID: x={x}")
-
-
-def to_normalized_id(x: str):
-    try:
-        pre, post = split_wikidata_id(x)
-        return f"{pre}{post:09d}"
-    except Exception as e:
-        logger.error(f"Error on to_normalized_id(x={x}): [{type(e).__name__}] {e}")
-        return None
 
 
 def parse_one(x: dict, args: IOArguments):
@@ -127,7 +103,7 @@ def parse_one(x: dict, args: IOArguments):
 
 
 def parse_many1(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer):
-    batch = [merge_dicts({"_id": to_normalized_id(x['id'])}, x) for x in batch]
+    batch = [merge_dicts({"_id": norm_wikidata_id(x['id'])}, x) for x in batch]
     if not writer.opt.reset:
         batch = [x for x in batch if x['_id'] and writer.count({"_id": x['_id']}) == 0]
     rows = [parse_one(x, args) for x in batch]
@@ -137,7 +113,7 @@ def parse_many1(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer)
 
 
 def parse_many2(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer):
-    batch = [merge_dicts({"_id": to_normalized_id(x['id'])}, x) for x in batch]
+    batch = [merge_dicts({"_id": norm_wikidata_id(x['id'])}, x) for x in batch]
     if not writer.opt.reset:
         batch = [x for x in batch if x['_id'] and writer.count({"_id": x['_id']}) == 0]
     with ProcessPoolExecutor(max_workers=args.env.max_workers) as exe:
@@ -149,7 +125,7 @@ def parse_many2(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer)
 
 
 def parse_many3(batch: Iterable[dict], args: IOArguments, writer: MongoStreamer):
-    batch = [merge_dicts({"_id": to_normalized_id(x['id'])}, x) for x in batch]
+    batch = [merge_dicts({"_id": norm_wikidata_id(x['id'])}, x) for x in batch]
     if not writer.opt.reset:
         batch = [x for x in batch if x['_id'] and writer.count({"_id": x['_id']}) == 0]
     with multiprocessing.Pool(processes=args.env.max_workers) as pool:

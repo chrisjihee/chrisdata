@@ -44,7 +44,7 @@ class TimeSensitiveEntity(DataClassJsonMixin):
     id: str
 
 
-def extract_one(x: dict, args: IOArguments, reader: MongoStreamer) -> TimeSensitiveEntity | None:
+def convert_one(x: dict, args: IOArguments, reader: MongoStreamer) -> TimeSensitiveEntity | None:
     subject: WikidataUnit = WikidataUnit.from_dict(x)
     if subject.type == "item":
         claims = subject.claims
@@ -54,7 +54,7 @@ def extract_one(x: dict, args: IOArguments, reader: MongoStreamer) -> TimeSensit
 
         grouped_claims = {k: list(vs) for k, vs in grouped(claims, key=lambda i: i['property'])}
         for property, claim_group in grouped_claims.items():
-            relation: Relation = get_relation(property, reader)
+            relation: Relation = get_relation(norm_wikidata_id(property), reader)
             if not relation:
                 continue
             num_claim = len(claim_group)
@@ -78,16 +78,16 @@ def extract_one(x: dict, args: IOArguments, reader: MongoStreamer) -> TimeSensit
     return None
 
 
-def extract_many(item: dict | Iterable[dict], args: IOArguments, reader: MongoStreamer, writer: MongoStreamer, item_is_batch: bool = True):
+def convert_many(item: dict | Iterable[dict], args: IOArguments, reader: MongoStreamer, writer: MongoStreamer, item_is_batch: bool = True):
     batch = item if item_is_batch else [item]
-    rows = [extract_one(x, args, reader) for x in batch]
+    rows = [convert_one(x, args, reader) for x in batch]
     rows = [row.to_dict() for row in rows if row]
     if len(rows) > 0:
         writer.table.insert_many(rows)
 
 
 @app.command()
-def extract(
+def convert(
         # env
         project: str = typer.Option(default="chrisdata"),
         job_name: str = typer.Option(default="extract_wikidata"),
@@ -101,13 +101,13 @@ def extract(
         input_batch: int = typer.Option(default=1000),
         input_inter: int = typer.Option(default=5000),
         input_total: int = typer.Option(default=113850250),  # https://www.wikidata.org/wiki/Wikidata:Statistics  # TODO: Replace with (actual count)
-        input_table_home: str = typer.Option(default="localhost:8801/Wikidata"),  # TODO: Replace with "localhost:8800/wikidata"
+        input_table_home: str = typer.Option(default="localhost:8800/wikidata"),
         input_table_name: str = typer.Option(default="wikidata-20240916-parse"),
         # output
         output_file_home: str = typer.Option(default="output/wikidata"),
         output_file_name: str = typer.Option(default="wikidata-20240916-extract.jsonl"),
         output_file_mode: str = typer.Option(default="w"),
-        output_table_home: str = typer.Option(default="localhost:8801/Wikidata"),
+        output_table_home: str = typer.Option(default="localhost:8800/wikidata"),
         output_table_name: str = typer.Option(default="wikidata-20240916-extract"),
         output_table_reset: bool = typer.Option(default=True),
 ):
@@ -164,13 +164,6 @@ def extract(
         FileStreamer(args.output.file) as output_file,
         MongoStreamer(args.output.table) as output_table,
     ):
-        # check input database and collection
-        if args.env.debugging:
-            for x in input_table.cli.list_database_names():
-                logger.info(f"- database_name: {x}")
-            for x in input_table.db.list_collection_names():
-                logger.info(f"- collection_name: {x}")
-
         # extract time-sensitive triples
         test_data = input_table.table.find({'_id': {'$in': ['Q000050184', 'Q000000884']}})
         # input_data = args.input.ready_inputs(input_table, total=len(input_table))
@@ -181,7 +174,7 @@ def extract(
         logger.info(f"- [output] table.reset={args.output.table.reset} | table.timeout={args.output.table.timeout}")
         with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="extracting", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for item in input_data.items:
-                extract_many(item=item, item_is_batch=input_data.has_batch_items(), args=args,
+                convert_many(item=item, item_is_batch=input_data.has_batch_items(), args=args,
                              reader=input_table, writer=output_table)
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
