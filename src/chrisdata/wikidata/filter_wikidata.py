@@ -31,6 +31,8 @@ def filter_one(x: dict) -> WikidataUnit | None:
 
 def filter_many1(item: dict | Iterable[dict], args: IOArguments, writer: MongoStreamer, item_is_batch: bool = True):
     batch = item if item_is_batch else [item]
+    if not writer.opt.reset:
+        batch = [x for x in batch if x['_id'] and writer.count({"_id": x['_id']}) == 0]
     rows = [filter_one(x) for x in batch]
     rows = [row.to_dict() for row in rows if row]
     if len(rows) > 0:
@@ -39,6 +41,8 @@ def filter_many1(item: dict | Iterable[dict], args: IOArguments, writer: MongoSt
 
 def filter_many2(item: dict | Iterable[dict], args: IOArguments, writer: MongoStreamer, item_is_batch: bool = True):
     batch = item if item_is_batch else [item]
+    if not writer.opt.reset:
+        batch = [x for x in batch if x['_id'] and writer.count({"_id": x['_id']}) == 0]
     with ProcessPoolExecutor(max_workers=args.env.max_workers) as exe:
         jobs = [exe.submit(filter_one, x) for x in batch]
         rows = [job.result(timeout=args.env.waiting_sec) for job in jobs]
@@ -49,6 +53,8 @@ def filter_many2(item: dict | Iterable[dict], args: IOArguments, writer: MongoSt
 
 def filter_many3(item: dict | Iterable[dict], args: IOArguments, writer: MongoStreamer, item_is_batch: bool = True):
     batch = item if item_is_batch else [item]
+    if not writer.opt.reset:
+        batch = [x for x in batch if x['_id'] and writer.count({"_id": x['_id']}) == 0]
     with multiprocessing.Pool(processes=args.env.max_workers) as pool:
         jobs = [pool.apply_async(filter_one, (x,)) for x in batch]
         rows = [job.get(timeout=args.env.waiting_sec) for job in jobs]
