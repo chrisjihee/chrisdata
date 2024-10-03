@@ -91,22 +91,15 @@ class TimeSensitiveEntity(DataClassJsonMixin):
 
 
 def convert_one(x: dict, args: IOArguments, reader: MongoStreamer) -> TimeSensitiveEntity | None:
-    subject: WikidataUnit = WikidataUnit.from_dict(x)
-    if subject.type != "item":
-        return None
-
-    claims = [x for x in subject.claims if x['property'] in relation_dict]
-    subject: Entity = Entity.from_wikidata_unit(subject)
-    if not subject.title2:
-        return None
+    item: WikidataUnit = WikidataUnit.from_dict(reader.table.find_one({'_id': x}))
+    claims = [x for x in item.claims if x['property'] in relation_dict]
+    subject: Entity = Entity.from_wikidata_unit(item)
     print("=" * 80)
     print(f"* subject: {subject}")
 
     grouped_claims = {k: list(vs) for k, vs in grouped(claims, key=lambda i: i['property'])}
     for property, claim_group in grouped_claims.items():
-        property_relation: Relation = relation_dict.get(property)  # or f"{property}(필터링됨)"
-        if not property_relation:
-            continue
+        property_relation: Relation = relation_dict.get(property)
         num_claim = len(claim_group)
         print(f"  + {property_relation}: #object={num_claim}")
         for claim in claim_group:
@@ -147,21 +140,23 @@ def convert_many(item: dict | Iterable[dict], args: IOArguments, reader: MongoSt
 def convert(
         # env
         project: str = typer.Option(default="chrisdata"),
-        job_name: str = typer.Option(default="extract_wikidata"),
+        job_name: str = typer.Option(default="convert_wikidata"),
         logging_home: str = typer.Option(default="output/wikidata/convert"),
         logging_file: str = typer.Option(default="logging.out"),
         max_workers: int = typer.Option(default=1),
-        debugging: bool = typer.Option(default=True),  # TODO: Replace with False
+        debugging: bool = typer.Option(default=False),  # TODO: Replace with False
         # input
         input_start: int = typer.Option(default=0),
         input_limit: int = typer.Option(default=-1),  # TODO: Replace with -1
-        input_batch: int = typer.Option(default=1000),
-        input_inter: int = typer.Option(default=5000),
-        input_total: int = typer.Option(default=113850250),  # https://www.wikidata.org/wiki/Wikidata:Statistics  # TODO: Replace with (actual count)
+        input_batch: int = typer.Option(default=100),  # TODO: Replace with 100
+        input_inter: int = typer.Option(default=100),  # TODO: Replace with 10000
+        input_total: int = typer.Option(default=214530),  # TODO: Replace with (actual count)
+        input_file_home: str = typer.Option(default="input/wikidata"),
+        input_file_name: str = typer.Option(default="wikidata-20240916-korean.txt"),
+        input_prop_name: str = typer.Option(default="wikidata-properties.jsonl"),
         input_table_home: str = typer.Option(default="localhost:8801/wikidata"),
         input_table_name: str = typer.Option(default="wikidata-20240916-parse"),
-        input_resource_home: str = typer.Option(default="input/wikidata"),
-        input_resource_name: str = typer.Option(default="wikidata-properties.jsonl"),
+        input_table_timeout: int = typer.Option(default=3600),
         # output
         output_file_home: str = typer.Option(default="output/wikidata"),
         output_file_name: str = typer.Option(default="wikidata-20240916-convert.jsonl"),
@@ -184,15 +179,20 @@ def convert(
         max_workers=1 if debugging else max(max_workers, 1),
     )
     input_opt = InputOption(
-        # start=input_start if not debugging else 10751,
         start=input_start if not debugging else 0,
         limit=input_limit if not debugging else 2,
         batch=input_batch if not debugging else 1,
         inter=input_inter if not debugging else 1,
         total=input_total,
+        file=FileOption(
+            home=input_file_home,
+            name=input_file_name,
+            required=True,
+        ),
         table=TableOption(
             home=input_table_home,
             name=input_table_name,
+            timeout=input_table_timeout * 1000,
             required=True,
         )
     )
@@ -227,17 +227,16 @@ def convert(
 
     with (
         JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        FileStreamer(FileOption(home=input_resource_home, name=input_resource_name)) as input_resource,
-        MongoStreamer(args.input.table) as input_table,
-        FileStreamer(args.output.file) as output_file,
-        MongoStreamer(args.output.table) as output_table,
+        FileStreamer(FileOption(home=input_file_home, name=input_prop_name)) as prop_file,
+        FileStreamer(args.input.file) as input_file, MongoStreamer(args.input.table) as input_table,
+        FileStreamer(args.output.file) as output_file, MongoStreamer(args.output.table) as output_table,
     ):
-        if input_resource.fp:
-            total_properties: pd.DataFrame = pd.read_json(input_resource.path, orient='records', lines=True)
-            source = input_resource.path
+        if prop_file.fp:
+            total_properties: pd.DataFrame = pd.read_json(prop_file.path, orient='records', lines=True)
+            source = prop_file.path
         else:
             total_properties: pd.DataFrame = download_wikidata_properties()
-            total_properties.to_json(input_resource.path, orient='records', lines=True)
+            total_properties.to_json(prop_file.path, orient='records', lines=True)
             source = list_of_all_properties
         logger.info(f"Load Wikidata {total_properties.shape[0]} properties from {source}")
         valid_properties = total_properties[
@@ -257,19 +256,19 @@ def convert(
         logger.info(f"Make relation_dict for Wikidata {len(relation_dict)} properties using {input_table.opt}")
         # for x in relation_dict.items():
         #     print(x)
-        # for x in input_table:
-        #     print(x['id'])
         # exit(1)
 
-        # extract time-sensitive triples
-        test_data = input_table.table.find({'_id': {'$in': [norm_wikidata_id('Q50184'), norm_wikidata_id('Q884')]}})
-        input_data = args.input.ready_inputs(test_data, total=len(input_table))
+        # convert time-sensitive triples
+        # test_data = input_table.table.find({'_id': {'$in': [norm_wikidata_id('Q50184'), norm_wikidata_id('Q884')]}})
+        # input_data = args.input.ready_inputs(test_data, total=len(input_table))
         # input_data = args.input.ready_inputs(input_table, total=len(input_table))
-        logger.info(f"Extract from [{input_table.opt}] to [{output_table.opt}]")
+        input_data = args.input.ready_inputs(input_file, total=len(input_file))
+        logger.info(f"Convert from [{input_file.opt}, {input_table.opt}] to [{output_file.opt}, {output_table.opt}]")
         logger.info(f"- [input] total={args.input.total} | start={args.input.start} | limit={args.input.limit}"
                     f" | {type(input_data).__name__}={input_data.num_item}{f'x{args.input.batch}ea' if input_data.has_batch_items() else ''}")
+        logger.info(f"- [output] file.reset={args.output.file.reset} | file.mode={args.output.file.mode}")
         logger.info(f"- [output] table.reset={args.output.table.reset} | table.timeout={args.output.table.timeout}")
-        with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="extracting", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
+        with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="converting", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for item in input_data.items:
                 convert_many(item=item, item_is_batch=input_data.has_batch_items(), args=args,
                              reader=input_table, writer=output_table)
