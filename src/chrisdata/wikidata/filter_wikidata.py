@@ -46,9 +46,10 @@ def filter(
         input_total: int = typer.Option(default=113850250),  # 112473850 vs. 113850250 # https://www.wikidata.org/wiki/Wikidata:Statistics  # TODO: Replace with (actual count)
         input_table_home: str = typer.Option(default="localhost:8800/wikidata"),
         input_table_name: str = typer.Option(default="wikidata-20240916-parse"),
+        input_table_timeout: int = typer.Option(default=3600),
         # output
         output_file_home: str = typer.Option(default="output/wikidata"),
-        output_file_name: str = typer.Option(default="wikidata-20240916-filter.jsonl"),
+        output_file_name: str = typer.Option(default="wikidata-20240916-korean.txt"),
         output_file_mode: str = typer.Option(default="w"),
 ):
     env = ProjectEnv(
@@ -70,6 +71,7 @@ def filter(
         table=TableOption(
             home=input_table_home,
             name=input_table_name,
+            timeout=input_table_timeout * 1000,
             required=True,
         )
     )
@@ -98,7 +100,7 @@ def filter(
         # filter korean wikipedia entities
         input_data = args.input.ready_inputs(input_table, total=len(input_table))
         logger.info(f"Filter from [{input_table.opt}] to [{output_file.opt}]")
-        logger.info(f"- [input] total={args.input.total} | start={args.input.start} | limit={args.input.limit}"
+        logger.info(f"- [input] total={args.input.total} | start={args.input.start} | limit={args.input.limit} | table.timeout={args.input.table.timeout}"
                     f" | {type(input_data).__name__}={input_data.num_item}{f'x{args.input.batch}ea' if input_data.has_batch_items() else ''}")
         logger.info(f"- [output] file.reset={args.output.file.reset} | file.mode={args.output.file.mode}")
         with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="filtering", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
