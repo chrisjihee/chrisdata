@@ -9,7 +9,7 @@ from qwikidata.datavalue import Time
 
 from chrisbase.data import FileStreamer, MongoStreamer
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption
-from chrisbase.data import JobTimer, ProjectEnv
+from chrisbase.data import JobTimer, ProjectEnv, OptionData
 from chrisbase.io import LoggingFormat, new_path
 from chrisbase.util import mute_tqdm_cls, grouped
 from chrisdata.wikidata import *
@@ -17,14 +17,20 @@ from chrisdata.wikidata import *
 logger = logging.getLogger(__name__)
 entity_cache: dict[str, Entity | None] = dict()
 relation_cache: dict[str, Relation | None] = dict()
+list_of_all_properties: str = "https://www.wikidata.org/wiki/Wikidata:Database_reports/List_of_properties/all"
 
 
-def get_wikidata_properties() -> pd.DataFrame:
-    uri = "https://www.wikidata.org/wiki/Wikidata:Database_reports/List_of_properties/all"
+@dataclass
+class ExtraOption(OptionData):
+    min_property_count: int = field(default=1000)
+    black_property_datatypes: str = field(default="CM, EI, ES, U")
+
+
+def download_wikidata_properties() -> pd.DataFrame:
     with httpx.Client(
             timeout=httpx.Timeout(timeout=120.0)
     ) as cli:
-        response = cli.get(uri)
+        response = cli.get(list_of_all_properties)
         # from pathlib import Path
         # Path("test.html").write_text(response.text)
         soup = BeautifulSoup(response.text, "html.parser")
@@ -36,7 +42,12 @@ def get_wikidata_properties() -> pd.DataFrame:
         for tr in soup.select("table.wikitable tr")[1:]:
             body_values = [' | '.join(td.stripped_strings) for td in tr.select("td")]
             data.append(body_values)
-        return pd.DataFrame(data, columns=columns)
+        data = pd.DataFrame(data, columns=columns)
+        data['property_count'] = data['Counts'].str.extract(r'([0-9,]+) *M')[0].str.replace(',', '').astype(float).fillna(0).astype(int)
+        data['qualifier_count'] = data['Counts'].str.extract(r'([0-9,]+) *Q')[0].str.replace(',', '').astype(float).fillna(0).astype(int)
+        data['reference_count'] = data['Counts'].str.extract(r'([0-9,]+) *R')[0].str.replace(',', '').astype(float).fillna(0).astype(int)
+        data = data.drop(columns=['Counts']).rename(columns={'Data type': 'datatype'})
+        return data
 
 
 def get_entity(_id: str, reader: MongoStreamer) -> Entity | None:
@@ -135,6 +146,9 @@ def convert(
         output_table_home: str = typer.Option(default="localhost:8800/wikidata"),
         output_table_name: str = typer.Option(default="wikidata-20240916-extract"),
         output_table_reset: bool = typer.Option(default=True),
+        # option
+        min_property_count: int = typer.Option(default=1000),
+        black_property_datatypes: str = typer.Option(default="CM, EI, ES, U"),
 ):
     env = ProjectEnv(
         project=project,
@@ -173,10 +187,15 @@ def convert(
             required=True,
         )
     )
+    extra_opt = ExtraOption(
+        min_property_count=min_property_count,
+        black_property_datatypes=black_property_datatypes,
+    )
     args = IOArguments(
         env=env,
         input=input_opt,
         output=output_opt,
+        option=extra_opt,
     )
     tqdm = mute_tqdm_cls()
     assert args.input.table, "input.table is required"
@@ -191,11 +210,21 @@ def convert(
         MongoStreamer(args.output.table) as output_table,
     ):
         if input_resource.fp:
-            properties: pd.DataFrame = pd.read_json(input_resource.path, orient='records', lines=True)
+            total_properties: pd.DataFrame = pd.read_json(input_resource.path, orient='records', lines=True)
+            source = input_resource.path
         else:
-            properties: pd.DataFrame = get_wikidata_properties()
-            properties.to_json(input_resource.path, orient='records', lines=True)
-        logger.info(f"Loading Wikidata properties: {'x'.join(str(a) for a in list(properties.shape))}")
+            total_properties: pd.DataFrame = download_wikidata_properties()
+            total_properties.to_json(input_resource.path, orient='records', lines=True)
+            source = list_of_all_properties
+        logger.info(f"Load Wikidata {total_properties.shape[0]} properties from {source}")
+        valid_properties = total_properties[
+            (total_properties['property_count'] >= args.option.min_property_count)
+            & ~total_properties['datatype'].isin([x.strip() for x in args.option.black_property_datatypes.split(",")])
+            ]
+        # for x in sorted(valid_properties.to_dict(orient='records'), key=lambda x: x['property_count'], reverse=True):
+        #     print(x)
+        logger.info(f"Keep Wikidata {valid_properties.shape[0]} properties by options: min_property_count={args.option.min_property_count}, black_property_datatypes={args.option.black_property_datatypes}")
+        exit(1)
 
         # extract time-sensitive triples
         test_data = input_table.table.find({'_id': {'$in': [norm_wikidata_id('Q50184'), norm_wikidata_id('Q884')]}})
