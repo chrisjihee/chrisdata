@@ -24,25 +24,21 @@ def filter_one(x: dict) -> WikidataUnit | None:
     if subject.type != "item":
         return None
     if subject.title1 and len(subject.title1) > 0:
-        return subject
+        return subject['_id']
     else:
         return None
 
 
-def filter_many1(item: dict | Iterable[dict], args: IOArguments, writer: MongoStreamer, item_is_batch: bool = True):
+def filter_many1(item: dict | Iterable[dict], args: IOArguments, writer: MongoStreamer, writer2: FileStreamer, item_is_batch: bool = True):
     batch = item if item_is_batch else [item]
-    if not writer.opt.reset:
-        batch = [x for x in batch if x['_id'] and writer.count({"_id": x['_id']}) == 0]
     rows = [filter_one(x) for x in batch]
     rows = [row.to_dict() for row in rows if row]
     if len(rows) > 0:
         writer.table.insert_many(rows)
 
 
-def filter_many2(item: dict | Iterable[dict], args: IOArguments, writer: MongoStreamer, item_is_batch: bool = True):
+def filter_many2(item: dict | Iterable[dict], args: IOArguments, writer: MongoStreamer, writer2: FileStreamer, item_is_batch: bool = True):
     batch = item if item_is_batch else [item]
-    if not writer.opt.reset:
-        batch = [x for x in batch if x['_id'] and writer.count({"_id": x['_id']}) == 0]
     with ProcessPoolExecutor(max_workers=args.env.max_workers) as exe:
         jobs = [exe.submit(filter_one, x) for x in batch]
         rows = [job.result(timeout=args.env.waiting_sec) for job in jobs]
@@ -51,10 +47,8 @@ def filter_many2(item: dict | Iterable[dict], args: IOArguments, writer: MongoSt
         writer.table.insert_many(rows)
 
 
-def filter_many3(item: dict | Iterable[dict], args: IOArguments, writer: MongoStreamer, item_is_batch: bool = True):
+def filter_many3(item: dict | Iterable[dict], args: IOArguments, writer: MongoStreamer, writer2: FileStreamer, item_is_batch: bool = True):
     batch = item if item_is_batch else [item]
-    if not writer.opt.reset:
-        batch = [x for x in batch if x['_id'] and writer.count({"_id": x['_id']}) == 0]
     with multiprocessing.Pool(processes=args.env.max_workers) as pool:
         jobs = [pool.apply_async(filter_one, (x,)) for x in batch]
         rows = [job.get(timeout=args.env.waiting_sec) for job in jobs]
@@ -67,16 +61,16 @@ def filter_many3(item: dict | Iterable[dict], args: IOArguments, writer: MongoSt
 def filter(
         # env
         project: str = typer.Option(default="chrisdata"),
-        job_name: str = typer.Option(default="extract_wikidata"),
+        job_name: str = typer.Option(default="filter_wikidata"),
         logging_home: str = typer.Option(default="output/wikidata/filter"),
         logging_file: str = typer.Option(default="logging.out"),
-        max_workers: int = typer.Option(default=5),
+        max_workers: int = typer.Option(default=1),
         debugging: bool = typer.Option(default=False),
         # input
         input_start: int = typer.Option(default=0),
         input_limit: int = typer.Option(default=-1),
         input_batch: int = typer.Option(default=1000),
-        input_inter: int = typer.Option(default=10000),
+        input_inter: int = typer.Option(default=5000),
         input_total: int = typer.Option(default=113850250),  # 112473850 vs. 113850250 # https://www.wikidata.org/wiki/Wikidata:Statistics  # TODO: Replace with (actual count)
         input_table_home: str = typer.Option(default="localhost:8800/wikidata"),
         input_table_name: str = typer.Option(default="wikidata-20240916-parse"),
@@ -88,7 +82,7 @@ def filter(
         output_table_name: str = typer.Option(default="wikidata-20240916-filter"),
         output_table_reset: bool = typer.Option(default=False),
         # option
-        processor: str = typer.Option(default="filter_many2"),
+        processor: str = typer.Option(default="filter_many1"),
 ):
     env = ProjectEnv(
         project=project,
@@ -152,7 +146,7 @@ def filter(
         logger.info(f"- [input] total={args.input.total} | start={args.input.start} | limit={args.input.limit}"
                     f" | {type(input_data).__name__}={input_data.num_item}{f'x{args.input.batch}ea' if input_data.has_batch_items() else ''}")
         logger.info(f"- [output] table.reset={args.output.table.reset} | table.timeout={args.output.table.timeout}")
-        with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="extracting", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
+        with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="filtering", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for item in input_data.items:
                 if args.option.processor == "filter_many1":
                     filter_many1(item=item, args=args, writer=output_table, item_is_batch=input_data.has_batch_items())
