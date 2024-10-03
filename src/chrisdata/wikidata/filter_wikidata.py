@@ -23,7 +23,7 @@ def filter_one(x: dict) -> WikidataUnit | None:
     subject: WikidataUnit = WikidataUnit.from_dict(x)
     if subject.type != "item":
         return None
-    if subject.title1:
+    if subject.title1 and len(subject.title1) > 0:
         return subject
     else:
         return None

@@ -50,6 +50,11 @@ Data processing tools for data analysis
     bin/mongod --config ../cfg/mongod-8800.yaml
     cd ..
     ```
+    ```bash
+    cd mongodb
+    bin/mongod --config ../cfg/mongod-8801.yaml
+    cd ..
+    ```
 
 7. Install Elasticsearch
     ```bash

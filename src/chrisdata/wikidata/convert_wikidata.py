@@ -158,7 +158,7 @@ def convert(
         input_batch: int = typer.Option(default=1000),
         input_inter: int = typer.Option(default=5000),
         input_total: int = typer.Option(default=113850250),  # https://www.wikidata.org/wiki/Wikidata:Statistics  # TODO: Replace with (actual count)
-        input_table_home: str = typer.Option(default="localhost:8800/wikidata"),
+        input_table_home: str = typer.Option(default="localhost:8801/wikidata"),
         input_table_name: str = typer.Option(default="wikidata-20240916-parse"),
         input_resource_home: str = typer.Option(default="input/wikidata"),
         input_resource_name: str = typer.Option(default="wikidata-properties.jsonl"),
@@ -166,7 +166,7 @@ def convert(
         output_file_home: str = typer.Option(default="output/wikidata"),
         output_file_name: str = typer.Option(default="wikidata-20240916-convert.jsonl"),
         output_file_mode: str = typer.Option(default="w"),
-        output_table_home: str = typer.Option(default="localhost:8800/wikidata"),
+        output_table_home: str = typer.Option(default="localhost:8801/wikidata"),
         output_table_name: str = typer.Option(default="wikidata-20240916-convert"),
         output_table_reset: bool = typer.Option(default=True),
         # option
