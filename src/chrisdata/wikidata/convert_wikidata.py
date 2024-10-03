@@ -10,13 +10,13 @@ from qwikidata.datavalue import Time
 from chrisbase.data import FileStreamer, MongoStreamer
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption
 from chrisbase.data import JobTimer, ProjectEnv, OptionData
-from chrisbase.io import LoggingFormat, new_path
+from chrisbase.io import LoggingFormat, new_path, merge_dicts
 from chrisbase.util import mute_tqdm_cls, grouped
 from chrisdata.wikidata import *
 
 logger = logging.getLogger(__name__)
 entity_cache: dict[str, Entity | None] = dict()
-relation_cache: dict[str, Relation | None] = dict()
+relation_dict: dict[str, Relation | None] = dict()
 list_of_all_properties: str = "https://www.wikidata.org/wiki/Wikidata:Database_reports/List_of_properties/all"
 
 
@@ -62,14 +62,14 @@ def get_entity(_id: str, reader: MongoStreamer) -> Entity | None:
 
 
 def get_relation(_id: str, reader: MongoStreamer) -> Relation | None:
-    if _id not in relation_cache:
+    if _id not in relation_dict:
         row: dict | None = reader.table.find_one({'_id': _id})
         if not row:
-            relation_cache[_id] = None
+            relation_dict[_id] = None
         else:
             row['id'] = row['_id']
-            relation_cache[_id] = Relation.from_dict(row)
-    return relation_cache[_id]
+            relation_dict[_id] = Relation.from_dict(row)
+    return relation_dict[_id]
 
 
 @dataclass
@@ -221,9 +221,18 @@ def convert(
             (total_properties['property_count'] >= args.option.min_property_count)
             & ~total_properties['datatype'].isin([x.strip() for x in args.option.black_property_datatypes.split(",")])
             ]
-        # for x in sorted(valid_properties.to_dict(orient='records'), key=lambda x: x['property_count'], reverse=True):
-        #     print(x)
         logger.info(f"Keep Wikidata {valid_properties.shape[0]} properties by options: min_property_count={args.option.min_property_count}, black_property_datatypes={args.option.black_property_datatypes}")
+        for p in valid_properties.to_dict(orient='records'):
+            row = input_table.table.find_one({'_id': norm_wikidata_id(p['ID'])})
+            relation_dict[p['ID']] = Relation.from_dict(merge_dicts(row, {
+                'datatype': p['datatype'],
+                'property_count': p['property_count'],
+                'qualifier_count': p['qualifier_count'],
+                'reference_count': p['reference_count'],
+            }))
+        logger.info(f"Make relation_dict for Wikidata {len(relation_dict)} properties using {input_table.opt}")
+        # for x in relation_dict.items():
+        #     print(x)
         exit(1)
 
         # extract time-sensitive triples

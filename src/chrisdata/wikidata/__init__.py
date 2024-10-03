@@ -105,8 +105,8 @@ class WikidataUnit(TypedData):
     label2: str | None = None
     title1: str | None = None
     title2: str | None = None
-    alias1: list = field(default_factory=list)
-    alias2: list = field(default_factory=list)
+    alias1: list[str] = field(default_factory=list)
+    alias2: list[str] = field(default_factory=list)
     descr1: str | None = None
     descr2: str | None = None
     claims: list[dict] = field(default_factory=list)
@@ -138,6 +138,14 @@ class Relation(TypedData):
     id: str
     label1: str
     label2: str
+    descr1: str
+    descr2: str
+    alias1: list[str] = field(default_factory=list)
+    alias2: list[str] = field(default_factory=list)
+    datatype: str | None = None
+    property_count: int = -1
+    qualifier_count: int = -1
+    reference_count: int = -1
 
     def __str__(self):
         return f"{self.id}[{self.label2}]"
