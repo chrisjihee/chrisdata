@@ -62,7 +62,7 @@ def filter(
         # env
         project: str = typer.Option(default="chrisdata"),
         job_name: str = typer.Option(default="extract_wikidata"),
-        logging_home: str = typer.Option(default="output/wikidata/extract"),
+        logging_home: str = typer.Option(default="output/wikidata/filter"),
         logging_file: str = typer.Option(default="logging.out"),
         max_workers: int = typer.Option(default=5),
         debugging: bool = typer.Option(default=False),
@@ -80,7 +80,7 @@ def filter(
         output_file_mode: str = typer.Option(default="w"),
         output_table_home: str = typer.Option(default="localhost:8800/wikidata"),
         output_table_name: str = typer.Option(default="wikidata-20240916-filter"),
-        output_table_reset: bool = typer.Option(default=True),
+        output_table_reset: bool = typer.Option(default=False),
         # option
         processor: str = typer.Option(default="filter_many2"),
 ):

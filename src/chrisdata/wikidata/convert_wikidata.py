@@ -148,7 +148,7 @@ def convert(
         # env
         project: str = typer.Option(default="chrisdata"),
         job_name: str = typer.Option(default="extract_wikidata"),
-        logging_home: str = typer.Option(default="output/wikidata/extract"),
+        logging_home: str = typer.Option(default="output/wikidata/convert"),
         logging_file: str = typer.Option(default="logging.out"),
         max_workers: int = typer.Option(default=1),
         debugging: bool = typer.Option(default=True),  # TODO: Replace with False
@@ -167,7 +167,7 @@ def convert(
         output_file_name: str = typer.Option(default="wikidata-20240916-convert.jsonl"),
         output_file_mode: str = typer.Option(default="w"),
         output_table_home: str = typer.Option(default="localhost:8800/wikidata"),
-        output_table_name: str = typer.Option(default="wikidata-20240916-extract"),
+        output_table_name: str = typer.Option(default="wikidata-20240916-convert"),
         output_table_reset: bool = typer.Option(default=True),
         # option
         min_property_count: int = typer.Option(default=1000),
