@@ -40,7 +40,7 @@ def filter(
         debugging: bool = typer.Option(default=False),
         # input
         input_start: int = typer.Option(default=0),
-        input_limit: int = typer.Option(default=200000),
+        input_limit: int = typer.Option(default=-1),
         input_batch: int = typer.Option(default=100),
         input_inter: int = typer.Option(default=10000),
         input_total: int = typer.Option(default=113850250),  # 112473850 vs. 113850250 # https://www.wikidata.org/wiki/Wikidata:Statistics  # TODO: Replace with (actual count)
