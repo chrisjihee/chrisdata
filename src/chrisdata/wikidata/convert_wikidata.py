@@ -61,15 +61,27 @@ def get_entity(_id: str, reader: MongoStreamer) -> Entity | None:
     return entity_cache[_id]
 
 
-def get_relation(_id: str, reader: MongoStreamer) -> Relation | None:
-    if _id not in relation_dict:
-        row: dict | None = reader.table.find_one({'_id': _id})
-        if not row:
-            relation_dict[_id] = None
-        else:
-            row['id'] = row['_id']
-            relation_dict[_id] = Relation.from_dict(row)
-    return relation_dict[_id]
+# def get_relation(_id: str, reader: MongoStreamer) -> Relation | None:
+#     if _id not in relation_dict:
+#         row: dict | None = reader.table.find_one({'_id': _id})
+#         if not row:
+#             relation_dict[_id] = None
+#         else:
+#             row['id'] = row['_id']
+#             relation_dict[_id] = Relation.from_dict(row)
+#     return relation_dict[_id]
+
+
+def get_time(time_value: Time) -> str:
+    units = time_value.get_parsed_datetime_dict()
+    if time_value.value['precision'] <= 9:
+        return f"{units['year']:04d}"
+    elif time_value.value['precision'] == 10:
+        return f"{units['year']:04d}-{units['month']:02d}"
+    elif time_value.value['precision'] == 11:
+        return f"{units['year']:04d}-{units['month']:02d}-{units['day']:02d}"
+    else:
+        raise ValueError(f"Unknown precision: {time_value.value['precision']}")
 
 
 @dataclass
@@ -80,36 +92,47 @@ class TimeSensitiveEntity(DataClassJsonMixin):
 
 def convert_one(x: dict, args: IOArguments, reader: MongoStreamer) -> TimeSensitiveEntity | None:
     subject: WikidataUnit = WikidataUnit.from_dict(x)
-    if subject.type == "item":
-        claims = subject.claims
-        subject: Entity = Entity.from_wikidata_unit(subject)
-        print("=" * 80)
-        print(f"* subject: {subject}")
+    if subject.type != "item":
+        return None
 
-        grouped_claims = {k: list(vs) for k, vs in grouped(claims, key=lambda i: i['property'])}
-        for property, claim_group in grouped_claims.items():
-            relation: Relation = get_relation(norm_wikidata_id(property), reader)
-            if not relation:
-                continue
-            num_claim = len(claim_group)
-            print(f"  + {relation}: #object={num_claim}")
-            for claim in claim_group:
-                datavalue: WikidataDatavalue = datavalue_dict_to_obj(claim['datavalue'])
-                object: Entity | None = None
-                if datavalue.datatype == "wikibase-entityid" and datavalue.value['entity-type'] == "item":
-                    object = get_entity(datavalue.value['id'], reader)
-                time_qualifiers = list()
-                for qualifier in claim['qualifiers']:
-                    relation: Relation = get_relation(qualifier['property'], reader)
-                    datavalue: WikidataDatavalue = datavalue_dict_to_obj(qualifier['datavalue'])
-                    if relation and isinstance(datavalue, Time):
-                        time_qualifiers.append({"relation": relation, "datavalue": datavalue})
-                print(f"    = [object] {datavalue} -> {object}")
-                if time_qualifiers:
-                    for qualifier in time_qualifiers:
-                        print(f"      - {qualifier['relation']} = {qualifier['datavalue']}")
-            print()
-    return None
+    claims = [x for x in subject.claims if x['property'] in relation_dict]
+    subject: Entity = Entity.from_wikidata_unit(subject)
+    if not subject.title2:
+        return None
+    print("=" * 80)
+    print(f"* subject: {subject}")
+
+    grouped_claims = {k: list(vs) for k, vs in grouped(claims, key=lambda i: i['property'])}
+    for property, claim_group in grouped_claims.items():
+        property_relation: Relation = relation_dict.get(property)  # or f"{property}(필터링됨)"
+        if not property_relation:
+            continue
+        num_claim = len(claim_group)
+        print(f"  + {property_relation}: #object={num_claim}")
+        for claim in claim_group:
+            property_value: WikidataDatavalue = datavalue_dict_to_obj(claim['datavalue'])
+            property_entity: Entity | None = None
+            if property_value.datatype == "wikibase-entityid" and property_value.value['entity-type'] == "item":
+                property_entity = get_entity(norm_wikidata_id(property_value.value['id']), reader)
+            time_qualifiers = list()
+            for qualifier in claim['qualifiers']:
+                qualifier_relation: Relation = relation_dict.get(qualifier['property'])  # or f"{qualifier['property']}(필터링됨)"
+                if not qualifier_relation:
+                    continue
+                qualifier_value: WikidataDatavalue = datavalue_dict_to_obj(qualifier['datavalue'])
+                qualifier_entity: Entity | None = None
+                if qualifier_value.datatype == "wikibase-entityid" and qualifier_value.value['entity-type'] == "item":
+                    qualifier_entity = get_entity(norm_wikidata_id(qualifier_value.value['id']), reader)
+                if isinstance(qualifier_value, Time):
+                    time_qualifiers.append({"qualifier_relation": qualifier_relation, "qualifier_value": get_time(qualifier_value), "qualifier_entity": qualifier_entity})
+                # else:
+                #     time_qualifiers.append({"qualifier_relation": qualifier_relation, "qualifier_value": qualifier_value, "qualifier_entity": qualifier_entity})
+            property_value = get_time(property_value) if isinstance(property_value, Time) else property_value
+            print(f"    = [object] {property_entity or property_value}")
+            if time_qualifiers:
+                for qualifier in time_qualifiers:
+                    print(f"      - {qualifier['qualifier_relation']} = {qualifier['qualifier_entity'] or qualifier['qualifier_value']}")
+        print()
 
 
 def convert_many(item: dict | Iterable[dict], args: IOArguments, reader: MongoStreamer, writer: MongoStreamer, item_is_batch: bool = True):
@@ -218,8 +241,9 @@ def convert(
             source = list_of_all_properties
         logger.info(f"Load Wikidata {total_properties.shape[0]} properties from {source}")
         valid_properties = total_properties[
-            (total_properties['property_count'] >= args.option.min_property_count)
-            & ~total_properties['datatype'].isin([x.strip() for x in args.option.black_property_datatypes.split(",")])
+            ~total_properties['datatype'].isin([x.strip() for x in args.option.black_property_datatypes.split(",")])
+            & ((total_properties['property_count'] >= args.option.min_property_count)
+               | (total_properties['qualifier_count'] >= args.option.min_property_count))
             ]
         logger.info(f"Keep Wikidata {valid_properties.shape[0]} properties by options: min_property_count={args.option.min_property_count}, black_property_datatypes={args.option.black_property_datatypes}")
         for p in valid_properties.to_dict(orient='records'):
@@ -233,12 +257,14 @@ def convert(
         logger.info(f"Make relation_dict for Wikidata {len(relation_dict)} properties using {input_table.opt}")
         # for x in relation_dict.items():
         #     print(x)
-        exit(1)
+        # for x in input_table:
+        #     print(x['id'])
+        # exit(1)
 
         # extract time-sensitive triples
         test_data = input_table.table.find({'_id': {'$in': [norm_wikidata_id('Q50184'), norm_wikidata_id('Q884')]}})
-        # input_data = args.input.ready_inputs(input_table, total=len(input_table))
         input_data = args.input.ready_inputs(test_data, total=len(input_table))
+        # input_data = args.input.ready_inputs(input_table, total=len(input_table))
         logger.info(f"Extract from [{input_table.opt}] to [{output_table.opt}]")
         logger.info(f"- [input] total={args.input.total} | start={args.input.start} | limit={args.input.limit}"
                     f" | {type(input_data).__name__}={input_data.num_item}{f'x{args.input.batch}ea' if input_data.has_batch_items() else ''}")

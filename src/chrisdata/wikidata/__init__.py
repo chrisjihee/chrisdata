@@ -130,7 +130,7 @@ class Entity(TypedData):
         return Entity.from_dict(unit.to_dict())
 
     def __str__(self):
-        return f"{self.id}[{self.title1 or self.title2}]"
+        return f"{self.id}[{self.title1 or self.title2 or self.label1 or self.label2}]"
 
 
 @dataclass
@@ -148,7 +148,7 @@ class Relation(TypedData):
     reference_count: int = -1
 
     def __str__(self):
-        return f"{self.id}[{self.label2}]"
+        return f"{self.id}[{self.label2}]({self.label1})"
 
 
 @dataclass
