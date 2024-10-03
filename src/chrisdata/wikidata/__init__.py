@@ -241,5 +241,6 @@ class DoubleTriple(TypedData):
 
 
 import chrisdata.wikidata.parse_wikidata
+import chrisdata.wikidata.filter_wikidata
 import chrisdata.wikidata.convert_wikidata
 import chrisdata.wikidata.restore_wikidata

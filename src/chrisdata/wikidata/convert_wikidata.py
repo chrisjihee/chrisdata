@@ -164,7 +164,7 @@ def convert(
         input_resource_name: str = typer.Option(default="wikidata-properties.jsonl"),
         # output
         output_file_home: str = typer.Option(default="output/wikidata"),
-        output_file_name: str = typer.Option(default="wikidata-20240916-extract.jsonl"),
+        output_file_name: str = typer.Option(default="wikidata-20240916-convert.jsonl"),
         output_file_mode: str = typer.Option(default="w"),
         output_table_home: str = typer.Option(default="localhost:8800/wikidata"),
         output_table_name: str = typer.Option(default="wikidata-20240916-extract"),
