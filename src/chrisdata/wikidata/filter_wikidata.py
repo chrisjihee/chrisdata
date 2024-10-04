@@ -43,7 +43,6 @@ def filter(
         input_limit: int = typer.Option(default=-1),
         input_batch: int = typer.Option(default=100),
         input_inter: int = typer.Option(default=10000),
-        input_total: int = typer.Option(default=113850250),  # 112473850 vs. 113850250 # https://www.wikidata.org/wiki/Wikidata:Statistics  # TODO: Replace with (actual count)
         input_table_home: str = typer.Option(default="localhost:8800/wikidata"),
         input_table_name: str = typer.Option(default="wikidata-20240916-parse"),
         input_table_timeout: int = typer.Option(default=3600),
@@ -67,7 +66,6 @@ def filter(
         limit=input_limit if not debugging else 2,
         batch=input_batch if not debugging else 1,
         inter=input_inter if not debugging else 1,
-        total=input_total,
         table=TableOption(
             home=input_table_home,
             name=input_table_name,

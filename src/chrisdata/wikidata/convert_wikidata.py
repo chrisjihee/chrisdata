@@ -150,18 +150,17 @@ def convert(
         input_limit: int = typer.Option(default=-1),  # TODO: Replace with -1
         input_batch: int = typer.Option(default=100),  # TODO: Replace with 100
         input_inter: int = typer.Option(default=100),  # TODO: Replace with 10000
-        input_total: int = typer.Option(default=214530),  # TODO: Replace with (actual count)
         input_file_home: str = typer.Option(default="input/wikidata"),
         input_file_name: str = typer.Option(default="wikidata-20240916-korean.txt"),
         input_prop_name: str = typer.Option(default="wikidata-properties.jsonl"),
-        input_table_home: str = typer.Option(default="localhost:8801/wikidata"),
+        input_table_home: str = typer.Option(default="localhost:8800/wikidata"),
         input_table_name: str = typer.Option(default="wikidata-20240916-parse"),
         input_table_timeout: int = typer.Option(default=3600),
         # output
         output_file_home: str = typer.Option(default="output/wikidata"),
         output_file_name: str = typer.Option(default="wikidata-20240916-convert.jsonl"),
         output_file_mode: str = typer.Option(default="w"),
-        output_table_home: str = typer.Option(default="localhost:8801/wikidata"),
+        output_table_home: str = typer.Option(default="localhost:8800/wikidata"),
         output_table_name: str = typer.Option(default="wikidata-20240916-convert"),
         output_table_reset: bool = typer.Option(default=True),
         # option
@@ -183,7 +182,6 @@ def convert(
         limit=input_limit if not debugging else 2,
         batch=input_batch if not debugging else 1,
         inter=input_inter if not debugging else 1,
-        total=input_total,
         file=FileOption(
             home=input_file_home,
             name=input_file_name,
@@ -266,12 +264,14 @@ def convert(
         logger.info(f"Convert from [{input_file.opt}, {input_table.opt}] to [{output_file.opt}, {output_table.opt}]")
         logger.info(f"- [input] total={args.input.total} | start={args.input.start} | limit={args.input.limit}"
                     f" | {type(input_data).__name__}={input_data.num_item}{f'x{args.input.batch}ea' if input_data.has_batch_items() else ''}")
+        logger.info(f"- [input] table.timeout={args.input.table.timeout}")
         logger.info(f"- [output] file.reset={args.output.file.reset} | file.mode={args.output.file.mode}")
         logger.info(f"- [output] table.reset={args.output.table.reset} | table.timeout={args.output.table.timeout}")
+        exit(1)
         with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="converting", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for item in input_data.items:
-                convert_many(item=item, item_is_batch=input_data.has_batch_items(), args=args,
-                             reader=input_table, writer=output_table)
+                convert_many(item=item, args=args, reader=input_table, writer=output_table,
+                             item_is_batch=input_data.has_batch_items())
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
