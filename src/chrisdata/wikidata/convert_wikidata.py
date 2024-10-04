@@ -1,3 +1,4 @@
+import json
 from typing import Iterable
 
 import httpx
@@ -101,56 +102,102 @@ def get_entity(_id: str, reader: MongoStreamer) -> Entity | None:
 #     return relation_dict[_id]
 
 
-def get_wikidata_entity(datavalue: WikibaseEntityId, reader: MongoStreamer) -> str:
+def get_wikidata_entity(datavalue: WikibaseEntityId, reader: MongoStreamer) -> WikidataValue:
     entity: Entity | None = get_entity(norm_wikidata_id(datavalue.value['id']), reader)
     if not entity:
-        return f"{datavalue.value['id']}"
+        return WikidataValue(
+            type=type(datavalue).__name__,
+            value=datavalue.value,
+            string=datavalue.value['id'],
+        )
     else:
-        return (entity.title1 or entity.title2) or (entity.label1 or entity.label2) or entity.id
-        # return f"Entity(title={entity.title1 or entity.title2}, label={entity.label1 or entity.label2}, id={entity.id})"
+        return WikidataValue(
+            type=type(datavalue).__name__,
+            value=datavalue.value,
+            entity=entity,
+            string=(entity.title1 or entity.title2) or (entity.label1 or entity.label2) or entity.id,
+        )
 
 
-def get_quantity(datavalue: Quantity, reader: MongoStreamer) -> str:
+def get_quantity(datavalue: Quantity, reader: MongoStreamer) -> WikidataValue:
     if datavalue.value['unit'] == '1':
-        return f"{datavalue.value['amount']}"
-    match = QUANTITY_UNIT_PATTERN.fullmatch(datavalue.value['unit'])
-    if not match:
-        return f"{datavalue.value['amount']} {datavalue.value['unit']}"
+        return WikidataValue(
+            type=type(datavalue).__name__,
+            value=datavalue.value,
+            string=f"{datavalue.value['amount']}",
+        )
     else:
-        unit: Entity | None = get_entity(norm_wikidata_id(match.group('id')), reader)
-        return f"{datavalue.value['amount']} {unit.label2 or unit.label1 or unit.id}"
+        match = QUANTITY_UNIT_PATTERN.fullmatch(datavalue.value['unit'])
+        if not match:
+            return WikidataValue(
+                type=type(datavalue).__name__,
+                value=datavalue.value,
+                string=f"{datavalue.value['amount']} {datavalue.value['unit']}",
+            )
+        else:
+            unit: Entity | None = get_entity(norm_wikidata_id(match.group('id')), reader)
+            return WikidataValue(
+                type=type(datavalue).__name__,
+                value=datavalue.value,
+                entity=unit,
+                string=f"{datavalue.value['amount']} {unit.label2 or unit.label1 or unit.id}",
+            )
 
 
-def get_time(datavalue: Time) -> str:
+def get_time(datavalue: Time) -> WikidataValue:
     parts = datavalue.get_parsed_datetime_dict()
     if datavalue.value['precision'] <= 9:
-        return f"{parts['year']:04d}"
+        return WikidataValue(
+            type=type(datavalue).__name__,
+            value=datavalue.value,
+            string=f"{parts['year']:04d}",
+        )
     elif datavalue.value['precision'] == 10:
-        return f"{parts['year']:04d}-{parts['month']:02d}"
+        return WikidataValue(
+            type=type(datavalue).__name__,
+            value=datavalue.value,
+            string=f"{parts['year']:04d}-{parts['month']:02d}",
+        )
     elif datavalue.value['precision'] == 11:
-        return f"{parts['year']:04d}-{parts['month']:02d}-{parts['day']:02d}"
+        return WikidataValue(
+            type=type(datavalue).__name__,
+            value=datavalue.value,
+            string=f"{parts['year']:04d}-{parts['month']:02d}-{parts['day']:02d}",
+        )
     else:
         raise ValueError(f"Unknown precision: {datavalue.value['precision']}")
 
 
-def get_monolingual_text(datavalue: MonolingualText) -> str:
-    return f"{datavalue.value['text']}({datavalue.value['language']})"
+def get_monolingual_text(datavalue: MonolingualText) -> WikidataValue:
+    return WikidataValue(
+        type=type(datavalue).__name__,
+        value=datavalue.value,
+        string=f"{datavalue.value['text']}({datavalue.value['language']})",
+    )
 
 
-def datavalue_dict_to_str(datavalue: dict, reader: MongoStreamer) -> str:
-    obj: WikidataDatavalue = datavalue_dict_to_obj(datavalue)
-    if isinstance(obj, WikibaseEntityId):
-        return get_wikidata_entity(obj, reader)
-    elif isinstance(obj, Quantity):
-        return get_quantity(obj, reader)
-    elif isinstance(obj, Time):
-        return get_time(obj)
-    elif isinstance(obj, MonolingualText):
-        return get_monolingual_text(obj)
-    elif isinstance(obj, String):
-        return obj.value
+def datavalue_to_object(datavalue: dict, reader: MongoStreamer) -> WikidataValue:
+    datavalue: WikidataDatavalue = datavalue_dict_to_obj(datavalue)
+    if isinstance(datavalue, WikibaseEntityId):
+        return get_wikidata_entity(datavalue, reader)
+    elif isinstance(datavalue, Quantity):
+        return get_quantity(datavalue, reader)
+    elif isinstance(datavalue, Time):
+        return get_time(datavalue)
+    elif isinstance(datavalue, MonolingualText):
+        return get_monolingual_text(datavalue)
+    elif isinstance(datavalue, String):
+        return WikidataValue(
+            type=type(datavalue).__name__,
+            value=datavalue.value,
+            string=datavalue.value,
+        )
     else:
-        return str(obj)
+        return WikidataValue(
+            type=type(datavalue).__name__,
+            value=datavalue.value,
+            string=str(datavalue),
+        )
 
 
 @dataclass
@@ -172,22 +219,33 @@ def convert_one(x: dict, args: IOArguments, reader: MongoStreamer) -> TimeSensit
     for statement_relation in statement_relations:
         print(statement_relation.id, statement_relation.label1, statement_relation.label2, statement_relation.datatype, statement_relation.property_count, len(statements[statement_relation.id]))
         for statement in statements[statement_relation.id]:
-            statement_value_str = datavalue_dict_to_str(statement['datavalue'], reader)
-            statement_value: WikidataDatavalue = datavalue_dict_to_obj(statement['datavalue'])
+            statement_value = datavalue_to_object(statement['datavalue'], reader)
 
+            time_qualifiers = list()
+            time_qualifiers_str = list()
             qualifiers = {k: list(vs) for k, vs in grouped(statement['qualifiers'], itemgetter='property') if k in relation_dict}
             qualifier_relations = [
                 relation_dict[k] for k in sorted(qualifiers.keys(), key=property_order, reverse=True)
                 if relation_dict[k].datatype == "T"
             ]
-            time_qualifiers = list()
             for qualifier_relation in qualifier_relations:
-                qualifier_values = [
-                    datavalue_dict_to_str(qualifier['datavalue'], reader)
-                    for qualifier in qualifiers[qualifier_relation.id]
-                ]
-                time_qualifiers.append(f"{qualifier_relation.label2.replace(SP, US)}={'|'.join(qualifier_values)}")
-            print(f"= {statement_value_str} ({type(statement_value).__name__}){f' ({(CM + SP).join(time_qualifiers)})' if time_qualifiers else ''}")
+                qualifier_values = list()
+                for qualifier in qualifiers[qualifier_relation.id]:
+                    qualifier_value = datavalue_to_object(qualifier['datavalue'], reader)
+                    qualifier_values.append(qualifier_value)
+                time_qualifiers_str.append(f"{qualifier_relation.label2.replace(SP, US)}={'|'.join([i.string for i in qualifier_values])}")
+                time_qualifiers.append({
+                    "relation": qualifier_relation.to_dict(),
+                    "values": [x.to_dict() for x in qualifier_values],
+                })
+
+            result_statement = {
+                # "relation": statement_relation.to_dict(),
+                "value": statement_value.to_dict(),
+                "time_qualifiers": time_qualifiers,
+            }
+            print(f"= {statement_value.string} ({statement_value.type}){f' ({(CM + SP).join(time_qualifiers_str)})' if time_qualifiers_str else ''}")
+            print(f"  -> {json.dumps(result_statement, ensure_ascii=False)}")
         print()
 
 

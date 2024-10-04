@@ -119,9 +119,8 @@ class Entity(TypedData):
     label2: str
     title1: str | None = None
     title2: str | None = None
-
-    # alias1: list = field(default_factory=list)
-    # alias2: list = field(default_factory=list)
+    alias1: list = field(default_factory=list)
+    alias2: list = field(default_factory=list)
     # descr1: str | None = None
     # descr2: str | None = None
 
@@ -149,6 +148,14 @@ class Relation(TypedData):
 
     def __str__(self):
         return f"{self.id}[{self.label2}]({self.label1})"
+
+
+@dataclass
+class WikidataValue(TypedData):
+    type: str
+    value: dict
+    string: str
+    entity: Entity | None = None
 
 
 @dataclass
