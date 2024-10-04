@@ -103,7 +103,8 @@ def filter(
         logger.info(f"- [output] file.reset={args.output.file.reset} | file.mode={args.output.file.mode}")
         with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="filtering", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for item in input_data.items:
-                filter_many(item=item, writer=output_file, item_is_batch=input_data.has_batch_items())
+                filter_many(item=item, writer=output_file,
+                            item_is_batch=input_data.has_batch_items())
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
