@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.css') }}">
+    <title>Entity: {{ entity.id }} [{{ entity.title }}]</title>
+</head>
+<body>
+<div class="container my-3">
+    <h1 class="border-bottom py-2">
+        <a href="https://ko.wikipedia.org/wiki/{{ entity.title }}"
+           class="link-primary link-underline-opacity-0">{{ entity.title }}</a>
+        <a href="https://www.wikidata.org/wiki/{{ entity.id }}"
+           class="btn btn-sm btn-outline-secondary">source</a>
+    </h1>
+    <table class="table table-bordered table-hover text-center">
+        <thead>
+        <tr>
+            <th scope="col">#</th>
+            <th scope="col">relation</th>
+            <th scope="col">#object</th>
+            <th scope="col">object</th>
+            <th scope="col">point_in_time</th>
+            <th scope="col">start_time</th>
+            <th scope="col">end_time</th>
+        </tr>
+        </thead>
+        <tbody>{% for statement in statements %}
+        <tr>
+            <th scope="row">{{ loop.index }}</th>
+            <td>{{ statement.relation }}</td>
+            <td>{{ statement.num_object }}</td>
+            <td><a href="{{ statement.object_link }}"
+                   class="link-body-emphasis link-offset-2 link-underline-opacity-25 link-underline-opacity-75-hover">{{ statement.object_title }}</a></td>
+            <td>{{ statement.point_in_time or '' }}</td>
+            <td>{{ statement.start_time or '' }}</td>
+            <td>{{ statement.end_time or '' }}</td>
+        </tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

@@ -6,6 +6,8 @@ import pandas as pd
 import typer
 from bs4 import BeautifulSoup
 from dataclasses_json import DataClassJsonMixin
+from flask import Flask, redirect, url_for, render_template
+from flask_classful import FlaskView
 from qwikidata.datavalue import Time, Quantity, WikibaseEntityId, String, MonolingualText
 
 from chrisbase.data import FileStreamer, MongoStreamer
@@ -247,6 +249,42 @@ def convert_one(x: dict, args: IOArguments, reader: MongoStreamer) -> TimeSensit
             print(f"= {statement_value.string} ({statement_value.type}){f' ({(CM + SP).join(time_qualifiers_str)})' if time_qualifiers_str else ''}")
             print(f"  -> {json.dumps(result_statement, ensure_ascii=False)}")
         print()
+
+    class EntityView(FlaskView):
+        def index(self):
+            return "List of entities"
+
+        def get(self, entity_id):
+            entity = {
+                "id": entity_id,
+                "title": subject.title1
+            }
+            statements = [
+                {
+                    "relation": "P31",
+                    "num_object": 1,
+                    "object_link": "Q5",
+                    "object_title": "human",
+                    "point_in_time": "2021-09-16",
+                    "start_time": "2023-09-16",
+                    "end_time": None,
+                }
+            ]
+            return render_template("entity_detail.html", entity=entity, statements=statements)
+
+    server = Flask(
+        "wikidata_browser",
+        static_folder=args.env.working_dir / "static",
+        template_folder=args.env.working_dir / "templates",
+    )
+
+    @server.route("/")
+    def home():
+        # return redirect(url_for(f'{EntityView.__name__}:{EntityView.index.__name__}'))
+        return redirect(url_for(f'{EntityView.__name__}:{EntityView.get.__name__}', entity_id=subject.id))
+
+    EntityView.register(server)
+    server.run(host="localhost", port=7321, debug=True)
 
 
 def convert_many(item: dict | Iterable[dict], args: IOArguments, reader: MongoStreamer, writer: MongoStreamer, item_is_batch: bool = True):
