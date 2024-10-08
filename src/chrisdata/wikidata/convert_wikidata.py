@@ -238,12 +238,12 @@ def convert_one(x: dict, args: IOArguments, reader: MongoStreamer) -> TimeSensit
                 time_qualifiers_str.append(f"{qualifier_relation.label2.replace(SP, US)}={'|'.join([i.string for i in qualifier_values])}")
                 time_qualifiers.append({
                     "relation": qualifier_relation.to_dict(),
-                    "values": [x.to_dict() for x in qualifier_values],
+                    "values": [x.model_dump() for x in qualifier_values],
                 })
 
             result_statement = {
                 # "relation": statement_relation.to_dict(),
-                "value": statement_value.to_dict(),
+                "value": statement_value.model_dump(),
                 "time_qualifiers": time_qualifiers,
             }
             print(f"= {statement_value.string} ({statement_value.type}){f' ({(CM + SP).join(time_qualifiers_str)})' if time_qualifiers_str else ''}")

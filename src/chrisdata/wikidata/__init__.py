@@ -4,6 +4,7 @@ import math
 from dataclasses import dataclass, field
 from typing import Optional
 
+from pydantic import BaseModel
 from qwikidata.claim import WikidataClaim
 from qwikidata.datavalue import _DATAVALUE_TYPE_TO_CLASS, WikidataDatavalue
 from qwikidata.entity import WikidataItem, WikidataProperty, WikidataLexeme, ClaimsMixin
@@ -150,10 +151,9 @@ class Relation(TypedData):
         return f"{self.id}[{self.label2}]({self.label1})"
 
 
-@dataclass
-class WikidataValue(TypedData):
+class WikidataValue(BaseModel):
     type: str
-    value: dict
+    value: str | dict
     string: str
     entity: Entity | None = None
 
