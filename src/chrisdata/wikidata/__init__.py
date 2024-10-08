@@ -1,17 +1,18 @@
-import re
 import logging
 import math
+import re
 from dataclasses import dataclass, field
 from typing import Optional
 
 from pydantic import BaseModel
 from qwikidata.claim import WikidataClaim
-from qwikidata.datavalue import _DATAVALUE_TYPE_TO_CLASS, WikidataDatavalue
+from qwikidata.datavalue import _DATAVALUE_TYPE_TO_CLASS, WikidataDatavalue, Time, Quantity, WikibaseEntityId, String, MonolingualText
 from qwikidata.entity import WikidataItem, WikidataProperty, WikidataLexeme, ClaimsMixin
 from qwikidata.snak import WikidataSnak
 from qwikidata.typedefs import LanguageCode
 
 from chrisbase.data import AppTyper, TypedData, IOArguments
+from chrisbase.data import MongoStreamer
 
 app = AppTyper()
 logger = logging.getLogger(__name__)
@@ -72,11 +73,11 @@ class WikidataLexemeEx(WikidataLexeme, ClaimMixinEx):
         return res
 
 
-wikidata_unit_id = re.compile(r"^([A-Z])([0-9]+)$")
+WIKIDATA_ID_PATTERN = re.compile(r"^([A-Z])([0-9]+)$")
 
 
 def split_wikidata_id(x: str):
-    match = wikidata_unit_id.fullmatch(x)
+    match = WIKIDATA_ID_PATTERN.fullmatch(x)
     if match:
         try:
             return match.group(1), int(match.group(2))
@@ -113,49 +114,175 @@ class WikidataUnit(TypedData):
     claims: list[dict] = field(default_factory=list)
 
 
-@dataclass
-class Entity(TypedData):
+class Entity(BaseModel):
     id: str
     label1: str
     label2: str
-    title1: str | None = None
-    title2: str | None = None
-    alias1: list = field(default_factory=list)
-    alias2: list = field(default_factory=list)
+    # alias1: list = field(default_factory=list)
+    # alias2: list = field(default_factory=list)
     # descr1: str | None = None
     # descr2: str | None = None
+    title1: str | None = None
+    title2: str | None = None
 
     @staticmethod
     def from_wikidata_unit(unit: WikidataUnit) -> "Entity":
-        return Entity.from_dict(unit.to_dict())
-
-    def __str__(self):
-        return f"{self.id}[{self.title1 or self.title2 or self.label1 or self.label2}]"
+        return Entity.model_validate(unit.to_dict())
 
 
-@dataclass
-class Relation(TypedData):
+entity_cache: dict[str, Entity | None] = dict()
+
+
+class Relation(BaseModel):
     id: str
     label1: str
     label2: str
-    descr1: str
-    descr2: str
-    alias1: list[str] = field(default_factory=list)
-    alias2: list[str] = field(default_factory=list)
+    # alias1: list[str] = field(default_factory=list)
+    # alias2: list[str] = field(default_factory=list)
+    # descr1: str
+    # descr2: str
     datatype: str | None = None
     property_count: int = -1
     qualifier_count: int = -1
     reference_count: int = -1
 
-    def __str__(self):
-        return f"{self.id}[{self.label2}]({self.label1})"
-
 
 class WikidataValue(BaseModel):
     type: str
-    value: str | dict
     string: str
     entity: Entity | None = None
+    raw_data: str | dict
+
+
+QUANTITY_UNIT_PATTERN = re.compile(
+    r"""
+    http://www.wikidata.org/entity/(?P<id>[A-Z]\d+)
+    """,
+    re.VERBOSE,
+)
+
+
+def get_entity(_id: str, reader: MongoStreamer) -> Entity | None:
+    if _id not in entity_cache:
+        row: dict | None = reader.table.find_one({'_id': _id})
+        if not row:
+            entity_cache[_id] = None
+        else:
+            entity_cache[_id] = Entity.model_validate(row)
+    return entity_cache[_id]
+
+
+def get_wikidata_entity(datavalue: WikibaseEntityId, reader: MongoStreamer) -> WikidataValue:
+    entity: Entity | None = get_entity(norm_wikidata_id(datavalue.value['id']), reader)
+    if not entity:
+        return WikidataValue(
+            type=type(datavalue).__name__,
+            string=datavalue.value['id'],
+            raw_data=datavalue.value,
+        )
+    else:
+        return WikidataValue(
+            type=type(datavalue).__name__,
+            string=(entity.title1 or entity.title2) or (entity.label1 or entity.label2) or entity.id,
+            entity=entity,
+            raw_data=datavalue.value,
+        )
+
+
+def get_quantity(datavalue: Quantity, reader: MongoStreamer) -> WikidataValue:
+    if datavalue.value['unit'] == '1':
+        return WikidataValue(
+            type=type(datavalue).__name__,
+            string=f"{datavalue.value['amount']}",
+            raw_data=datavalue.value,
+        )
+    else:
+        match = QUANTITY_UNIT_PATTERN.fullmatch(datavalue.value['unit'])
+        if not match:
+            return WikidataValue(
+                type=type(datavalue).__name__,
+                string=f"{datavalue.value['amount']} {datavalue.value['unit']}",
+                raw_data=datavalue.value,
+            )
+        else:
+            unit: Entity | None = get_entity(norm_wikidata_id(match.group('id')), reader)
+            return WikidataValue(
+                type=type(datavalue).__name__,
+                string=f"{datavalue.value['amount']} {unit.label2 or unit.label1 or unit.id}",
+                entity=unit,
+                raw_data=datavalue.value,
+            )
+
+
+def get_time(datavalue: Time) -> WikidataValue:
+    parts = datavalue.get_parsed_datetime_dict()
+    if datavalue.value['precision'] <= 9:
+        return WikidataValue(
+            type=type(datavalue).__name__,
+            string=f"{parts['year']:04d}",
+            raw_data=datavalue.value,
+        )
+    elif datavalue.value['precision'] == 10:
+        return WikidataValue(
+            type=type(datavalue).__name__,
+            string=f"{parts['year']:04d}-{parts['month']:02d}",
+            raw_data=datavalue.value,
+        )
+    elif datavalue.value['precision'] == 11:
+        return WikidataValue(
+            type=type(datavalue).__name__,
+            string=f"{parts['year']:04d}-{parts['month']:02d}-{parts['day']:02d}",
+            raw_data=datavalue.value,
+        )
+    else:
+        raise ValueError(f"Unknown precision: {datavalue.value['precision']}")
+
+
+def get_monolingual_text(datavalue: MonolingualText) -> WikidataValue:
+    return WikidataValue(
+        type=type(datavalue).__name__,
+        string=f"{datavalue.value['text']}({datavalue.value['language']})",
+        raw_data=datavalue.value,
+    )
+
+
+def datavalue_to_object(datavalue: dict, reader: MongoStreamer) -> WikidataValue:
+    datavalue: WikidataDatavalue = datavalue_dict_to_obj(datavalue)
+    if isinstance(datavalue, WikibaseEntityId):
+        return get_wikidata_entity(datavalue, reader)
+    elif isinstance(datavalue, Quantity):
+        return get_quantity(datavalue, reader)
+    elif isinstance(datavalue, Time):
+        return get_time(datavalue)
+    elif isinstance(datavalue, MonolingualText):
+        return get_monolingual_text(datavalue)
+    elif isinstance(datavalue, String):
+        return WikidataValue(
+            type=type(datavalue).__name__,
+            string=datavalue.value,
+            raw_data=datavalue.value,
+        )
+    else:
+        return WikidataValue(
+            type=type(datavalue).__name__,
+            string=str(datavalue),
+            raw_data=datavalue.value,
+        )
+
+
+class WikidataQualifier(BaseModel):
+    relation: Relation
+    values: list[WikidataValue]
+
+
+class WikidataStatementValue(BaseModel):
+    value: WikidataValue
+    qualifiers: list[WikidataQualifier]
+
+
+class WikidataStatement(BaseModel):
+    relation: Relation
+    values: list[WikidataStatementValue]
 
 
 @dataclass
@@ -247,7 +374,4 @@ class DoubleTriple(TypedData):
             return None
 
 
-import chrisdata.wikidata.parse_wikidata
-import chrisdata.wikidata.filter_wikidata
-import chrisdata.wikidata.convert_wikidata
-import chrisdata.wikidata.restore_wikidata
+from . import parse_wikidata, filter_wikidata, convert_wikidata, restore_wikidata

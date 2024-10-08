@@ -1,32 +1,22 @@
 import json
-from typing import Iterable
+from typing import Iterable, List
 
 import httpx
 import pandas as pd
 import typer
 from bs4 import BeautifulSoup
-from dataclasses_json import DataClassJsonMixin
 from flask import Flask, redirect, url_for, render_template
 from flask_classful import FlaskView
-from qwikidata.datavalue import Time, Quantity, WikibaseEntityId, String, MonolingualText
 
-from chrisbase.data import FileStreamer, MongoStreamer
-from chrisbase.data import InputOption, OutputOption, FileOption, TableOption
+from chrisbase.data import InputOption, OutputOption, FileOption, TableOption, FileStreamer
 from chrisbase.data import JobTimer, ProjectEnv, OptionData
 from chrisbase.io import LoggingFormat, new_path, merge_dicts
 from chrisbase.util import mute_tqdm_cls, grouped, SP, CM, US
 from chrisdata.wikidata import *
 
 logger = logging.getLogger(__name__)
-entity_cache: dict[str, Entity | None] = dict()
 relation_dict: dict[str, Relation | None] = dict()
 list_of_all_properties: str = "https://www.wikidata.org/wiki/Wikidata:Database_reports/List_of_properties/all"
-QUANTITY_UNIT_PATTERN = re.compile(
-    r"""
-    http://www.wikidata.org/entity/(?P<id>[A-Z]\d+)
-    """,
-    re.VERBOSE,
-)
 datatype_orders: dict[str, int] = {
     "WI": 14,
     "WL": 13,
@@ -83,194 +73,74 @@ def download_wikidata_properties() -> pd.DataFrame:
         return data
 
 
-def get_entity(_id: str, reader: MongoStreamer) -> Entity | None:
-    if _id not in entity_cache:
-        row: dict | None = reader.table.find_one({'_id': _id})
-        if not row:
-            entity_cache[_id] = None
-        else:
-            entity_cache[_id] = Entity.from_dict(row)
-    return entity_cache[_id]
-
-
-# def get_relation(_id: str, reader: MongoStreamer) -> Relation | None:
-#     if _id not in relation_dict:
-#         row: dict | None = reader.table.find_one({'_id': _id})
-#         if not row:
-#             relation_dict[_id] = None
-#         else:
-#             row['id'] = row['_id']
-#             relation_dict[_id] = Relation.from_dict(row)
-#     return relation_dict[_id]
-
-
-def get_wikidata_entity(datavalue: WikibaseEntityId, reader: MongoStreamer) -> WikidataValue:
-    entity: Entity | None = get_entity(norm_wikidata_id(datavalue.value['id']), reader)
-    if not entity:
-        return WikidataValue(
-            type=type(datavalue).__name__,
-            value=datavalue.value,
-            string=datavalue.value['id'],
-        )
-    else:
-        return WikidataValue(
-            type=type(datavalue).__name__,
-            value=datavalue.value,
-            entity=entity,
-            string=(entity.title1 or entity.title2) or (entity.label1 or entity.label2) or entity.id,
-        )
-
-
-def get_quantity(datavalue: Quantity, reader: MongoStreamer) -> WikidataValue:
-    if datavalue.value['unit'] == '1':
-        return WikidataValue(
-            type=type(datavalue).__name__,
-            value=datavalue.value,
-            string=f"{datavalue.value['amount']}",
-        )
-    else:
-        match = QUANTITY_UNIT_PATTERN.fullmatch(datavalue.value['unit'])
-        if not match:
-            return WikidataValue(
-                type=type(datavalue).__name__,
-                value=datavalue.value,
-                string=f"{datavalue.value['amount']} {datavalue.value['unit']}",
-            )
-        else:
-            unit: Entity | None = get_entity(norm_wikidata_id(match.group('id')), reader)
-            return WikidataValue(
-                type=type(datavalue).__name__,
-                value=datavalue.value,
-                entity=unit,
-                string=f"{datavalue.value['amount']} {unit.label2 or unit.label1 or unit.id}",
-            )
-
-
-def get_time(datavalue: Time) -> WikidataValue:
-    parts = datavalue.get_parsed_datetime_dict()
-    if datavalue.value['precision'] <= 9:
-        return WikidataValue(
-            type=type(datavalue).__name__,
-            value=datavalue.value,
-            string=f"{parts['year']:04d}",
-        )
-    elif datavalue.value['precision'] == 10:
-        return WikidataValue(
-            type=type(datavalue).__name__,
-            value=datavalue.value,
-            string=f"{parts['year']:04d}-{parts['month']:02d}",
-        )
-    elif datavalue.value['precision'] == 11:
-        return WikidataValue(
-            type=type(datavalue).__name__,
-            value=datavalue.value,
-            string=f"{parts['year']:04d}-{parts['month']:02d}-{parts['day']:02d}",
-        )
-    else:
-        raise ValueError(f"Unknown precision: {datavalue.value['precision']}")
-
-
-def get_monolingual_text(datavalue: MonolingualText) -> WikidataValue:
-    return WikidataValue(
-        type=type(datavalue).__name__,
-        value=datavalue.value,
-        string=f"{datavalue.value['text']}({datavalue.value['language']})",
-    )
-
-
-def datavalue_to_object(datavalue: dict, reader: MongoStreamer) -> WikidataValue:
-    datavalue: WikidataDatavalue = datavalue_dict_to_obj(datavalue)
-    if isinstance(datavalue, WikibaseEntityId):
-        return get_wikidata_entity(datavalue, reader)
-    elif isinstance(datavalue, Quantity):
-        return get_quantity(datavalue, reader)
-    elif isinstance(datavalue, Time):
-        return get_time(datavalue)
-    elif isinstance(datavalue, MonolingualText):
-        return get_monolingual_text(datavalue)
-    elif isinstance(datavalue, String):
-        return WikidataValue(
-            type=type(datavalue).__name__,
-            value=datavalue.value,
-            string=datavalue.value,
-        )
-    else:
-        return WikidataValue(
-            type=type(datavalue).__name__,
-            value=datavalue.value,
-            string=str(datavalue),
-        )
-
-
-@dataclass
-class TimeSensitiveEntity(DataClassJsonMixin):
-    _id: str
-    id: str
-
-
-def convert_one(x: dict, args: IOArguments, reader: MongoStreamer) -> TimeSensitiveEntity | None:
+def convert_one(x: dict, args: IOArguments, reader: MongoStreamer) -> dict | None:
     item: WikidataUnit = WikidataUnit.from_dict(reader.table.find_one({'_id': x}))
-    subject: Entity = Entity.from_wikidata_unit(item)
+    entity: Entity = Entity.from_wikidata_unit(item)
     print("=" * 80)
-    print(f"* subject: {subject}")
+    print(f"* subject: {entity}")
 
-    statements = {k: list(vs) for k, vs in grouped(item.claims, itemgetter='property') if k in relation_dict}
+    grouped_statements = {k: list(vs) for k, vs in grouped(item.claims, itemgetter='property') if k in relation_dict}
     statement_relations = [
-        relation_dict[k] for k in sorted(statements.keys(), key=property_order, reverse=True)
+        relation_dict[k] for k in sorted(grouped_statements.keys(), key=property_order, reverse=True)
     ]
+    entity_statements: list[WikidataStatement] = list()
     for statement_relation in statement_relations:
-        print(statement_relation.id, statement_relation.label1, statement_relation.label2, statement_relation.datatype, statement_relation.property_count, len(statements[statement_relation.id]))
-        for statement in statements[statement_relation.id]:
-            statement_value = datavalue_to_object(statement['datavalue'], reader)
+        print(statement_relation.id, statement_relation.label1, statement_relation.label2, statement_relation.datatype, statement_relation.property_count, len(grouped_statements[statement_relation.id]))
+        statement_values: list[WikidataStatementValue] = list()
+        for statement in grouped_statements[statement_relation.id]:
+            statement_value: WikidataValue = datavalue_to_object(statement['datavalue'], reader)
 
-            time_qualifiers = list()
-            time_qualifiers_str = list()
-            qualifiers = {k: list(vs) for k, vs in grouped(statement['qualifiers'], itemgetter='property') if k in relation_dict}
-            qualifier_relations = [
-                relation_dict[k] for k in sorted(qualifiers.keys(), key=property_order, reverse=True)
+            grouped_qualifiers = {k: list(vs) for k, vs in grouped(statement['qualifiers'], itemgetter='property') if k in relation_dict}
+            time_qualifier_relations: list[Relation] = [
+                relation_dict[k] for k in sorted(grouped_qualifiers.keys(), key=property_order, reverse=True)
                 if relation_dict[k].datatype == "T"
             ]
-            for qualifier_relation in qualifier_relations:
-                qualifier_values = list()
-                for qualifier in qualifiers[qualifier_relation.id]:
-                    qualifier_value = datavalue_to_object(qualifier['datavalue'], reader)
+            time_qualifiers: list[WikidataQualifier] = list()
+            time_qualifiers_str: list[str] = list()
+            for qualifier_relation in time_qualifier_relations:
+                qualifier_values: list[WikidataValue] = list()
+                for qualifier in grouped_qualifiers[qualifier_relation.id]:
+                    qualifier_value: WikidataValue = datavalue_to_object(qualifier['datavalue'], reader)
                     qualifier_values.append(qualifier_value)
+                time_qualifiers.append(WikidataQualifier(relation=qualifier_relation, values=qualifier_values))
                 time_qualifiers_str.append(f"{qualifier_relation.label2.replace(SP, US)}={'|'.join([i.string for i in qualifier_values])}")
-                time_qualifiers.append({
-                    "relation": qualifier_relation.to_dict(),
-                    "values": [x.model_dump() for x in qualifier_values],
-                })
 
-            result_statement = {
-                # "relation": statement_relation.to_dict(),
-                "value": statement_value.model_dump(),
-                "time_qualifiers": time_qualifiers,
-            }
+            statement_values.append(WikidataStatementValue(value=statement_value, qualifiers=time_qualifiers))
             print(f"= {statement_value.string} ({statement_value.type}){f' ({(CM + SP).join(time_qualifiers_str)})' if time_qualifiers_str else ''}")
-            print(f"  -> {json.dumps(result_statement, ensure_ascii=False)}")
+            print(f"  -> {WikidataStatementValue(value=statement_value, qualifiers=time_qualifiers)}")
+        entity_statements.append(WikidataStatement(relation=statement_relation, values=statement_values))
         print()
+
+    print("-" * 80)
+    for x in entity_statements:
+        print(f"- {x}")
+    print("-" * 80)
+    print(f"ENTITY: {[entity]}")
+    print([entity_statements[0].relation])
+    print([entity_statements[0].values])
+    # entity = entity, statements = entity_statements
 
     class EntityView(FlaskView):
         def index(self):
             return "List of entities"
 
         def get(self, entity_id):
-            entity = {
-                "id": entity_id,
-                "title": subject.title1
-            }
-            statements = [
-                {
-                    "relation": "P31",
-                    "num_object": 1,
-                    "object_link": "Q5",
-                    "object_title": "human",
-                    "point_in_time": "2021-09-16",
-                    "start_time": "2023-09-16",
-                    "end_time": None,
-                }
-            ]
-            return render_template("entity_detail.html", entity=entity, statements=statements)
+            # entity = {
+            #     "id": entity_id,
+            #     "title": entity.title1
+            # }
+            # statements = [
+            #     {
+            #         "relation": "P31",
+            #         "num_object": 1,
+            #         "object_link": "Q5",
+            #         "object_title": "human",
+            #         "point_in_time": "2021-09-16",
+            #         "start_time": "2023-09-16",
+            #         "end_time": None,
+            #     }
+            # ]
+            return render_template("entity_detail.html", entity=entity)
 
     server = Flask(
         "wikidata_browser",
@@ -281,7 +151,7 @@ def convert_one(x: dict, args: IOArguments, reader: MongoStreamer) -> TimeSensit
     @server.route("/")
     def home():
         # return redirect(url_for(f'{EntityView.__name__}:{EntityView.index.__name__}'))
-        return redirect(url_for(f'{EntityView.__name__}:{EntityView.get.__name__}', entity_id=subject.id))
+        return redirect(url_for(f'{EntityView.__name__}:{EntityView.get.__name__}', entity_id=entity.id))
 
     EntityView.register(server)
     server.run(host="localhost", port=7321, debug=True)
@@ -404,7 +274,7 @@ def convert(
         logger.info(f"Keep Wikidata {valid_properties.shape[0]} properties by options: min_property_count={args.option.min_property_count}, black_property_datatypes={args.option.black_property_datatypes}")
         for p in valid_properties.to_dict(orient='records'):
             row = input_table.table.find_one({'_id': norm_wikidata_id(p['ID'])})
-            relation_dict[p['ID']] = Relation.from_dict(merge_dicts(row, {
+            relation_dict[p['ID']] = Relation.model_validate(merge_dicts(row, {
                 'datatype': p['datatype'],
                 'property_count': p['property_count'],
                 'qualifier_count': p['qualifier_count'],
