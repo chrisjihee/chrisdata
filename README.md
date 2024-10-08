@@ -29,7 +29,7 @@ Data processing tools for data analysis
     pip install -U -e .
     rm -rf chrisbase*; git clone git@github.com:chrisjihee/chrisbase.git
     pip install -U -e chrisbase*
-    pip list | grep -E "search|Wiki|wiki|json|chris|Data"
+    pip list | grep -E "mongo|search|Wiki|wiki|json|chris|Flask"
     ```
 
 5. Install MongoDB
