@@ -116,35 +116,18 @@ def convert_one(x: dict, args: IOArguments, reader: MongoStreamer) -> dict | Non
         print()
 
     print("-" * 80)
-    for x in entity_statements:
-        print(f"- {x}")
-    print("-" * 80)
     print(f"ENTITY: {[entity]}")
-    print([entity_statements[0].relation])
-    print([entity_statements[0].values])
-
-    # entity = entity, statements = entity_statements
+    print(f"STATEMENTS:")
+    print("-" * 80)
+    for x in entity_statements:
+        print(f"- {[x]}")
+    print("-" * 80)
 
     class EntityView(FlaskView):
         def index(self):
             return "List of entities"
 
         def get(self, entity_id):
-            # entity = {
-            #     "id": entity_id,
-            #     "title": entity.title1
-            # }
-            # statements = [
-            #     {
-            #         "relation": "P31",
-            #         "num_object": 1,
-            #         "object_link": "Q5",
-            #         "object_title": "human",
-            #         "point_in_time": "2021-09-16",
-            #         "start_time": "2023-09-16",
-            #         "end_time": None,
-            #     }
-            # ]
             return render_template("entity_detail.html", entity=entity, statements=entity_statements)
 
     server = Flask(
