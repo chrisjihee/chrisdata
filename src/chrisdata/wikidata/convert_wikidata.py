@@ -1,5 +1,4 @@
-import json
-from typing import Iterable, List
+from typing import Iterable
 
 import httpx
 import pandas as pd
@@ -11,7 +10,7 @@ from flask_classful import FlaskView
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption, FileStreamer
 from chrisbase.data import JobTimer, ProjectEnv, OptionData
 from chrisbase.io import LoggingFormat, new_path, merge_dicts
-from chrisbase.util import mute_tqdm_cls, grouped, SP, CM, US
+from chrisbase.util import mute_tqdm_cls, grouped, CM
 from chrisdata.wikidata import *
 
 logger = logging.getLogger(__name__)
@@ -82,7 +81,7 @@ def convert_one(x: dict, args: IOArguments, reader: MongoStreamer) -> dict | Non
     grouped_statements = {k: list(vs) for k, vs in grouped(item.claims, itemgetter='property') if k in relation_dict}
     statement_relations = [
         relation_dict[k] for k in sorted(grouped_statements.keys(), key=property_order, reverse=True)
-    ]
+    ]  # [4:5]  # TODO: Remove [:5]
     entity_statements: list[WikidataStatement] = list()
     for statement_relation in statement_relations:
         print(statement_relation.id, statement_relation.label1, statement_relation.label2, statement_relation.datatype, statement_relation.property_count, len(grouped_statements[statement_relation.id]))
@@ -95,14 +94,19 @@ def convert_one(x: dict, args: IOArguments, reader: MongoStreamer) -> dict | Non
                 relation_dict[k] for k in sorted(grouped_qualifiers.keys(), key=property_order, reverse=True)
                 if relation_dict[k].datatype == "T"
             ]
-            time_qualifiers: list[WikidataQualifier] = list()
+            time_qualifiers: dict[str, str | None] = {
+                "point_in_time": None,
+                "start_time": None,
+                "end_time": None,
+            }
             time_qualifiers_str: list[str] = list()
             for qualifier_relation in time_qualifier_relations:
                 qualifier_values: list[WikidataValue] = list()
                 for qualifier in grouped_qualifiers[qualifier_relation.id]:
                     qualifier_value: WikidataValue = datavalue_to_object(qualifier['datavalue'], reader)
                     qualifier_values.append(qualifier_value)
-                time_qualifiers.append(WikidataQualifier(relation=qualifier_relation, values=qualifier_values))
+                time_qualifiers[qualifier_relation.label2.replace(SP, US)] = '|'.join([i.string for i in qualifier_values])
+                # time_qualifiers.append(WikidataQualifier(relation=qualifier_relation, values=qualifier_values))
                 time_qualifiers_str.append(f"{qualifier_relation.label2.replace(SP, US)}={'|'.join([i.string for i in qualifier_values])}")
 
             statement_values.append(WikidataStatementValue(value=statement_value, qualifiers=time_qualifiers))
@@ -118,6 +122,7 @@ def convert_one(x: dict, args: IOArguments, reader: MongoStreamer) -> dict | Non
     print(f"ENTITY: {[entity]}")
     print([entity_statements[0].relation])
     print([entity_statements[0].values])
+
     # entity = entity, statements = entity_statements
 
     class EntityView(FlaskView):
@@ -140,7 +145,7 @@ def convert_one(x: dict, args: IOArguments, reader: MongoStreamer) -> dict | Non
             #         "end_time": None,
             #     }
             # ]
-            return render_template("entity_detail.html", entity=entity)
+            return render_template("entity_detail.html", entity=entity, statements=entity_statements)
 
     server = Flask(
         "wikidata_browser",

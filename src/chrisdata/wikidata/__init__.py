@@ -13,6 +13,7 @@ from qwikidata.typedefs import LanguageCode
 
 from chrisbase.data import AppTyper, TypedData, IOArguments
 from chrisbase.data import MongoStreamer
+from chrisbase.util import SP, US
 
 app = AppTyper()
 logger = logging.getLogger(__name__)
@@ -151,7 +152,8 @@ class WikidataValue(BaseModel):
     type: str
     string: str
     entity: Entity | None = None
-    raw_data: str | dict
+    entity_link: str | None = None
+    raw_data: str | dict | None = None
 
 
 QUANTITY_UNIT_PATTERN = re.compile(
@@ -178,14 +180,22 @@ def get_wikidata_entity(datavalue: WikibaseEntityId, reader: MongoStreamer) -> W
         return WikidataValue(
             type=type(datavalue).__name__,
             string=datavalue.value['id'],
-            raw_data=datavalue.value,
+            entity_link=f"https://www.wikidata.org/wiki/{datavalue.value['id']}",
+            # raw_data=datavalue.value,
         )
     else:
+        if entity.title1:
+            entity_link = f"https://ko.wikipedia.org/wiki/{entity.title1.replace(SP, US)}"
+        elif entity.title2:
+            entity_link = f"https://en.wikipedia.org/wiki/{entity.title2.replace(SP, US)}"
+        else:
+            entity_link = f"https://www.wikidata.org/wiki/{entity.id}"
         return WikidataValue(
             type=type(datavalue).__name__,
             string=(entity.title1 or entity.title2) or (entity.label1 or entity.label2) or entity.id,
             entity=entity,
-            raw_data=datavalue.value,
+            entity_link=entity_link,
+            # raw_data=datavalue.value,
         )
 
 
@@ -194,7 +204,7 @@ def get_quantity(datavalue: Quantity, reader: MongoStreamer) -> WikidataValue:
         return WikidataValue(
             type=type(datavalue).__name__,
             string=f"{datavalue.value['amount']}",
-            raw_data=datavalue.value,
+            # raw_data=datavalue.value,
         )
     else:
         match = QUANTITY_UNIT_PATTERN.fullmatch(datavalue.value['unit'])
@@ -202,7 +212,7 @@ def get_quantity(datavalue: Quantity, reader: MongoStreamer) -> WikidataValue:
             return WikidataValue(
                 type=type(datavalue).__name__,
                 string=f"{datavalue.value['amount']} {datavalue.value['unit']}",
-                raw_data=datavalue.value,
+                # raw_data=datavalue.value,
             )
         else:
             unit: Entity | None = get_entity(norm_wikidata_id(match.group('id')), reader)
@@ -210,7 +220,7 @@ def get_quantity(datavalue: Quantity, reader: MongoStreamer) -> WikidataValue:
                 type=type(datavalue).__name__,
                 string=f"{datavalue.value['amount']} {unit.label2 or unit.label1 or unit.id}",
                 entity=unit,
-                raw_data=datavalue.value,
+                # raw_data=datavalue.value,
             )
 
 
@@ -220,19 +230,19 @@ def get_time(datavalue: Time) -> WikidataValue:
         return WikidataValue(
             type=type(datavalue).__name__,
             string=f"{parts['year']:04d}",
-            raw_data=datavalue.value,
+            # raw_data=datavalue.value,
         )
     elif datavalue.value['precision'] == 10:
         return WikidataValue(
             type=type(datavalue).__name__,
             string=f"{parts['year']:04d}-{parts['month']:02d}",
-            raw_data=datavalue.value,
+            # raw_data=datavalue.value,
         )
     elif datavalue.value['precision'] == 11:
         return WikidataValue(
             type=type(datavalue).__name__,
             string=f"{parts['year']:04d}-{parts['month']:02d}-{parts['day']:02d}",
-            raw_data=datavalue.value,
+            # raw_data=datavalue.value,
         )
     else:
         raise ValueError(f"Unknown precision: {datavalue.value['precision']}")
@@ -242,7 +252,7 @@ def get_monolingual_text(datavalue: MonolingualText) -> WikidataValue:
     return WikidataValue(
         type=type(datavalue).__name__,
         string=f"{datavalue.value['text']}({datavalue.value['language']})",
-        raw_data=datavalue.value,
+        # raw_data=datavalue.value,
     )
 
 
@@ -260,13 +270,13 @@ def datavalue_to_object(datavalue: dict, reader: MongoStreamer) -> WikidataValue
         return WikidataValue(
             type=type(datavalue).__name__,
             string=datavalue.value,
-            raw_data=datavalue.value,
+            # raw_data=datavalue.value,
         )
     else:
         return WikidataValue(
             type=type(datavalue).__name__,
             string=str(datavalue),
-            raw_data=datavalue.value,
+            # raw_data=datavalue.value,
         )
 
 
@@ -277,7 +287,8 @@ class WikidataQualifier(BaseModel):
 
 class WikidataStatementValue(BaseModel):
     value: WikidataValue
-    qualifiers: list[WikidataQualifier]
+    qualifiers: dict[str, str | None]
+    # qualifiers: list[WikidataQualifier]
 
 
 class WikidataStatement(BaseModel):
