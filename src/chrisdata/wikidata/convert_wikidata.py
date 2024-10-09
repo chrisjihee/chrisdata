@@ -6,8 +6,7 @@ import httpx
 import pandas as pd
 import typer
 from bs4 import BeautifulSoup
-from flask import Flask, redirect, url_for, render_template
-from flask_classful import FlaskView
+from flask import Flask, render_template
 
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption, FileStreamer
 from chrisbase.data import JobTimer, ProjectEnv, OptionData
@@ -58,11 +57,6 @@ class ExtraOption(OptionData):
 
     def white_qualifier_relation_list(self):
         return [x.strip() for x in self.white_qualifier_relations.split("|")]
-
-
-# {"ID":"P580","label":"start time","description":"time an entity begins to exist or a statement starts being valid","datatype":"T","property_count":815629,"qualifier_count":11461189,"reference_count":0}
-# {"ID":"P582","label":"end time","description":"moment when an entity ceases to exist or a statement stops being valid","datatype":"T","property_count":705579,"qualifier_count":5392022,"reference_count":0}
-# {"ID":"P585","label":"point in time","description":"date something took place, existed or a statement was true; for providing time use the \"refine date\" property (P4241)","datatype":"T","property_count":1014806,"qualifier_count":14488413,"reference_count":0}
 
 
 def download_wikidata_properties() -> pd.DataFrame:
@@ -149,13 +143,11 @@ def convert_one(item_id: dict, args: IOArguments, reader: MongoStreamer) -> Subj
 
 
 def view_one(args: IOArguments, subject: Entity, statements: list[Statement]):
-    server = Flask("wikidata_browser",
-                   static_folder=args.env.working_dir / "static",
-                   template_folder=args.env.working_dir / "templates")
+    server = Flask("wikidata_browser", template_folder=args.env.working_dir / "templates")
 
     @server.route("/")
-    def home():
-        return render_template("entity_detail.html", subject=subject, statements=statements)
+    def index():
+        return render_template("entity_detail.html", subject=subject, statement_list=statements)
 
     server.run(host="localhost", port=7321, debug=False)
 
@@ -183,7 +175,7 @@ def convert(
         input_batch: int = typer.Option(default=100),  # TODO: Replace with 100
         input_inter: int = typer.Option(default=100),  # TODO: Replace with 10000
         input_file_home: str = typer.Option(default="input/wikidata"),
-        input_file_name: str = typer.Option(default="wikidata-20240916-korean.txt"),
+        input_file_name: str = typer.Option(default="wikidata-20240916-korean-100.txt"),
         input_prop_name: str = typer.Option(default="wikidata-properties.jsonl"),
         input_table_home: str = typer.Option(default="localhost:8800/wikidata"),
         input_table_name: str = typer.Option(default="wikidata-20240916-parse"),
@@ -323,38 +315,26 @@ def convert(
         if args.option.serve:
             entity_list: list[SubjectInfo] = list()
             entity_details: dict[str, SubjectStatements] = dict()
-
-            class EntityView(FlaskView):
-                def __init__(self, init_argument: tuple[list[SubjectInfo], dict[str, SubjectStatements]]):
-                    self.entity_list, self.entity_details = init_argument
-                    super().__init__()
-
-                def index(self):
-                    return render_template("entity_list.html", entity_list=self.entity_list)
-
-                def get(self, id: str):
-                    id = Path(id).stem
-                    entity: SubjectStatements | None = self.entity_details.get(id)
-                    if entity:
-                        return render_template("entity_detail.html", subject=entity.subject, statement_list=entity.statements)
-                    else:
-                        return "Not Found", 404
-
             for row in output_table:
                 info: SubjectInfo = SubjectInfo.model_validate(row)
                 detail: SubjectStatements = SubjectStatements.model_validate(row)
                 entity_list.append(info)
                 entity_details[info.subject.id] = detail
             logger.info(f"Load {len(entity_list)} entities from [{output_table.opt}]")
-
-            server = Flask("wikidata_browser",
-                           static_folder=args.env.working_dir / "static",
-                           template_folder=args.env.working_dir / "templates")
-            EntityView.register(server, init_argument=(entity_list, entity_details))
+            server = Flask("wikidata_browser", template_folder=args.env.working_dir / "templates")
 
             @server.route("/")
-            def home():
-                return redirect(url_for("EntityView:index"))
-                # return redirect(url_for("EntityView:get", id="Q1"))
+            def index():
+                return render_template("entity_list.html", entity_list=entity_list)
+                # return redirect(url_for('entity', sub='Q1.html'))
+
+            @server.route("/entity/<path:sub>")
+            def entity(sub: str):
+                id = Path(sub).stem
+                entity: SubjectStatements | None = entity_details.get(id)
+                if entity:
+                    return render_template("entity_detail.html", subject=entity.subject, statement_list=entity.statements)
+                else:
+                    return "Not Found", 404
 
             server.run(host="localhost", port=7321, debug=False)
