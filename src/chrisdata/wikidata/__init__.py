@@ -311,6 +311,11 @@ class Statement(BaseModel):
     values: list[StatementValue]
 
 
+class SubjectStatements(BaseModel):
+    subject: Entity
+    statements: list[Statement]
+
+
 @dataclass
 class EntityInWiki(TypedData):
     entity: str

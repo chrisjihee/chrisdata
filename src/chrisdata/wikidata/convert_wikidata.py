@@ -72,19 +72,21 @@ def download_wikidata_properties() -> pd.DataFrame:
         return data
 
 
-def convert_one(x: dict, args: IOArguments, reader: MongoStreamer) -> dict | None:
-    item: WikidataUnit = WikidataUnit.from_dict(reader.table.find_one({'_id': x}))
+def convert_one(item_id: dict, args: IOArguments, reader: MongoStreamer) -> SubjectStatements | None:
+    item: WikidataUnit = WikidataUnit.from_dict(reader.table.find_one({'_id': item_id}))
     subject: Entity = Entity.from_wikidata_unit(item)
-    logger.info("*" * 80)
-    logger.info(f" * {str([subject])[1:-1]}")
+    if args.env.debugging:
+        logger.info("*" * 80)
+        logger.info(f" * {str([subject])[1:-1]}")
 
     statements: list[Statement] = list()
     grouped_statements = {k: list(vs) for k, vs in grouped(item.claims, itemgetter='property') if k in relation_dict}
     statement_relations: list[Relation] = [
         relation_dict[k] for k in sorted(grouped_statements.keys(), key=property_order, reverse=True)
-    ]  # [4:5]
+    ]
     for statement_relation in statement_relations:
-        logger.info(f"   + {str([statement_relation])[1:-1]}")
+        if args.env.debugging:
+            logger.info(f"   + {str([statement_relation])[1:-1]}")
         statement_values: list[StatementValue] = list()
         for statement in grouped_statements[statement_relation.id]:
             statement_value: DataValue = datavalue_to_object(statement['datavalue'], reader)
@@ -106,44 +108,50 @@ def convert_one(x: dict, args: IOArguments, reader: MongoStreamer) -> dict | Non
                     qualifier_values.append(qualifier_value)
                 qualifiers[qualifier_relation.label2.replace(SP, US)] = '|'.join([i.string for i in qualifier_values])
 
-            logger.info(f"     - {str([StatementValue(value=statement_value, qualifiers=qualifiers)])[1:-1]}")
+            if args.env.debugging:
+                logger.info(f"     - {str([StatementValue(value=statement_value, qualifiers=qualifiers)])[1:-1]}")
             statement_values.append(StatementValue(value=statement_value, qualifiers=qualifiers))
         statements.append(Statement(relation=statement_relation, values=statement_values))
-        # print()
 
-    logger.info("-" * 80)
-    logger.info(f"Subject: {str([subject])[1:-1]}")
-    logger.info(f"Statements:")
-    for x in statements:
-        logger.info(f"- {str([x])[1:-1]}")
-    logger.info("-" * 80)
-
-    class EntityView(FlaskView):
-        def index(self):
-            return "List of entities"
-
-        def get(self, entity_id):
-            return render_template("entity_detail.html", subject=subject, statements=statements)
-
-    server = Flask("wikidata_browser",
-                   static_folder=args.env.working_dir / "static",
-                   template_folder=args.env.working_dir / "templates")
-
-    @server.route("/")
-    def home():
-        # return redirect(url_for(f'{EntityView.__name__}:{EntityView.index.__name__}'))
-        return redirect(url_for(f'{EntityView.__name__}:{EntityView.get.__name__}', entity_id=subject.id))
-
-    EntityView.register(server)
-    server.run(host="localhost", port=7321, debug=False)
+    if len(statements) > 0:
+        if args.env.debugging:
+            logger.info("-" * 80)
+            logger.info(f"Subject: {str([subject])[1:-1]}")
+            logger.info(f"Statements:")
+            for x in statements:
+                logger.info(f"- {str([x])[1:-1]}")
+            logger.info("-" * 80)
+        return SubjectStatements(subject=subject, statements=statements)
+    return None
 
 
 def convert_many(item: dict | Iterable[dict], args: IOArguments, reader: MongoStreamer, writer: MongoStreamer, item_is_batch: bool = True):
     batch = item if item_is_batch else [item]
     rows = [convert_one(x, args, reader) for x in batch]
-    rows = [row.to_dict() for row in rows if row]
+    rows = [merge_dicts({"_id": norm_wikidata_id(row.subject.id)}, row.model_dump())
+            for row in rows if row]
     if len(rows) > 0:
         writer.table.insert_many(rows)
+
+    # if args.env.debugging:
+    #     class EntityView(FlaskView):
+    #         def index(self):
+    #             return "List of entities"
+    #
+    #         def get(self, entity_id):
+    #             return render_template("entity_detail.html", subject=subject, statements=statements)
+    #
+    #     server = Flask("wikidata_browser",
+    #                    static_folder=args.env.working_dir / "static",
+    #                    template_folder=args.env.working_dir / "templates")
+    #
+    #     @server.route("/")
+    #     def home():
+    #         # return redirect(url_for(f'{EntityView.__name__}:{EntityView.index.__name__}'))
+    #         return redirect(url_for(f'{EntityView.__name__}:{EntityView.get.__name__}', entity_id=subject.id))
+    #
+    #     EntityView.register(server)
+    #     server.run(host="localhost", port=7321, debug=False)
 
 
 @app.command()
@@ -158,8 +166,8 @@ def convert(
         # input
         input_start: int = typer.Option(default=0),
         input_limit: int = typer.Option(default=-1),  # TODO: Replace with -1
-        input_batch: int = typer.Option(default=100),  # TODO: Replace with 100
-        input_inter: int = typer.Option(default=100),  # TODO: Replace with 10000
+        input_batch: int = typer.Option(default=10),  # TODO: Replace with 100
+        input_inter: int = typer.Option(default=10),  # TODO: Replace with 10000
         input_file_home: str = typer.Option(default="input/wikidata"),
         input_file_name: str = typer.Option(default="wikidata-20240916-korean.txt"),
         input_prop_name: str = typer.Option(default="wikidata-properties.jsonl"),
