@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from typing import Iterable
 
 import httpx
@@ -11,7 +12,7 @@ from flask_classful import FlaskView
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption, FileStreamer
 from chrisbase.data import JobTimer, ProjectEnv, OptionData
 from chrisbase.io import LoggingFormat, new_path, merge_dicts
-from chrisbase.util import mute_tqdm_cls, grouped, CM
+from chrisbase.util import mute_tqdm_cls, grouped
 from chrisdata.wikidata import *
 
 logger = logging.getLogger(__name__)
@@ -179,8 +180,8 @@ def convert(
         # input
         input_start: int = typer.Option(default=0),
         input_limit: int = typer.Option(default=-1),  # TODO: Replace with -1
-        input_batch: int = typer.Option(default=10),  # TODO: Replace with 100
-        input_inter: int = typer.Option(default=10),  # TODO: Replace with 10000
+        input_batch: int = typer.Option(default=100),  # TODO: Replace with 100
+        input_inter: int = typer.Option(default=100),  # TODO: Replace with 10000
         input_file_home: str = typer.Option(default="input/wikidata"),
         input_file_name: str = typer.Option(default="wikidata-20240916-korean.txt"),
         input_prop_name: str = typer.Option(default="wikidata-properties.jsonl"),
@@ -332,8 +333,9 @@ def convert(
                     return render_template("entity_list.html", entity_list=self.entity_list)
 
                 def get(self, id: str):
+                    id = Path(id).stem
                     entity: SubjectStatements | None = self.entity_details.get(id)
-                    if item:
+                    if entity:
                         return render_template("entity_detail.html", subject=entity.subject, statement_list=entity.statements)
                     else:
                         return "Not Found", 404
