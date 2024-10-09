@@ -74,75 +74,68 @@ def download_wikidata_properties() -> pd.DataFrame:
 
 def convert_one(x: dict, args: IOArguments, reader: MongoStreamer) -> dict | None:
     item: WikidataUnit = WikidataUnit.from_dict(reader.table.find_one({'_id': x}))
-    entity: Entity = Entity.from_wikidata_unit(item)
-    print("=" * 80)
-    print(f"* subject: {entity}")
+    subject: Entity = Entity.from_wikidata_unit(item)
+    logger.info("*" * 80)
+    logger.info(f" * {str([subject])[1:-1]}")
 
+    statements: list[Statement] = list()
     grouped_statements = {k: list(vs) for k, vs in grouped(item.claims, itemgetter='property') if k in relation_dict}
-    statement_relations = [
+    statement_relations: list[Relation] = [
         relation_dict[k] for k in sorted(grouped_statements.keys(), key=property_order, reverse=True)
-    ]  # [4:5]  # TODO: Remove [:5]
-    entity_statements: list[WikidataStatement] = list()
+    ]  # [4:5]
     for statement_relation in statement_relations:
-        print(statement_relation.id, statement_relation.label1, statement_relation.label2, statement_relation.datatype, statement_relation.property_count, len(grouped_statements[statement_relation.id]))
-        statement_values: list[WikidataStatementValue] = list()
+        logger.info(f"   + {str([statement_relation])[1:-1]}")
+        statement_values: list[StatementValue] = list()
         for statement in grouped_statements[statement_relation.id]:
-            statement_value: WikidataValue = datavalue_to_object(statement['datavalue'], reader)
+            statement_value: DataValue = datavalue_to_object(statement['datavalue'], reader)
 
-            grouped_qualifiers = {k: list(vs) for k, vs in grouped(statement['qualifiers'], itemgetter='property') if k in relation_dict}
-            time_qualifier_relations: list[Relation] = [
-                relation_dict[k] for k in sorted(grouped_qualifiers.keys(), key=property_order, reverse=True)
-                if relation_dict[k].datatype == "T"
-            ]
-            time_qualifiers: dict[str, str | None] = {
+            qualifiers: dict[str, str | None] = {
                 "point_in_time": None,
                 "start_time": None,
                 "end_time": None,
             }
-            time_qualifiers_str: list[str] = list()
-            for qualifier_relation in time_qualifier_relations:
-                qualifier_values: list[WikidataValue] = list()
+            grouped_qualifiers = {k: list(vs) for k, vs in grouped(statement['qualifiers'], itemgetter='property') if k in relation_dict}
+            qualifier_relations: list[Relation] = [
+                relation_dict[k] for k in sorted(grouped_qualifiers.keys(), key=property_order, reverse=True)
+                if relation_dict[k].datatype == "T"
+            ]
+            for qualifier_relation in qualifier_relations:
+                qualifier_values: list[DataValue] = list()
                 for qualifier in grouped_qualifiers[qualifier_relation.id]:
-                    qualifier_value: WikidataValue = datavalue_to_object(qualifier['datavalue'], reader)
+                    qualifier_value: DataValue = datavalue_to_object(qualifier['datavalue'], reader)
                     qualifier_values.append(qualifier_value)
-                time_qualifiers[qualifier_relation.label2.replace(SP, US)] = '|'.join([i.string for i in qualifier_values])
-                # time_qualifiers.append(WikidataQualifier(relation=qualifier_relation, values=qualifier_values))
-                time_qualifiers_str.append(f"{qualifier_relation.label2.replace(SP, US)}={'|'.join([i.string for i in qualifier_values])}")
+                qualifiers[qualifier_relation.label2.replace(SP, US)] = '|'.join([i.string for i in qualifier_values])
 
-            statement_values.append(WikidataStatementValue(value=statement_value, qualifiers=time_qualifiers))
-            print(f"= {statement_value.string} ({statement_value.type}){f' ({(CM + SP).join(time_qualifiers_str)})' if time_qualifiers_str else ''}")
-            print(f"  -> {WikidataStatementValue(value=statement_value, qualifiers=time_qualifiers)}")
-        entity_statements.append(WikidataStatement(relation=statement_relation, values=statement_values))
-        print()
+            logger.info(f"     - {str([StatementValue(value=statement_value, qualifiers=qualifiers)])[1:-1]}")
+            statement_values.append(StatementValue(value=statement_value, qualifiers=qualifiers))
+        statements.append(Statement(relation=statement_relation, values=statement_values))
+        # print()
 
-    print("-" * 80)
-    print(f"ENTITY: {[entity]}")
-    print(f"STATEMENTS:")
-    print("-" * 80)
-    for x in entity_statements:
-        print(f"- {[x]}")
-    print("-" * 80)
+    logger.info("-" * 80)
+    logger.info(f"Subject: {str([subject])[1:-1]}")
+    logger.info(f"Statements:")
+    for x in statements:
+        logger.info(f"- {str([x])[1:-1]}")
+    logger.info("-" * 80)
 
     class EntityView(FlaskView):
         def index(self):
             return "List of entities"
 
         def get(self, entity_id):
-            return render_template("entity_detail.html", entity=entity, statements=entity_statements)
+            return render_template("entity_detail.html", subject=subject, statements=statements)
 
-    server = Flask(
-        "wikidata_browser",
-        static_folder=args.env.working_dir / "static",
-        template_folder=args.env.working_dir / "templates",
-    )
+    server = Flask("wikidata_browser",
+                   static_folder=args.env.working_dir / "static",
+                   template_folder=args.env.working_dir / "templates")
 
     @server.route("/")
     def home():
         # return redirect(url_for(f'{EntityView.__name__}:{EntityView.index.__name__}'))
-        return redirect(url_for(f'{EntityView.__name__}:{EntityView.get.__name__}', entity_id=entity.id))
+        return redirect(url_for(f'{EntityView.__name__}:{EntityView.get.__name__}', entity_id=subject.id))
 
     EntityView.register(server)
-    server.run(host="localhost", port=7321, debug=True)
+    server.run(host="localhost", port=7321, debug=False)
 
 
 def convert_many(item: dict | Iterable[dict], args: IOArguments, reader: MongoStreamer, writer: MongoStreamer, item_is_batch: bool = True):

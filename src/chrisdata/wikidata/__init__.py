@@ -126,6 +126,27 @@ class Entity(BaseModel):
     title1: str | None = None
     title2: str | None = None
 
+    @property
+    def title(self) -> str:
+        return self.title1 or self.title2
+
+    @property
+    def label(self) -> str:
+        return self.label1 or self.label2 or self.id
+
+    @property
+    def source(self) -> str:
+        return f"https://www.wikidata.org/wiki/{self.id}"
+
+    @property
+    def document(self) -> str:
+        if self.title1:
+            return f"https://ko.wikipedia.org/wiki/{self.title1.replace(SP, US)}"
+        elif self.title2:
+            return f"https://en.wikipedia.org/wiki/{self.title2.replace(SP, US)}"
+        else:
+            return self.source
+
     @staticmethod
     def from_wikidata_unit(unit: WikidataUnit) -> "Entity":
         return Entity.model_validate(unit.to_dict())
@@ -147,13 +168,21 @@ class Relation(BaseModel):
     qualifier_count: int = -1
     reference_count: int = -1
 
+    @property
+    def label(self) -> str:
+        return self.label1 or self.label2 or self.id
 
-class WikidataValue(BaseModel):
+    @property
+    def source(self) -> str:
+        return f"https://www.wikidata.org/wiki/Property:{self.id}"
+
+
+class DataValue(BaseModel):
     type: str
     string: str
     entity: Entity | None = None
-    entity_link: str | None = None
     raw_data: str | dict | None = None
+    # entity_link: str | None = None
 
 
 QUANTITY_UNIT_PATTERN = re.compile(
@@ -174,34 +203,26 @@ def get_entity(_id: str, reader: MongoStreamer) -> Entity | None:
     return entity_cache[_id]
 
 
-def get_wikidata_entity(datavalue: WikibaseEntityId, reader: MongoStreamer) -> WikidataValue:
+def get_wikidata_entity(datavalue: WikibaseEntityId, reader: MongoStreamer) -> DataValue:
     entity: Entity | None = get_entity(norm_wikidata_id(datavalue.value['id']), reader)
     if not entity:
-        return WikidataValue(
+        return DataValue(
             type=type(datavalue).__name__,
             string=datavalue.value['id'],
-            entity_link=f"https://www.wikidata.org/wiki/{datavalue.value['id']}",
             # raw_data=datavalue.value,
         )
     else:
-        if entity.title1:
-            entity_link = f"https://ko.wikipedia.org/wiki/{entity.title1.replace(SP, US)}"
-        elif entity.title2:
-            entity_link = f"https://en.wikipedia.org/wiki/{entity.title2.replace(SP, US)}"
-        else:
-            entity_link = f"https://www.wikidata.org/wiki/{entity.id}"
-        return WikidataValue(
+        return DataValue(
             type=type(datavalue).__name__,
-            string=(entity.title1 or entity.title2) or (entity.label1 or entity.label2) or entity.id,
+            string=entity.title or entity.label,
             entity=entity,
-            entity_link=entity_link,
             # raw_data=datavalue.value,
         )
 
 
-def get_quantity(datavalue: Quantity, reader: MongoStreamer) -> WikidataValue:
+def get_quantity(datavalue: Quantity, reader: MongoStreamer) -> DataValue:
     if datavalue.value['unit'] == '1':
-        return WikidataValue(
+        return DataValue(
             type=type(datavalue).__name__,
             string=f"{datavalue.value['amount']}",
             # raw_data=datavalue.value,
@@ -209,37 +230,37 @@ def get_quantity(datavalue: Quantity, reader: MongoStreamer) -> WikidataValue:
     else:
         match = QUANTITY_UNIT_PATTERN.fullmatch(datavalue.value['unit'])
         if not match:
-            return WikidataValue(
+            return DataValue(
                 type=type(datavalue).__name__,
                 string=f"{datavalue.value['amount']} {datavalue.value['unit']}",
                 # raw_data=datavalue.value,
             )
         else:
             unit: Entity | None = get_entity(norm_wikidata_id(match.group('id')), reader)
-            return WikidataValue(
+            return DataValue(
                 type=type(datavalue).__name__,
-                string=f"{datavalue.value['amount']} {unit.label2 or unit.label1 or unit.id}",
+                string=f"{datavalue.value['amount']} {unit.label}",
                 entity=unit,
                 # raw_data=datavalue.value,
             )
 
 
-def get_time(datavalue: Time) -> WikidataValue:
+def get_time(datavalue: Time) -> DataValue:
     parts = datavalue.get_parsed_datetime_dict()
     if datavalue.value['precision'] <= 9:
-        return WikidataValue(
+        return DataValue(
             type=type(datavalue).__name__,
-            string=f"{parts['year']:04d}",
+            string=f"{parts['year']:04d}년",
             # raw_data=datavalue.value,
         )
     elif datavalue.value['precision'] == 10:
-        return WikidataValue(
+        return DataValue(
             type=type(datavalue).__name__,
             string=f"{parts['year']:04d}-{parts['month']:02d}",
             # raw_data=datavalue.value,
         )
     elif datavalue.value['precision'] == 11:
-        return WikidataValue(
+        return DataValue(
             type=type(datavalue).__name__,
             string=f"{parts['year']:04d}-{parts['month']:02d}-{parts['day']:02d}",
             # raw_data=datavalue.value,
@@ -248,15 +269,15 @@ def get_time(datavalue: Time) -> WikidataValue:
         raise ValueError(f"Unknown precision: {datavalue.value['precision']}")
 
 
-def get_monolingual_text(datavalue: MonolingualText) -> WikidataValue:
-    return WikidataValue(
+def get_monolingual_text(datavalue: MonolingualText) -> DataValue:
+    return DataValue(
         type=type(datavalue).__name__,
         string=f"{datavalue.value['text']}({datavalue.value['language']})",
         # raw_data=datavalue.value,
     )
 
 
-def datavalue_to_object(datavalue: dict, reader: MongoStreamer) -> WikidataValue:
+def datavalue_to_object(datavalue: dict, reader: MongoStreamer) -> DataValue:
     datavalue: WikidataDatavalue = datavalue_dict_to_obj(datavalue)
     if isinstance(datavalue, WikibaseEntityId):
         return get_wikidata_entity(datavalue, reader)
@@ -267,33 +288,27 @@ def datavalue_to_object(datavalue: dict, reader: MongoStreamer) -> WikidataValue
     elif isinstance(datavalue, MonolingualText):
         return get_monolingual_text(datavalue)
     elif isinstance(datavalue, String):
-        return WikidataValue(
+        return DataValue(
             type=type(datavalue).__name__,
             string=datavalue.value,
             # raw_data=datavalue.value,
         )
     else:
-        return WikidataValue(
+        return DataValue(
             type=type(datavalue).__name__,
             string=str(datavalue),
             # raw_data=datavalue.value,
         )
 
 
-class WikidataQualifier(BaseModel):
-    relation: Relation
-    values: list[WikidataValue]
-
-
-class WikidataStatementValue(BaseModel):
-    value: WikidataValue
+class StatementValue(BaseModel):
+    value: DataValue
     qualifiers: dict[str, str | None]
-    # qualifiers: list[WikidataQualifier]
 
 
-class WikidataStatement(BaseModel):
+class Statement(BaseModel):
     relation: Relation
-    values: list[WikidataStatementValue]
+    values: list[StatementValue]
 
 
 @dataclass
