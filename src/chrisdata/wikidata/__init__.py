@@ -311,12 +311,15 @@ class Statement(BaseModel):
     values: list[StatementValue]
 
 
-class SubjectStatements(BaseModel):
+class SubjectInfo(BaseModel):
     subject: Entity
-    statements: list[Statement]
     num_statements: int
     num_qualifiers: int
     document_length: int | None = None
+
+
+class SubjectStatements(SubjectInfo):
+    statements: list[Statement]
 
 
 @dataclass

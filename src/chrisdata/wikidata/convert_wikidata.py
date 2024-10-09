@@ -122,7 +122,7 @@ def convert_one(item_id: dict, args: IOArguments, reader: MongoStreamer) -> Subj
                 for qualifier in grouped_qualifiers[qualifier_relation.id]:
                     qualifier_value: DataValue = datavalue_to_object(qualifier['datavalue'], reader)
                     qualifier_values.append(qualifier_value)
-                qualifiers[qualifier_relation.label2.replace(SP, US)] = '|'.join([i.string for i in qualifier_values])
+                qualifiers[qualifier_relation.label2.replace(SP, US)] = ', '.join([i.string for i in qualifier_values])
                 num_qualifiers += 1
 
             if args.env.debugging:
@@ -291,14 +291,10 @@ def convert(
                 'reference_count': p['reference_count'],
             }))
         logger.info(f"Make relation_dict for Wikidata {len(relation_dict)} properties using {input_table.opt}")
-        # for x in relation_dict.items():
-        #     print(x)
-        # exit(1)
 
         # convert time-sensitive triples
-        # test_data = input_table.table.find({'_id': {'$in': [norm_wikidata_id('Q50184'), norm_wikidata_id('Q884')]}})
+        # test_data = [norm_wikidata_id('Q50184'), norm_wikidata_id('Q884')]
         # input_data = args.input.ready_inputs(test_data, total=len(input_table))
-        # input_data = args.input.ready_inputs(input_table, total=len(input_table))
         input_data = args.input.ready_inputs(input_file, total=len(input_file))
         logger.info(f"Convert from [{input_file.opt}, {input_table.opt}] to [{output_file.opt}, {output_table.opt}]")
         logger.info(f"- [input] total={args.input.total} | start={args.input.start} | limit={args.input.limit}"
@@ -324,34 +320,39 @@ def convert(
                 logger.info(f"Export {prog.n}/{args.input.total} rows to [{output_file.opt}]")
 
         if args.option.serve:
-            all_entities = dict()
-            for row in output_table:
-                item = SubjectStatements.model_validate(row)
-                key = item.subject.id
-                all_entities[key] = item
-            logger.info(f"Load {len(all_entities)} entities from [{output_table.opt}]")
+            entity_list: list[SubjectInfo] = list()
+            entity_details: dict[str, SubjectStatements] = dict()
 
             class EntityView(FlaskView):
-                def index(self):
-                    for key, item in all_entities.items():
-                        print(f"k={key}, subject={item.subject}, #statements={item.num_statements}, #qualifiers={item.num_qualifiers}")
-                    return "List of entities"
+                def __init__(self, init_argument: tuple[list[SubjectInfo], dict[str, SubjectStatements]]):
+                    self.entity_list, self.entity_details = init_argument
+                    super().__init__()
 
-                def get(self, key):
-                    item = all_entities.get(key)
+                def index(self):
+                    return render_template("entity_list.html", entity_list=self.entity_list)
+
+                def get(self, id: str):
+                    entity: SubjectStatements | None = self.entity_details.get(id)
                     if item:
-                        return render_template("entity_detail.html", subject=item.subject, statements=item.statements)
+                        return render_template("entity_detail.html", subject=entity.subject, statement_list=entity.statements)
                     else:
                         return "Not Found", 404
+
+            for row in output_table:
+                info: SubjectInfo = SubjectInfo.model_validate(row)
+                detail: SubjectStatements = SubjectStatements.model_validate(row)
+                entity_list.append(info)
+                entity_details[info.subject.id] = detail
+            logger.info(f"Load {len(entity_list)} entities from [{output_table.opt}]")
 
             server = Flask("wikidata_browser",
                            static_folder=args.env.working_dir / "static",
                            template_folder=args.env.working_dir / "templates")
+            EntityView.register(server, init_argument=(entity_list, entity_details))
 
             @server.route("/")
             def home():
-                return redirect(url_for(f'{EntityView.__name__}:{EntityView.index.__name__}'))
-                # return redirect(url_for(f'{EntityView.__name__}:{EntityView.get.__name__}', key="Q1"))
+                return redirect(url_for("EntityView:index"))
+                # return redirect(url_for("EntityView:get", id="Q1"))
 
-            EntityView.register(server)
             server.run(host="localhost", port=7321, debug=False)

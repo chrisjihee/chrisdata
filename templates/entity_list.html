@@ -4,48 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.css') }}">
-    <title>Entity: {{ subject.id }} [{{ subject.title }}]</title>
+    <title>List of Entities</title>
 </head>
 <body>
 <div class="container my-3">
-    <h1 class="border-bottom py-2">
-        <a href="{{ subject.document }}" class="link-primary link-underline-opacity-0">{{ subject.title }}</a>
-        <a href="{{ subject.source }}" class="btn btn-sm btn-outline-secondary">source</a>
-    </h1>
+    <h1 class="border-bottom py-2">List of Entities</h1>
     <table class="table table-bordered table-hover text-center">
         <thead>
         <tr>
             <th scope="col">#</th>
-            <th scope="col">relation</th>
-            <th scope="col">#object</th>
-            <th scope="col">object</th>
-            <th scope="col">point_in_time</th>
-            <th scope="col">start_time</th>
-            <th scope="col">end_time</th>
+            <th scope="col">Korean</th>
+            <th scope="col">English</th>
+            <th scope="col">#statement</th>
+            <th scope="col">#qualifier</th>
+            <th scope="col">doc_length</th>
         </tr>
         </thead>
         <tbody>
-        {% for statement in statements %}
-        {% set statement_loop = loop %}
-        {% for object in statement.values %}
+        {% for info in entity_list %}
         <tr>
-            {% if loop.first %}
-            <th rowspan="{{ statement.values|length }}" scope="row">{{ statement_loop.index }}</th>
-            <td rowspan="{{ statement.values|length }}">{{ statement.relation.label1 }}({{ statement.relation.label2 }})</td>
-            <td rowspan="{{ statement.values|length }}">{{ statement.values|length }}</td>
-            {% endif %}
-            <td>
-                {% if object.value.type == 'WikibaseEntityId' and object.value.entity %}
-                <a href="{{ object.value.entity.document }}" class="link-primary link-underline-opacity-0">{{ object.value.string }}</a>
-                {% else %}
-                {{ object.value.string }}
-                {% endif %}
-            </td>
-            <td>{{ object.qualifiers.point_in_time or '' }}</td>
-            <td>{{ object.qualifiers.start_time or '' }}</td>
-            <td>{{ object.qualifiers.end_time or '' }}</td>
+            <th scope="row">{{ loop.index }}</th>
+            <td><a href="{{ url_for('EntityView:get', id=info.subject.id) }}" class="link-primary link-underline-opacity-0">{{ info.subject.title1 }}</a></td>
+            <td>{{ info.subject.title2 }}</td>
+            <td>{{ info.num_statements }}</td>
+            <td>{{ info.num_qualifiers }}</td>
+            <td>{{ info.document_length or '' }}</td>
         </tr>
-        {% endfor %}
         {% endfor %}
         </tbody>
     </table>
