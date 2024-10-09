@@ -1,3 +1,4 @@
+import json
 from typing import Iterable
 
 import httpx
@@ -44,8 +45,23 @@ def property_order(k: str):
 
 @dataclass
 class ExtraOption(OptionData):
+    serve: bool = field(default=False)
+    export: bool = field(default=True)
+    processor: str | None = field(default=None)
     min_property_count: int = field(default=1000)
-    black_property_datatypes: str = field(default="CM, EI, ES, U")
+    black_property_datatypes: str = field(default="CM|EI|ES|U")
+    white_qualifier_relations: str = field(default="P580|P582|P585")
+
+    def black_property_datatype_list(self):
+        return [x.strip() for x in self.black_property_datatypes.split("|")]
+
+    def white_qualifier_relation_list(self):
+        return [x.strip() for x in self.white_qualifier_relations.split("|")]
+
+
+# {"ID":"P580","label":"start time","description":"time an entity begins to exist or a statement starts being valid","datatype":"T","property_count":815629,"qualifier_count":11461189,"reference_count":0}
+# {"ID":"P582","label":"end time","description":"moment when an entity ceases to exist or a statement stops being valid","datatype":"T","property_count":705579,"qualifier_count":5392022,"reference_count":0}
+# {"ID":"P585","label":"point in time","description":"date something took place, existed or a statement was true; for providing time use the \"refine date\" property (P4241)","datatype":"T","property_count":1014806,"qualifier_count":14488413,"reference_count":0}
 
 
 def download_wikidata_properties() -> pd.DataFrame:
@@ -79,11 +95,14 @@ def convert_one(item_id: dict, args: IOArguments, reader: MongoStreamer) -> Subj
         logger.info("*" * 80)
         logger.info(f" * {str([subject])[1:-1]}")
 
+    num_statements = 0
+    num_qualifiers = 0
     statements: list[Statement] = list()
     grouped_statements = {k: list(vs) for k, vs in grouped(item.claims, itemgetter='property') if k in relation_dict}
     statement_relations: list[Relation] = [
         relation_dict[k] for k in sorted(grouped_statements.keys(), key=property_order, reverse=True)
     ]
+    white_qualifier_relation_list = args.option.white_qualifier_relation_list()
     for statement_relation in statement_relations:
         if args.env.debugging:
             logger.info(f"   + {str([statement_relation])[1:-1]}")
@@ -91,15 +110,12 @@ def convert_one(item_id: dict, args: IOArguments, reader: MongoStreamer) -> Subj
         for statement in grouped_statements[statement_relation.id]:
             statement_value: DataValue = datavalue_to_object(statement['datavalue'], reader)
 
-            qualifiers: dict[str, str | None] = {
-                "point_in_time": None,
-                "start_time": None,
-                "end_time": None,
-            }
+            qualifiers: dict[str, str | None] = dict()
             grouped_qualifiers = {k: list(vs) for k, vs in grouped(statement['qualifiers'], itemgetter='property') if k in relation_dict}
             qualifier_relations: list[Relation] = [
                 relation_dict[k] for k in sorted(grouped_qualifiers.keys(), key=property_order, reverse=True)
-                if relation_dict[k].datatype == "T"
+                if relation_dict[k].id in white_qualifier_relation_list
+                # if relation_dict[k].datatype == "T"
             ]
             for qualifier_relation in qualifier_relations:
                 qualifier_values: list[DataValue] = list()
@@ -107,11 +123,13 @@ def convert_one(item_id: dict, args: IOArguments, reader: MongoStreamer) -> Subj
                     qualifier_value: DataValue = datavalue_to_object(qualifier['datavalue'], reader)
                     qualifier_values.append(qualifier_value)
                 qualifiers[qualifier_relation.label2.replace(SP, US)] = '|'.join([i.string for i in qualifier_values])
+                num_qualifiers += 1
 
             if args.env.debugging:
                 logger.info(f"     - {str([StatementValue(value=statement_value, qualifiers=qualifiers)])[1:-1]}")
             statement_values.append(StatementValue(value=statement_value, qualifiers=qualifiers))
         statements.append(Statement(relation=statement_relation, values=statement_values))
+        num_statements += 1
 
     if len(statements) > 0:
         if args.env.debugging:
@@ -121,37 +139,32 @@ def convert_one(item_id: dict, args: IOArguments, reader: MongoStreamer) -> Subj
             for x in statements:
                 logger.info(f"- {str([x])[1:-1]}")
             logger.info("-" * 80)
-        return SubjectStatements(subject=subject, statements=statements)
+            view_one(args, subject, statements)
+        return SubjectStatements(subject=subject,
+                                 statements=statements,
+                                 num_statements=num_statements,
+                                 num_qualifiers=num_qualifiers)
     return None
 
 
-def convert_many(item: dict | Iterable[dict], args: IOArguments, reader: MongoStreamer, writer: MongoStreamer, item_is_batch: bool = True):
-    batch = item if item_is_batch else [item]
-    rows = [convert_one(x, args, reader) for x in batch]
-    rows = [merge_dicts({"_id": norm_wikidata_id(row.subject.id)}, row.model_dump())
-            for row in rows if row]
-    if len(rows) > 0:
-        writer.table.insert_many(rows)
+def view_one(args: IOArguments, subject: Entity, statements: list[Statement]):
+    server = Flask("wikidata_browser",
+                   static_folder=args.env.working_dir / "static",
+                   template_folder=args.env.working_dir / "templates")
 
-    # if args.env.debugging:
-    #     class EntityView(FlaskView):
-    #         def index(self):
-    #             return "List of entities"
-    #
-    #         def get(self, entity_id):
-    #             return render_template("entity_detail.html", subject=subject, statements=statements)
-    #
-    #     server = Flask("wikidata_browser",
-    #                    static_folder=args.env.working_dir / "static",
-    #                    template_folder=args.env.working_dir / "templates")
-    #
-    #     @server.route("/")
-    #     def home():
-    #         # return redirect(url_for(f'{EntityView.__name__}:{EntityView.index.__name__}'))
-    #         return redirect(url_for(f'{EntityView.__name__}:{EntityView.get.__name__}', entity_id=subject.id))
-    #
-    #     EntityView.register(server)
-    #     server.run(host="localhost", port=7321, debug=False)
+    @server.route("/")
+    def home():
+        return render_template("entity_detail.html", subject=subject, statements=statements)
+
+    server.run(host="localhost", port=7321, debug=False)
+
+
+def convert_many(item: dict | Iterable[dict], args: IOArguments, reader: MongoStreamer, writer: MongoStreamer, item_is_batch: bool = True):
+    inputs = item if item_is_batch else [item]
+    outputs = {i: convert_one(i, args, reader) for i in inputs}
+    records = [merge_dicts({"_id": k}, v.model_dump()) for k, v in outputs.items() if v]
+    if len(records) > 0:
+        writer.table.insert_many(records)
 
 
 @app.command()
@@ -162,7 +175,7 @@ def convert(
         logging_home: str = typer.Option(default="output/wikidata/convert"),
         logging_file: str = typer.Option(default="logging.out"),
         max_workers: int = typer.Option(default=1),
-        debugging: bool = typer.Option(default=False),  # TODO: Replace with False
+        debugging: bool = typer.Option(default=True),  # TODO: Replace with False
         # input
         input_start: int = typer.Option(default=0),
         input_limit: int = typer.Option(default=-1),  # TODO: Replace with -1
@@ -182,8 +195,12 @@ def convert(
         output_table_name: str = typer.Option(default="wikidata-20240916-convert"),
         output_table_reset: bool = typer.Option(default=True),
         # option
+        serve: bool = typer.Option(default=True),
+        export: bool = typer.Option(default=True),
+        processor: str = typer.Option(default="convert_many"),
         min_property_count: int = typer.Option(default=1000),
-        black_property_datatypes: str = typer.Option(default="CM, EI, ES, U"),
+        black_property_datatypes: str = typer.Option(default="CM|EI|ES|U"),
+        white_qualifier_relations: str = typer.Option(default="P580|P582|P585"),
 ):
     env = ProjectEnv(
         project=project,
@@ -227,8 +244,12 @@ def convert(
         )
     )
     extra_opt = ExtraOption(
+        serve=serve,
+        export=export,
+        processor=processor,
         min_property_count=min_property_count,
         black_property_datatypes=black_property_datatypes,
+        white_qualifier_relations=white_qualifier_relations,
     )
     args = IOArguments(
         env=env,
@@ -256,7 +277,7 @@ def convert(
             source = list_of_all_properties
         logger.info(f"Load Wikidata {total_properties.shape[0]} properties from {source}")
         valid_properties = total_properties[
-            ~total_properties['datatype'].isin([x.strip() for x in args.option.black_property_datatypes.split(",")])
+            ~total_properties['datatype'].isin(args.option.black_property_datatype_list())
             & ((total_properties['property_count'] >= args.option.min_property_count)
                | (total_properties['qualifier_count'] >= args.option.min_property_count))
             ]
@@ -292,3 +313,13 @@ def convert(
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
+
+        if args.option.export:
+            with tqdm(total=len(output_table), unit="row", pre="=>", desc="exporting", unit_divisor=args.input.inter * 100) as prog:
+                for row in output_table:
+                    output_file.fp.write(json.dumps(row, ensure_ascii=False, indent=None if not debugging else 2) + '\n')
+                    prog.update()
+                    if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
+                        logger.info(prog)
+                logger.info(f"Export {prog.n}/{args.input.total} rows to [{output_file.opt}]")
+

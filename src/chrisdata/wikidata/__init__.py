@@ -181,7 +181,7 @@ class DataValue(BaseModel):
     type: str
     string: str
     entity: Entity | None = None
-    raw_data: str | dict | None = None
+    # raw_data: str | dict | None = None
     # entity_link: str | None = None
 
 
@@ -303,7 +303,7 @@ def datavalue_to_object(datavalue: dict, reader: MongoStreamer) -> DataValue:
 
 class StatementValue(BaseModel):
     value: DataValue
-    qualifiers: dict[str, str | None]
+    qualifiers: dict[str, str]
 
 
 class Statement(BaseModel):
@@ -314,6 +314,9 @@ class Statement(BaseModel):
 class SubjectStatements(BaseModel):
     subject: Entity
     statements: list[Statement]
+    num_statements: int
+    num_qualifiers: int
+    document_length: int | None = None
 
 
 @dataclass
