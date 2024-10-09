@@ -323,3 +323,36 @@ def convert(
                         logger.info(prog)
                 logger.info(f"Export {prog.n}/{args.input.total} rows to [{output_file.opt}]")
 
+        if args.option.serve:
+            all_entities = dict()
+            for row in output_table:
+                item = SubjectStatements.model_validate(row)
+                key = item.subject.id
+                all_entities[key] = item
+                # key = row['_id']
+            logger.info(f"Load {len(all_entities)} entities from [{output_table.opt}]")
+
+            class EntityView(FlaskView):
+                def index(self):
+                    for k, v in all_entities.items():
+                        print(f"k={k}, subject={v.subject}, #statements={len(v.statements)}")
+                    return "List of entities"
+
+                def get(self, key):
+                    item = all_entities.get(key)
+                    if item:
+                        return render_template("entity_detail.html", subject=item.subject, statements=item.statements)
+                    else:
+                        return "Not Found", 404
+
+            server = Flask("wikidata_browser",
+                           static_folder=args.env.working_dir / "static",
+                           template_folder=args.env.working_dir / "templates")
+
+            @server.route("/")
+            def home():
+                return redirect(url_for(f'{EntityView.__name__}:{EntityView.index.__name__}'))
+                # return redirect(url_for(f'{EntityView.__name__}:{EntityView.get.__name__}', key="Q1"))
+
+            EntityView.register(server)
+            server.run(host="localhost", port=7321, debug=False)
