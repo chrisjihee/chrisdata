@@ -175,7 +175,7 @@ def convert(
         logging_home: str = typer.Option(default="output/wikidata/convert"),
         logging_file: str = typer.Option(default="logging.out"),
         max_workers: int = typer.Option(default=1),
-        debugging: bool = typer.Option(default=True),  # TODO: Replace with False
+        debugging: bool = typer.Option(default=False),  # TODO: Replace with False
         # input
         input_start: int = typer.Option(default=0),
         input_limit: int = typer.Option(default=-1),  # TODO: Replace with -1
@@ -329,13 +329,12 @@ def convert(
                 item = SubjectStatements.model_validate(row)
                 key = item.subject.id
                 all_entities[key] = item
-                # key = row['_id']
             logger.info(f"Load {len(all_entities)} entities from [{output_table.opt}]")
 
             class EntityView(FlaskView):
                 def index(self):
-                    for k, v in all_entities.items():
-                        print(f"k={k}, subject={v.subject}, #statements={len(v.statements)}")
+                    for key, item in all_entities.items():
+                        print(f"k={key}, subject={item.subject}, #statements={item.num_statements}, #qualifiers={item.num_qualifiers}")
                     return "List of entities"
 
                 def get(self, key):
