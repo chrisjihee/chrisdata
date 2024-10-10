@@ -175,7 +175,7 @@ def convert(
         input_batch: int = typer.Option(default=100),  # TODO: Replace with 100
         input_inter: int = typer.Option(default=100),  # TODO: Replace with 10000
         input_file_home: str = typer.Option(default="input/wikidata"),
-        input_file_name: str = typer.Option(default="wikidata-20240916-korean-100.txt"),
+        input_file_name: str = typer.Option(default="wikidata-20240916-korean-full.txt"),
         input_prop_name: str = typer.Option(default="wikidata-properties.jsonl"),
         input_table_home: str = typer.Option(default="localhost:8800/wikidata"),
         input_table_name: str = typer.Option(default="wikidata-20240916-parse"),
