@@ -6,11 +6,11 @@ from pathlib import Path
 import jsonlines
 from dataclasses_json import DataClassJsonMixin
 
-from chrisbase.io import num_lines, LoggingFormat, configure_unit_logger
+from chrisbase.io import num_lines, LoggingFormat, setup_unit_logger
 from chrisbase.util import mute_tqdm_cls
 
 logger = logging.getLogger(__name__)
-configure_unit_logger(fmt=LoggingFormat.CHECK_12)
+setup_unit_logger(fmt=LoggingFormat.CHECK_12)
 
 
 @dataclass
