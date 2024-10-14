@@ -12,7 +12,7 @@ from chrisbase.util import mute_tqdm_cls
 from . import *
 
 logger = logging.getLogger(__name__)
-parsed_ids = set()
+parsed_ids = set()  # for duplicated crawling data
 
 
 class WikipediaDocument(BaseModel):
