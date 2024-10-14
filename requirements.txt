@@ -4,4 +4,3 @@ qwikidata
 jsonlines
 beautifulsoup4
 Flask
-Flask-Classful
