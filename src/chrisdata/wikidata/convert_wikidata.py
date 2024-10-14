@@ -251,6 +251,7 @@ def convert(
         option=extra_opt,
     )
     tqdm = mute_tqdm_cls()
+    assert args.input.file, "input.file is required"
     assert args.input.table, "input.table is required"
     assert args.output.file, "output.file is required"
     assert args.output.table, "output.table is required"
