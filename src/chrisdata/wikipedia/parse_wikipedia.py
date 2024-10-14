@@ -1,14 +1,16 @@
 import json
-import logging
 import math
+from dataclasses import dataclass
+from dataclasses import field
 from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
 import typer
+from dataclasses_json import DataClassJsonMixin
 
-from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, OptionData
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption
+from chrisbase.data import JobTimer, ProjectEnv, CommonArguments, OptionData
 from chrisbase.data import Streamer, FileStreamer, MongoStreamer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
@@ -77,7 +79,7 @@ class PassageUnit(DataClassJsonMixin):
 
 
 def parse_one(x: dict, parsed_ids: set[int], opt: FilterOption) -> Iterable[PassageUnit]:
-    doc: WikipediaProcessResult = WikipediaProcessResult.from_dict(x)
+    doc: WikipediaCrawlResult = WikipediaCrawlResult.from_dict(x)
     doc.title = doc.title.strip() if doc.title else ""
     if not doc.page_id or doc.page_id in parsed_ids or not doc.title or not doc.section_list:
         return None

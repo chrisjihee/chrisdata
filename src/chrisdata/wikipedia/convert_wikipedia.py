@@ -1,6 +1,7 @@
 import json
 import math
 from dataclasses import dataclass
+from dataclasses import field
 from typing import Iterable
 
 import typer
@@ -15,17 +16,6 @@ logger = logging.getLogger(__name__)
 parsed_ids = set()  # for duplicated crawling data
 
 
-class WikipediaDocument(BaseModel):
-    title: str
-    length: int
-    page_id: int
-    sections: list[str]
-
-    @property
-    def id(self):
-        return self.title
-
-
 @dataclass
 class ExtraOption(OptionData):
     export: bool = field(default=True)
@@ -33,7 +23,7 @@ class ExtraOption(OptionData):
 
 
 def convert_one(item: dict) -> WikipediaDocument | None:
-    doc: WikipediaProcessResult = WikipediaProcessResult.model_validate(item)
+    doc: WikipediaCrawlResult = WikipediaCrawlResult.model_validate(item)
     doc.title = doc.title.strip() if doc.title else ""
     if not doc.page_id or doc.page_id in parsed_ids or not doc.title or not doc.section_list:
         return None
