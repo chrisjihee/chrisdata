@@ -1,20 +1,18 @@
 import json
 import logging
 import math
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
 import typer
-from dataclasses_json import DataClassJsonMixin
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, CommonArguments, OptionData
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption
 from chrisbase.data import Streamer, FileStreamer, MongoStreamer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
-from crawl_wikipedia import ProcessResult as WikipediaProcessResult
+from . import *
 
 logger = logging.getLogger(__name__)
 app = AppTyper()

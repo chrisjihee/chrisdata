@@ -12,7 +12,7 @@ from chrisbase.data import InputOption, OutputOption, FileOption, TableOption, F
 from chrisbase.data import JobTimer, ProjectEnv, OptionData
 from chrisbase.io import LoggingFormat, new_path, merge_dicts
 from chrisbase.util import mute_tqdm_cls, grouped
-from chrisdata.wikidata import *
+from . import *
 
 logger = logging.getLogger(__name__)
 relation_dict: dict[str, Relation | None] = dict()

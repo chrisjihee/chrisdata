@@ -7,10 +7,10 @@ from elasticsearch.helpers import streaming_bulk
 
 from chrisbase.data import InputOption, OutputOption, TableOption, IndexOption
 from chrisbase.data import JobTimer, ProjectEnv, FileOption, FileStreamer
-from chrisbase.data import Streamer, MongoStreamer, ElasticStreamer
+from chrisbase.data import Streamer, ElasticStreamer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import mute_tqdm_cls
-from chrisdata.wikidata import *
+from . import *
 
 logger = logging.getLogger(__name__)
 app = AppTyper()

@@ -3,7 +3,6 @@ import logging
 import re
 import time
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import dataclass, field
 from itertools import islice
 from pathlib import Path
 from typing import List, Dict, Any, Tuple
@@ -11,13 +10,13 @@ from typing import List, Dict, Any, Tuple
 import httpx
 import pandas as pd
 import typer
-from dataclasses_json import DataClassJsonMixin
 from wikipediaapi import Wikipedia
 from wikipediaapi import WikipediaPage
 
 from chrisbase.data import AppTyper, JobTimer, ProjectEnv, OptionData, CommonArguments, TableOption, MongoStreamer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls, wait_future_jobs, LF
+from chrisdata.wikipedia import *
 
 logger = logging.getLogger(__name__)
 app = AppTyper()
@@ -195,16 +194,6 @@ def reset_global_api(args: ProgramArguments):
     return len(api_list_per_ip)
 
 
-@dataclass
-class ProcessResult(DataClassJsonMixin):
-    _id: int
-    query: str
-    title: str | None = None
-    page_id: int | None = None
-    section_list: list = field(default_factory=list)
-    passage_list: list = field(default_factory=list)
-
-
 def process_query(i: int, x: str, args: ProgramArguments):
     with MongoStreamer(args.table) as db:
         is_done = db.table.count_documents({"_id": i, "query": x}, limit=1) > 0
@@ -214,7 +203,7 @@ def process_query(i: int, x: str, args: ProgramArguments):
             time.sleep(args.net.calling_sec)
         api = api_list_per_ip[i % len(api_list_per_ip)]
         page: WikipediaPage = api.page(x)
-        result = ProcessResult(_id=i, query=x)
+        result = WikipediaProcessResult(_id=i, query=x)
         page_exists = False
         try:
             page_exists = page.exists()

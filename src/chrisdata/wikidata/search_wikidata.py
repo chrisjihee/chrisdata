@@ -1,5 +1,4 @@
 import json
-import re
 from pathlib import Path
 from typing import Iterable
 
@@ -10,10 +9,10 @@ from elasticsearch.helpers import streaming_bulk
 
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption, IndexOption
 from chrisbase.data import JobTimer, ProjectEnv, OptionData
-from chrisbase.data import Streamer, FileStreamer, MongoStreamer, ElasticStreamer
+from chrisbase.data import Streamer, FileStreamer, ElasticStreamer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
-from chrisdata.wikidata import *
+from . import *
 
 logger = logging.getLogger(__name__)
 app = AppTyper()

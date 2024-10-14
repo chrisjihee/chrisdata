@@ -5,7 +5,7 @@ from dataclasses_json import DataClassJsonMixin
 
 from chrisbase.io import num_lines, LoggingFormat, setup_unit_logger
 from chrisbase.util import mute_tqdm_cls
-from chrisdata.wikidata import *
+from . import *
 
 logger = logging.getLogger(__name__)
 setup_unit_logger(fmt=LoggingFormat.CHECK_12)

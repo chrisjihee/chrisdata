@@ -1,26 +1,15 @@
 import logging
 import re
-from dataclasses import dataclass, field
 from pathlib import Path
 
 import jsonlines
-from dataclasses_json import DataClassJsonMixin
 
 from chrisbase.io import num_lines, LoggingFormat, setup_unit_logger
 from chrisbase.util import mute_tqdm_cls
+from . import *
 
 logger = logging.getLogger(__name__)
 setup_unit_logger(fmt=LoggingFormat.CHECK_12)
-
-
-@dataclass
-class WikipediaProcessResult(DataClassJsonMixin):
-    _id: int
-    query: str
-    title: str | None = None
-    page_id: int | None = None
-    section_list: list = field(default_factory=list)
-    passage_list: list = field(default_factory=list)
 
 
 @dataclass

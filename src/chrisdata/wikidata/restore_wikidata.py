@@ -3,12 +3,12 @@ import json
 import pandas as pd
 import typer
 
-from chrisbase.data import FileStreamer, MongoStreamer
+from chrisbase.data import FileStreamer
 from chrisbase.data import InputOption, FileOption, TableOption
 from chrisbase.data import JobTimer, ProjectEnv, CommonArguments
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls
-from chrisdata.wikidata import *
+from . import *
 
 logger = logging.getLogger(__name__)
 
