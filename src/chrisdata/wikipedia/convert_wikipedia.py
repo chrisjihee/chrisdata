@@ -1,5 +1,6 @@
 import json
 import math
+from dataclasses import dataclass
 from typing import Iterable
 
 import typer
@@ -11,6 +12,18 @@ from chrisbase.util import mute_tqdm_cls
 from . import *
 
 logger = logging.getLogger(__name__)
+parsed_ids = set()
+
+
+class WikipediaDocument(BaseModel):
+    title: str
+    length: int
+    page_id: int
+    sections: list[str]
+
+    @property
+    def id(self):
+        return self.title
 
 
 @dataclass
@@ -19,14 +32,25 @@ class ExtraOption(OptionData):
     processor: str | None = field(default=None)
 
 
-def convert_one(item_id: dict, args: IOArguments, reader: MongoStreamer) -> None:
-    return None
+def convert_one(item: dict) -> WikipediaDocument | None:
+    doc: WikipediaProcessResult = WikipediaProcessResult.model_validate(item)
+    doc.title = doc.title.strip() if doc.title else ""
+    if not doc.page_id or doc.page_id in parsed_ids or not doc.title or not doc.section_list:
+        return None
+    sections = [str(x[-1]).strip() for x in doc.section_list]
+    parsed_ids.add(doc.page_id)
+    return WikipediaDocument(title=doc.title, page_id=doc.page_id,
+                             length=sum([len(x) for x in sections]), sections=sections)
 
 
-def convert_many(item: dict | Iterable[dict], args: IOArguments, reader: MongoStreamer, writer: MongoStreamer, item_is_batch: bool = True):
+def convert_many(item: str | Iterable[str], args: IOArguments, writer: MongoStreamer, item_is_batch: bool = True):
     inputs = item if item_is_batch else [item]
-    outputs = {i: convert_one(i, args, reader) for i in inputs}
-    records = [merge_dicts({"_id": k}, v.model_dump()) for k, v in outputs.items() if v]
+    inputs = [json.loads(i) for i in inputs]
+    outputs = [convert_one(i) for i in inputs]
+    outputs = {v.id: v for v in outputs if v}
+    records = [merge_dicts({"_id": k}, v.model_dump()) for k, v in outputs.items()]
+    if args.env.debugging:
+        logger.debug(f"convert_many: {len(inputs)} -> {len(outputs)} -> {len(records)}")
     if len(records) > 0:
         writer.table.insert_many(records)
 
@@ -42,9 +66,9 @@ def convert(
         debugging: bool = typer.Option(default=False),  # TODO: Replace with False
         # input
         input_start: int = typer.Option(default=0),
-        input_limit: int = typer.Option(default=100),  # TODO: Replace with -1 or 1410203
+        input_limit: int = typer.Option(default=-1),  # TODO: Replace with -1 or 1410203
         input_batch: int = typer.Option(default=100),  # TODO: Replace with 100
-        input_inter: int = typer.Option(default=100),  # TODO: Replace with 10000
+        input_inter: int = typer.Option(default=50000),  # TODO: Replace with 50000
         input_file_home: str = typer.Option(default="input/wikipedia"),
         input_file_name: str = typer.Option(default="kowiki-20230701-all-titles-in-ns0-crawl.jsonl"),
         # output
@@ -114,13 +138,12 @@ def convert(
         FileStreamer(args.output.file) as output_file,
         MongoStreamer(args.output.table) as output_table,
     ):
-        input_data = args.input.ready_inputs(input_file, total=1410203 or len(input_file))
+        input_data = args.input.ready_inputs(input_file, total=len(input_file))  # total=1410203 or len(input_file)
         logger.info(f"Convert from [{input_file.opt}] to [{output_file.opt}, {output_table.opt}]")
         logger.info(f"- [input] total={args.input.total} | start={args.input.start} | limit={args.input.limit}"
                     f" | {type(input_data).__name__}={input_data.num_item}{f'x{args.input.batch}ea' if input_data.has_batch_items() else ''}")
         logger.info(f"- [output] file.reset={args.output.file.reset} | file.mode={args.output.file.mode}")
         logger.info(f"- [output] table.reset={args.output.table.reset} | table.timeout={args.output.table.timeout}")
-        exit(1)
         with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="converting", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for item in input_data.items:
                 convert_many(item=item, args=args, writer=output_table,

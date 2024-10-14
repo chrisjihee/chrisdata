@@ -1,7 +1,7 @@
 import logging
-from dataclasses import dataclass, field
+from dataclasses import field
 
-from dataclasses_json import DataClassJsonMixin
+from pydantic import BaseModel
 
 from chrisbase.data import AppTyper
 
@@ -9,8 +9,7 @@ app = AppTyper()
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class WikipediaProcessResult(DataClassJsonMixin):
+class WikipediaProcessResult(BaseModel):
     _id: int
     query: str
     title: str | None = None
