@@ -83,7 +83,7 @@ def download_wikidata_properties() -> pd.DataFrame:
         return data
 
 
-def convert_one(item_id: dict, args: IOArguments, reader: MongoStreamer) -> SubjectStatements | None:
+def convert_one(item_id: str, args: IOArguments, reader: MongoStreamer) -> SubjectStatements | None:
     item: WikidataUnit = WikidataUnit.from_dict(reader.table.find_one({'_id': item_id}))
     subject: Entity = Entity.from_wikidata_unit(item)
     if args.env.debugging:
@@ -152,7 +152,7 @@ def view_one(args: IOArguments, subject: Entity, statements: list[Statement]):
     server.run(host="localhost", port=7321, debug=False)
 
 
-def convert_many(item: dict | Iterable[dict], args: IOArguments, reader: MongoStreamer, writer: MongoStreamer, item_is_batch: bool = True):
+def convert_many(item: str | Iterable[str], args: IOArguments, reader: MongoStreamer, writer: MongoStreamer, item_is_batch: bool = True):
     inputs = item if item_is_batch else [item]
     outputs = {i: convert_one(i, args, reader) for i in inputs}
     records = [merge_dicts({"_id": k}, v.model_dump()) for k, v in outputs.items() if v]
