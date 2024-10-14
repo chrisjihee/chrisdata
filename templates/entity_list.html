@@ -22,14 +22,14 @@
         </thead>
         <tbody>
         {% for info in entity_list %}
-        <tr>
-            <th scope="row">{{ loop.index }}</th>
-            <td><a href="entity/{{ info.subject.id }}.html" class="link-primary link-underline-opacity-0">{{ info.subject.title1 }}</a></td>
-            <td>{{ info.subject.title2 }}</td>
-            <td>{{ info.num_statements }}</td>
-            <td>{{ info.num_qualifiers }}</td>
-            <td>{{ info.document_length or '' }}</td>
-        </tr>
+            <tr>
+                <th scope="row">{{ loop.index }}</th>
+                <td><a href="entity/{{ info.subject.id }}.html" class="link-primary link-underline-opacity-0">{{ info.subject.title1 }}</a></td>
+                <td>{{ info.subject.title2 }}</td>
+                <td>{{ info.num_statements }}</td>
+                <td>{{ info.num_qualifiers }}</td>
+                <td>{{ info.document_length or '' }}</td>
+            </tr>
         {% endfor %}
         </tbody>
     </table>

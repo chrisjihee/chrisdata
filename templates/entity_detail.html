@@ -26,26 +26,26 @@
         </thead>
         <tbody>
         {% for statement in statement_list %}
-        {% set statement_loop = loop %}
-        {% for object in statement.values %}
-        <tr>
-            {% if loop.first %}
-            <th rowspan="{{ statement.values|length }}" scope="row">{{ statement_loop.index }}</th>
-            <td rowspan="{{ statement.values|length }}">{{ statement.relation.label1 }}({{ statement.relation.label2 }})</td>
-            <td rowspan="{{ statement.values|length }}">{{ statement.values|length }}</td>
-            {% endif %}
-            <td>
-                {% if object.value.type == 'WikibaseEntityId' and object.value.entity %}
-                <a href="{{ object.value.entity.document }}" class="link-primary link-underline-opacity-0">{{ object.value.string }}</a>
-                {% else %}
-                {{ object.value.string }}
-                {% endif %}
-            </td>
-            <td>{{ object.qualifiers.point_in_time or '' }}</td>
-            <td>{{ object.qualifiers.start_time or '' }}</td>
-            <td>{{ object.qualifiers.end_time or '' }}</td>
-        </tr>
-        {% endfor %}
+            {% set statement_loop = loop %}
+            {% for object in statement.values %}
+                <tr>
+                    {% if loop.first %}
+                        <th rowspan="{{ statement.values|length }}" scope="row">{{ statement_loop.index }}</th>
+                        <td rowspan="{{ statement.values|length }}">{{ statement.relation.label1 }}({{ statement.relation.label2 }})</td>
+                        <td rowspan="{{ statement.values|length }}">{{ statement.values|length }}</td>
+                    {% endif %}
+                    <td>
+                        {% if object.value.type == 'WikibaseEntityId' and object.value.entity %}
+                            <a href="{{ object.value.entity.document }}" class="link-primary link-underline-opacity-0">{{ object.value.string }}</a>
+                        {% else %}
+                            {{ object.value.string }}
+                        {% endif %}
+                    </td>
+                    <td>{{ object.qualifiers.point_in_time or '' }}</td>
+                    <td>{{ object.qualifiers.start_time or '' }}</td>
+                    <td>{{ object.qualifiers.end_time or '' }}</td>
+                </tr>
+            {% endfor %}
         {% endfor %}
         </tbody>
     </table>
