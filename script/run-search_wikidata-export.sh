@@ -1,1 +1,0 @@
-python search_wikidata.py export run

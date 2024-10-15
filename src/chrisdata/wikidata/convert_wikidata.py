@@ -1,3 +1,4 @@
+import math
 from pathlib import Path
 from typing import Iterable
 
@@ -5,13 +6,13 @@ import httpx
 import pandas as pd
 import typer
 from bs4 import BeautifulSoup
-from flask import Flask, render_template
-from more_itertools import ichunked
-
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption, FileStreamer
 from chrisbase.data import JobTimer, ProjectEnv
 from chrisbase.io import LoggingFormat, new_path, merge_dicts
 from chrisbase.util import mute_tqdm_cls, grouped
+from flask import Flask, render_template
+from more_itertools import ichunked
+
 from . import *
 from ..wikipedia import WikipediaStat
 

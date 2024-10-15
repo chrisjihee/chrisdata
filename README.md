@@ -27,8 +27,6 @@ Data processing tools for data analysis
 4. Install the required packages
     ```bash
     pip install -U -e .
-    rm -rf chrisbase*; git clone git@github.com:chrisjihee/chrisbase.git
-    pip install -U -e chrisbase*
     pip list | grep -E "mongo|search|Wiki|wiki|json|pydantic|chris|Flask"
     ```
 
@@ -50,27 +48,8 @@ Data processing tools for data analysis
     bin/mongod --config ../cfg/mongod-8800.yaml
     cd ..
     ```
-    ```bash
-    cd mongodb
-    bin/mongod --config ../cfg/mongod-8801.yaml
-    cd ..
-    ```
 
-7. Install Elasticsearch
-    ```bash
-    mkdir elasticsearch7; cd elasticsearch7
-    if [ "$(uname)" = "Linux" ]; then
-      aria2c https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.17.10-linux-x86_64.tar.gz
-    elif [ "$(uname)" = "Darwin" ]; then
-      aria2c https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.17.10-darwin-aarch64.tar.gz
-    fi
-    tar zxf elasticsearch-*.tar.gz --strip-components 1
-    sed -i '' 's/#http.port: 9200/http.port: 9717/g' ./config/elasticsearch.yml
-    echo "xpack.security.enabled: true" >> ./config/elasticsearch.yml
-    cd ..
-    ```
-
-8. Link input data
+7. Link input data
     ```bash
     cd input
     ln -s /mnt/geo/data/wikidata .

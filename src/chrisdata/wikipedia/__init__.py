@@ -1,8 +1,7 @@
 import logging
 
-from pydantic import BaseModel
-
 from chrisbase.data import AppTyper
+from pydantic import BaseModel
 
 app = AppTyper()
 logger = logging.getLogger(__name__)
