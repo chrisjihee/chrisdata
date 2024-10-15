@@ -191,7 +191,7 @@ def convert(
         serve: bool = typer.Option(default=True),
         export: bool = typer.Option(default=True),
         processor: str = typer.Option(default="convert_many"),
-        serve_batch: int = typer.Option(default=1000),
+        serve_batch: int = typer.Option(default=5000),
         min_property_count: int = typer.Option(default=1000),
         black_property_datatypes: str = typer.Option(default="CM|EI|ES|U"),
         white_qualifier_relations: str = typer.Option(default="P580|P582|P585"),
