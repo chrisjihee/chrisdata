@@ -86,25 +86,33 @@ Data processing tools for data analysis
     python -m chrisdata.cli --help
     ```
 
+    ```bash
+    python -m chrisdata.cli wikipedia --help
+    ```
+
+    ```bash
+    python -m chrisdata.cli wikidata --help
+    ```
+
 2. Run command
-  * To check local IP addresses
+  * To convert Wikipedia articles
     ```bash
-    python -m chrisdata.cli net check
-    ```
-
-  * To crawl Wikipedia articles
-    ```bash
-    python -m chrisdata.cli hello
-    ```
-
-  * To parse Wikipedia articles
-    ```bash
-    python -m chrisdata.cli bye Chris
+    python -m chrisdata.cli wikipedia convert
     ```
 
   * To parse Wikidata dump
     ```bash
-    python -m chrisdata.cli wikidata parse --output-table-reset --no-export
+    python -m chrisdata.cli wikidata parse
+    ```
+
+  * To filter Wikidata entities
+    ```bash
+    python -m chrisdata.cli wikidata filter
+    ```
+
+  * To convert Wikidata entities
+    ```bash
+    python -m chrisdata.cli wikidata convert
     ```
 
 
