@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 from typing import Iterable
 
@@ -9,7 +8,7 @@ from bs4 import BeautifulSoup
 from flask import Flask, render_template
 
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption, FileStreamer
-from chrisbase.data import JobTimer, ProjectEnv, OptionData
+from chrisbase.data import JobTimer, ProjectEnv
 from chrisbase.io import LoggingFormat, new_path, merge_dicts
 from chrisbase.util import mute_tqdm_cls, grouped
 from . import *
@@ -20,24 +19,10 @@ relation_dict: dict[str, Relation | None] = dict()
 wikipedia_stat: dict[str, WikipediaStat] = dict()
 list_of_all_properties: str = "https://www.wikidata.org/wiki/Wikidata:Database_reports/List_of_properties/all"
 datatype_orders: dict[str, int] = {
-    "WI": 14,
-    "WL": 13,
-    "WP": 12,
-    "WS": 11,
-    "WF": 10,
-    "TD": 9,
-    "T": 8,
-    "Q": 7,
-    "GC": 6,
-    "GS": 5,
-    "M": 4,
-    "MN": 3,
-    "MT": 2,
-    "S": 1,
-    "U": -1,
-    "CM": -2,
-    "EI": -3,
-    "ES": -4,
+    "WI": 14, "WL": 13, "WP": 12, "WS": 11, "WF": 10,
+    "TD": 9, "T": 8, "Q": 7, "GC": 6, "GS": 5, "M": 4,
+    "MN": 3, "MT": 2, "S": 1,
+    "U": -1, "CM": -2, "EI": -3, "ES": -4,
 }
 
 
@@ -87,12 +72,15 @@ def download_wikidata_properties() -> pd.DataFrame:
 def convert_one(item_id: str, args: IOArguments, reader: MongoStreamer) -> SubjectStatements | None:
     item: WikidataUnit = WikidataUnit.from_dict(reader.table.find_one({'_id': item_id}))
     subject: Entity = Entity.from_wikidata_unit(item)
+    if not subject.title1 or (subject.title1 not in wikipedia_stat) or wikipedia_stat[subject.title1].length < 1:
+        return None
     if args.env.debugging:
         logger.info("*" * 80)
         logger.info(f" * {str([subject])[1:-1]}")
 
-    num_statements = 0
-    num_qualifiers = 0
+    num_statements: int = 0
+    num_qualifiers: int = 0
+    document_length: int = wikipedia_stat[subject.title1].length
     statements: list[Statement] = list()
     grouped_statements = {k: list(vs) for k, vs in grouped(item.claims, itemgetter='property') if k in relation_dict}
     statement_relations: list[Relation] = [
@@ -137,10 +125,13 @@ def convert_one(item_id: str, args: IOArguments, reader: MongoStreamer) -> Subje
                 logger.info(f"- {str([x])[1:-1]}")
             logger.info("-" * 80)
             view_one(args, subject, statements)
-        return SubjectStatements(subject=subject,
-                                 statements=statements,
-                                 num_statements=num_statements,
-                                 num_qualifiers=num_qualifiers)
+        return SubjectStatements(
+            subject=subject,
+            statements=statements,
+            num_statements=num_statements,
+            num_qualifiers=num_qualifiers,
+            document_length=document_length,
+        )
     return None
 
 
@@ -156,7 +147,8 @@ def view_one(args: IOArguments, subject: Entity, statements: list[Statement]):
 
 def convert_many(item: str | Iterable[str], args: IOArguments, reader: MongoStreamer, writer: MongoStreamer, item_is_batch: bool = True):
     inputs = item if item_is_batch else [item]
-    outputs = {i: convert_one(i, args, reader) for i in inputs}
+    outputs = [convert_one(i, args, reader) for i in inputs]
+    outputs = {v.subject.title1: v for v in outputs if v}
     records = [merge_dicts({"_id": k}, v.model_dump()) for k, v in outputs.items() if v]
     if len(records) > 0:
         writer.table.insert_many(records)
@@ -175,7 +167,7 @@ def convert(
         input_start: int = typer.Option(default=0),
         input_limit: int = typer.Option(default=-1),  # TODO: Replace with -1
         input_batch: int = typer.Option(default=100),  # TODO: Replace with 100
-        input_inter: int = typer.Option(default=100),  # TODO: Replace with 10000
+        input_inter: int = typer.Option(default=1000),  # TODO: Replace with 1000
         input_file_path: str = typer.Option(default="input/wikidata/wikidata-20240916-korean-full.txt"),
         input_prop_path: str = typer.Option(default="input/wikidata/wikidata-properties.jsonl"),
         input_stat_path: str = typer.Option(default="input/wikipedia/kowiki-20230701-all-titles-in-ns0-stat.jsonl"),
@@ -287,13 +279,11 @@ def convert(
                 'reference_count': p['reference_count'],
             }))
         logger.info(f"Make relation_dict for Wikidata {len(relation_dict)} properties using {input_table.opt}")
-        exit(1)
 
         # convert time-sensitive triples
-        # test_data = [norm_wikidata_id('Q50184'), norm_wikidata_id('Q884')]
-        # input_data = args.input.ready_inputs(test_data, total=len(input_table))
         input_data = args.input.ready_inputs(input_file, total=len(input_file))
-        logger.info(f"Convert from [{input_file.opt}, {input_table.opt}] to [{output_file.opt}, {output_table.opt}]")
+        logger.info(f"Convert from [{input_file.opt}, {input_table.opt}]")
+        logger.info(f"          to [{output_file.opt}, {output_table.opt}]")
         logger.info(f"- [input] total={args.input.total} | start={args.input.start} | limit={args.input.limit}"
                     f" | {type(input_data).__name__}={input_data.num_item}{f'x{args.input.batch}ea' if input_data.has_batch_items() else ''}")
         logger.info(f"- [input] table.timeout={args.input.table.timeout}")
@@ -310,7 +300,7 @@ def convert(
         if extra_opt.export:
             with tqdm(total=len(output_table), unit="row", pre="=>", desc="exporting", unit_divisor=args.input.inter * 100) as prog:
                 for row in output_table:
-                    output_file.fp.write(json.dumps(row, ensure_ascii=False, indent=None if not debugging else 2) + '\n')
+                    output_file.fp.write(SubjectInfo.model_validate(row).model_dump_json() + '\n')
                     prog.update()
                     if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                         logger.info(prog)
