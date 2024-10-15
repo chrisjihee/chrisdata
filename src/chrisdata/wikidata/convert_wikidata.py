@@ -13,9 +13,11 @@ from chrisbase.data import JobTimer, ProjectEnv, OptionData
 from chrisbase.io import LoggingFormat, new_path, merge_dicts
 from chrisbase.util import mute_tqdm_cls, grouped
 from . import *
+from ..wikipedia import WikipediaStat
 
 logger = logging.getLogger(__name__)
 relation_dict: dict[str, Relation | None] = dict()
+wikipedia_stat: dict[str, WikipediaStat] = dict()
 list_of_all_properties: str = "https://www.wikidata.org/wiki/Wikidata:Database_reports/List_of_properties/all"
 datatype_orders: dict[str, int] = {
     "WI": 14,
@@ -174,18 +176,15 @@ def convert(
         input_limit: int = typer.Option(default=-1),  # TODO: Replace with -1
         input_batch: int = typer.Option(default=100),  # TODO: Replace with 100
         input_inter: int = typer.Option(default=100),  # TODO: Replace with 10000
-        input_file_home: str = typer.Option(default="input/wikidata"),
-        input_file_name: str = typer.Option(default="wikidata-20240916-korean-full.txt"),
-        input_prop_name: str = typer.Option(default="wikidata-properties.jsonl"),
-        input_table_home: str = typer.Option(default="localhost:8800/wikidata"),
-        input_table_name: str = typer.Option(default="wikidata-20240916-parse"),
+        input_file_path: str = typer.Option(default="input/wikidata/wikidata-20240916-korean-full.txt"),
+        input_prop_path: str = typer.Option(default="input/wikidata/wikidata-properties.jsonl"),
+        input_stat_path: str = typer.Option(default="input/wikipedia/kowiki-20230701-all-titles-in-ns0-stat.jsonl"),
+        input_table_path: str = typer.Option(default="localhost:8800/wikidata/wikidata-20240916-parse"),
         input_table_timeout: int = typer.Option(default=3600),
         # output
-        output_file_home: str = typer.Option(default="output/wikidata"),
-        output_file_name: str = typer.Option(default="wikidata-20240916-convert.jsonl"),
+        output_file_path: str = typer.Option(default="output/wikidata/wikidata-20240916-convert.jsonl"),
         output_file_mode: str = typer.Option(default="w"),
-        output_table_home: str = typer.Option(default="localhost:8800/wikidata"),
-        output_table_name: str = typer.Option(default="wikidata-20240916-convert"),
+        output_table_path: str = typer.Option(default="localhost:8800/wikidata/wikidata-20240916-convert"),
         output_table_reset: bool = typer.Option(default=True),
         # option
         serve: bool = typer.Option(default=True),
@@ -210,28 +209,25 @@ def convert(
         limit=input_limit if not debugging else 2,
         batch=input_batch if not debugging else 1,
         inter=input_inter if not debugging else 1,
-        file=FileOption(
-            home=input_file_home,
-            name=input_file_name,
+        file=FileOption.from_path(
+            path=input_file_path,
             required=True,
         ),
-        table=TableOption(
-            home=input_table_home,
-            name=input_table_name,
+        table=TableOption.from_path(
+            path=input_table_path,
             timeout=input_table_timeout * 1000,
             required=True,
         )
     )
     output_opt = OutputOption(
-        file=FileOption(
-            home=output_file_home,
-            name=new_path(output_file_name, post=env.time_stamp),
+        file=FileOption.from_path(
+            path=output_file_path,
+            name=new_path(output_file_path, post=env.time_stamp).name,
             mode=output_file_mode,
             required=True,
         ),
-        table=TableOption(
-            home=output_table_home,
-            name=output_table_name,
+        table=TableOption.from_path(
+            path=output_table_path,
             reset=output_table_reset,
             required=True,
         )
@@ -258,10 +254,16 @@ def convert(
 
     with (
         JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        FileStreamer(FileOption(home=input_file_home, name=input_prop_name)) as prop_file,
+        FileStreamer(FileOption.from_path(input_stat_path, required=True)) as stat_file,
+        FileStreamer(FileOption.from_path(input_prop_path, required=False)) as prop_file,
         FileStreamer(args.input.file) as input_file, MongoStreamer(args.input.table) as input_table,
         FileStreamer(args.output.file) as output_file, MongoStreamer(args.output.table) as output_table,
     ):
+        global wikipedia_stat, relation_dict
+        for i in stat_file:
+            v = WikipediaStat.model_validate_json(i)
+            wikipedia_stat[v.id] = v
+        logger.info(f"Load Wikipedia {len(wikipedia_stat)} statistics from {stat_file.path}")
         if prop_file.fp:
             total_properties: pd.DataFrame = pd.read_json(prop_file.path, orient='records', lines=True)
             source = prop_file.path
@@ -285,6 +287,7 @@ def convert(
                 'reference_count': p['reference_count'],
             }))
         logger.info(f"Make relation_dict for Wikidata {len(relation_dict)} properties using {input_table.opt}")
+        exit(1)
 
         # convert time-sensitive triples
         # test_data = [norm_wikidata_id('Q50184'), norm_wikidata_id('Q884')]
