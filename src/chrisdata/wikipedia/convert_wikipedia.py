@@ -125,7 +125,7 @@ def convert(
         FileStreamer(args.output.file) as output_file,
         MongoStreamer(args.output.table) as output_table,
     ):
-        input_data = args.input.ready_inputs(input_file, total=1410203 or len(input_file))  # total=1410203 or len(input_file)
+        input_data = args.input.ready_inputs(input_file, total=len(input_file))
         logger.info(f"Convert from [{input_file.opt}] to [{output_file.opt}, {output_table.opt}]")
         logger.info(f"- [input] total={args.input.total} | start={args.input.start} | limit={args.input.limit}"
                     f" | {type(input_data).__name__}={input_data.num_item}{f'x{args.input.batch}ea' if input_data.has_batch_items() else ''}")

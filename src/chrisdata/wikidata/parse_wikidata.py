@@ -184,7 +184,6 @@ def parse(
         limit=input_limit if not debugging else 1,
         batch=input_batch if not debugging else 2,
         inter=input_inter if not debugging else 1,
-        total=input_total,
         file=FileOption(
             home=input_file_home,
             name=input_file_name,
@@ -231,7 +230,7 @@ def parse(
         MongoStreamer(args.output.table) as output_table,
     ):
         # parse dump data
-        input_data = args.input.ready_inputs(WikidataJsonDump(f"{input_file.path}"))
+        input_data = args.input.ready_inputs(WikidataJsonDump(f"{input_file.path}"), total=input_total)
         logger.info(f"Parse from [{input_file.opt}] to [{output_table.opt}]")
         logger.info(f"- [input] total={args.input.total} | start={args.input.start} | limit={args.input.limit}"
                     f" | {type(input_data).__name__}={input_data.num_item}{f'x{args.input.batch}ea' if input_data.has_batch_items() else ''}")
