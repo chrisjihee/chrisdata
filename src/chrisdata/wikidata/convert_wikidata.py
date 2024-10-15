@@ -45,10 +45,9 @@ def property_order(k: str):
     return datatype_orders[relation_dict[k].datatype], relation_dict[k].property_count
 
 
-@dataclass
-class ExtraOption(OptionData):
+class ExtraOption(BaseModel):
     serve: bool = field(default=False)
-    export: bool = field(default=True)
+    export: bool = field(default=False)
     processor: str | None = field(default=None)
     min_property_count: int = field(default=1000)
     black_property_datatypes: str = field(default="CM|EI|ES|U")
@@ -99,6 +98,7 @@ def convert_one(item_id: str, args: IOArguments, reader: MongoStreamer) -> Subje
     statement_relations: list[Relation] = [
         relation_dict[k] for k in sorted(grouped_statements.keys(), key=property_order, reverse=True)
     ]
+    args.option = ExtraOption.model_validate(args.option)
     white_qualifier_relation_list = args.option.white_qualifier_relation_list()
     for statement_relation in statement_relations:
         if args.env.debugging:
@@ -273,11 +273,11 @@ def convert(
             source = list_of_all_properties
         logger.info(f"Load Wikidata {total_properties.shape[0]} properties from {source}")
         valid_properties = total_properties[
-            ~total_properties['datatype'].isin(args.option.black_property_datatype_list())
-            & ((total_properties['property_count'] >= args.option.min_property_count)
-               | (total_properties['qualifier_count'] >= args.option.min_property_count))
+            ~total_properties['datatype'].isin(extra_opt.black_property_datatype_list())
+            & ((total_properties['property_count'] >= extra_opt.min_property_count)
+               | (total_properties['qualifier_count'] >= extra_opt.min_property_count))
             ]
-        logger.info(f"Keep Wikidata {valid_properties.shape[0]} properties by options: min_property_count={args.option.min_property_count}, black_property_datatypes={args.option.black_property_datatypes}")
+        logger.info(f"Keep Wikidata {valid_properties.shape[0]} properties by options: min_property_count={extra_opt.min_property_count}, black_property_datatypes={extra_opt.black_property_datatypes}")
         for p in valid_properties.to_dict(orient='records'):
             row = input_table.table.find_one({'_id': norm_wikidata_id(p['ID'])})
             relation_dict[p['ID']] = Relation.model_validate(merge_dicts(row, {
@@ -307,7 +307,7 @@ def convert(
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
 
-        if args.option.export:
+        if extra_opt.export:
             with tqdm(total=len(output_table), unit="row", pre="=>", desc="exporting", unit_divisor=args.input.inter * 100) as prog:
                 for row in output_table:
                     output_file.fp.write(json.dumps(row, ensure_ascii=False, indent=None if not debugging else 2) + '\n')
@@ -316,7 +316,7 @@ def convert(
                         logger.info(prog)
                 logger.info(f"Export {prog.n}/{args.input.total} rows to [{output_file.opt}]")
 
-        if args.option.serve:
+        if extra_opt.serve:
             entity_list: list[SubjectInfo] = list()
             entity_details: dict[str, SubjectStatements] = dict()
             for row in output_table:

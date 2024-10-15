@@ -28,9 +28,9 @@ def datavalue_dict(x: WikidataSnak):
 
 
 class ClaimMixinEx(ClaimsMixin):
-    def get_claims(self, args: IOArguments) -> list[dict]:
+    def get_claims(self, args: IOArguments, truthy: bool) -> list[dict]:
         claims = list()
-        claim_groups = self.get_claim_groups() if not args.option.truthy else self.get_truthy_claim_groups()
+        claim_groups = self.get_claim_groups() if not truthy else self.get_truthy_claim_groups()
         for claim_group in claim_groups.values():
             for claim in claim_group:
                 claim: WikidataClaim = claim
@@ -315,7 +315,7 @@ class SubjectInfo(BaseModel):
     subject: Entity
     num_statements: int
     num_qualifiers: int
-    document_length: int | None = None
+    document_length: int
 
 
 class SubjectStatements(SubjectInfo):

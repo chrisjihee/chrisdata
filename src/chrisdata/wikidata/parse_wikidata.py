@@ -9,7 +9,7 @@ from qwikidata.json_dump import WikidataJsonDump
 
 from chrisbase.data import FileStreamer
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption
-from chrisbase.data import JobTimer, ProjectEnv, OptionData
+from chrisbase.data import JobTimer, ProjectEnv
 from chrisbase.io import LoggingFormat, new_path, merge_dicts
 from chrisbase.util import mute_tqdm_cls
 from . import *
@@ -17,8 +17,7 @@ from . import *
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class ExtraOption(OptionData):
+class ExtraOption(BaseModel):
     processor: str = field(default="parse_many1")
     lang1: str = field(default="ko")
     lang2: str = field(default="en")
@@ -40,6 +39,7 @@ def parse_one(x: dict, args: IOArguments):
             logger.info("*" * 120)
         return r
 
+    args.option = ExtraOption.model_validate(args.option)
     lang1_code = LanguageCode(args.option.lang1)
     lang2_code = LanguageCode(args.option.lang2)
     row = WikidataUnit(
@@ -63,7 +63,7 @@ def parse_one(x: dict, args: IOArguments):
         row.descr1 = item.get_description(lang1_code)
         row.descr2 = item.get_description(lang2_code)
         try:
-            row.claims = item.get_claims(args)
+            row.claims = item.get_claims(args, truthy=args.option.truthy)
             return debug_return(row)
         except Exception as e:
             logger.error(f"Error on parse_one(id={x['id']}, ns={x['ns']}, type={x['type']}): [{type(e).__name__}] {e}")
@@ -78,7 +78,7 @@ def parse_one(x: dict, args: IOArguments):
         row.descr1 = prop.get_description(lang1_code)
         row.descr2 = prop.get_description(lang2_code)
         try:
-            row.claims = prop.get_claims(args)
+            row.claims = prop.get_claims(args, truthy=args.option.truthy)
             return debug_return(row)
         except Exception as e:
             logger.error(f"Error on parse_one(id={x['id']}, ns={x['ns']}, type={x['type']}): [{type(e).__name__}] {e}")
@@ -93,7 +93,7 @@ def parse_one(x: dict, args: IOArguments):
         row.descr1 = lexm.get_gloss(lang1_code)
         row.descr2 = lexm.get_gloss(lang2_code)
         try:
-            row.claims = lexm.get_claims(args)
+            row.claims = lexm.get_claims(args, truthy=args.option.truthy)
             return debug_return(row)
         except Exception as e:
             logger.error(f"Error on parse_one(id={x['id']}, ns={x['ns']}, type={x['type']}): [{type(e).__name__}] {e}")
@@ -235,24 +235,24 @@ def parse(
         logger.info(f"- [input] total={args.input.total} | start={args.input.start} | limit={args.input.limit}"
                     f" | {type(input_data).__name__}={input_data.num_item}{f'x{args.input.batch}ea' if input_data.has_batch_items() else ''}")
         logger.info(f"- [output] table.reset={args.output.table.reset} | table.timeout={args.output.table.timeout}")
-        logger.info(f"- [option] processor={args.option.processor} | lang1={args.option.lang1} | lang2={args.option.lang2}"
-                    f" | truthy={args.option.truthy} | filter={args.option.filter} | export={args.option.export}")
+        logger.info(f"- [option] processor={extra_opt.processor} | lang1={extra_opt.lang1} | lang2={extra_opt.lang2}"
+                    f" | truthy={extra_opt.truthy} | filter={extra_opt.filter} | export={extra_opt.export}")
         with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="parsing", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for batch in input_data.items:
-                if args.option.processor == "parse_many1":
+                if extra_opt.processor == "parse_many1":
                     parse_many1(batch=batch, args=args, writer=output_table)
-                elif args.option.processor == "parse_many2":
+                elif extra_opt.processor == "parse_many2":
                     parse_many2(batch=batch, args=args, writer=output_table)
-                elif args.option.processor == "parse_many3":
+                elif extra_opt.processor == "parse_many3":
                     parse_many3(batch=batch, args=args, writer=output_table)
                 else:
-                    assert False, f"Unknown processor: {args.option.processor}"
+                    assert False, f"Unknown processor: {extra_opt.processor}"
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
 
         # export parsed data
-        if args.option.export:
+        if extra_opt.export:
             with tqdm(total=len(output_table), unit="row", pre="=>", desc="exporting", unit_divisor=args.input.inter * 100) as prog:
                 for row in output_table:
                     output_file.fp.write(json.dumps(row, ensure_ascii=False, indent=None if not debugging else 2) + '\n')

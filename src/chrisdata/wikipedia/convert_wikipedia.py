@@ -1,13 +1,12 @@
 import json
 import math
-from dataclasses import dataclass
 from dataclasses import field
 from typing import Iterable
 
 import typer
 
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption, FileStreamer, MongoStreamer, IOArguments
-from chrisbase.data import JobTimer, ProjectEnv, OptionData
+from chrisbase.data import JobTimer, ProjectEnv
 from chrisbase.io import LoggingFormat, new_path, merge_dicts
 from chrisbase.util import mute_tqdm_cls
 from . import *
@@ -16,8 +15,7 @@ logger = logging.getLogger(__name__)
 parsed_ids = set()  # for duplicated crawling data
 
 
-@dataclass
-class ExtraOption(OptionData):
+class ExtraOption(BaseModel):
     export: bool = field(default=True)
     processor: str | None = field(default=None)
 
@@ -141,7 +139,7 @@ def convert(
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
 
-        if args.option.export:
+        if extra_opt.export:
             with tqdm(total=len(output_table), unit="row", pre="=>", desc="exporting", unit_divisor=args.input.inter * 100) as prog:
                 for row in output_table:
                     row = WikipediaStat.model_validate(row)
