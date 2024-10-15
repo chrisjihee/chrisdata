@@ -22,15 +22,14 @@ class ExtraOption(OptionData):
     processor: str | None = field(default=None)
 
 
-def convert_one(item: dict) -> WikipediaDocument | None:
+def convert_one(item: dict) -> WikipediaStat | None:
     doc: WikipediaCrawlResult = WikipediaCrawlResult.model_validate(item)
     doc.title = doc.title.strip() if doc.title else ""
     if not doc.page_id or doc.page_id in parsed_ids or not doc.title or not doc.section_list:
         return None
     sections = [str(x[-1]).strip() for x in doc.section_list]
     parsed_ids.add(doc.page_id)
-    return WikipediaDocument(title=doc.title, page_id=doc.page_id,
-                             length=sum([len(x) for x in sections]), sections=sections)
+    return WikipediaStat(title=doc.title, page_id=doc.page_id, length=sum([len(x) for x in sections]))
 
 
 def convert_many(item: str | Iterable[str], args: IOArguments, writer: MongoStreamer, item_is_batch: bool = True):
@@ -128,7 +127,7 @@ def convert(
         FileStreamer(args.output.file) as output_file,
         MongoStreamer(args.output.table) as output_table,
     ):
-        input_data = args.input.ready_inputs(input_file, total=len(input_file))  # total=1410203 or len(input_file)
+        input_data = args.input.ready_inputs(input_file, total=1410203 or len(input_file))  # total=1410203 or len(input_file)
         logger.info(f"Convert from [{input_file.opt}] to [{output_file.opt}, {output_table.opt}]")
         logger.info(f"- [input] total={args.input.total} | start={args.input.start} | limit={args.input.limit}"
                     f" | {type(input_data).__name__}={input_data.num_item}{f'x{args.input.batch}ea' if input_data.has_batch_items() else ''}")
@@ -145,7 +144,8 @@ def convert(
         if args.option.export:
             with tqdm(total=len(output_table), unit="row", pre="=>", desc="exporting", unit_divisor=args.input.inter * 100) as prog:
                 for row in output_table:
-                    output_file.fp.write(json.dumps(row, ensure_ascii=False, indent=None if not debugging else 2) + '\n')
+                    row = WikipediaStat.model_validate(row)
+                    output_file.fp.write(row.model_dump_json() + '\n')
                     prog.update()
                     if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                         logger.info(prog)

@@ -28,4 +28,14 @@ class WikipediaDocument(BaseModel):
         return self.title
 
 
+class WikipediaStat(BaseModel):
+    title: str
+    length: int
+    page_id: int
+
+    @property
+    def id(self):
+        return self.title
+
+
 from . import convert_wikipedia
