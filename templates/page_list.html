@@ -8,27 +8,25 @@
 </head>
 <body>
 <div class="container my-3">
-    <h1 class="border-bottom py-2">List of Entities</h1>
+    <h1 class="border-bottom py-2">List of Pages</h1>
     <table class="table table-bordered table-hover text-center">
         <thead>
         <tr>
             <th scope="col">#</th>
-            <th scope="col">한국어 제목</th>
-            <th scope="col">영어 제목</th>
-            <th scope="col">Statement 개수</th>
-            <th scope="col">Qualifier 개수</th>
-            <th scope="col">문서 글자수</th>
+            <th scope="col">페이지</th>
+            <th scope="col">Entity 개수</th>
+            <th scope="col">첫번째 Entity</th>
+            <th scope="col">마지막 Entity</th>
         </tr>
         </thead>
         <tbody>
-        {% for info in entity_list %}
+        {% for info in page_list %}
             <tr>
                 <th scope="row">{{ loop.index }}</th>
-                <td><a href="entity/{{ info.subject.id }}.html" class="link-primary link-underline-opacity-0">{{ info.subject.title1 }}</a></td>
-                <td>{{ info.subject.title2 }}</td>
-                <td>{{ info.num_statements }}</td>
-                <td>{{ info.num_qualifiers }}</td>
-                <td>{{ info.document_length or '' }}</td>
+                <td><a href="{{ info.page }}.html" class="link-primary link-underline-opacity-0">{{ info.page }}</a></td>
+                <td>{{ info.num_entities }}</td>
+                <td>{{ info.first_entity }}</td>
+                <td>{{ info.last_entity }}</td>
             </tr>
         {% endfor %}
         </tbody>

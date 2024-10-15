@@ -6,6 +6,7 @@ import pandas as pd
 import typer
 from bs4 import BeautifulSoup
 from flask import Flask, render_template
+from more_itertools import ichunked
 
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption, FileStreamer
 from chrisbase.data import JobTimer, ProjectEnv
@@ -30,10 +31,18 @@ def property_order(k: str):
     return datatype_orders[relation_dict[k].datatype], relation_dict[k].property_count
 
 
+class PageInfo(BaseModel):
+    page: str
+    num_entities: int
+    first_entity: str
+    last_entity: str
+
+
 class ExtraOption(BaseModel):
     serve: bool = field(default=False)
     export: bool = field(default=False)
     processor: str | None = field(default=None)
+    serve_batch: int = field(default=1000)
     min_property_count: int = field(default=1000)
     black_property_datatypes: str = field(default="CM|EI|ES|U")
     white_qualifier_relations: str = field(default="P580|P582|P585")
@@ -167,7 +176,7 @@ def convert(
         input_start: int = typer.Option(default=0),
         input_limit: int = typer.Option(default=-1),  # TODO: Replace with -1
         input_batch: int = typer.Option(default=100),  # TODO: Replace with 100
-        input_inter: int = typer.Option(default=1000),  # TODO: Replace with 1000
+        input_inter: int = typer.Option(default=100),  # TODO: Replace with 1000
         input_file_path: str = typer.Option(default="input/wikidata/wikidata-20240916-korean-full.txt"),
         input_prop_path: str = typer.Option(default="input/wikidata/wikidata-properties.jsonl"),
         input_stat_path: str = typer.Option(default="input/wikipedia/kowiki-20230701-all-titles-in-ns0-stat.jsonl"),
@@ -182,6 +191,7 @@ def convert(
         serve: bool = typer.Option(default=True),
         export: bool = typer.Option(default=True),
         processor: str = typer.Option(default="convert_many"),
+        serve_batch: int = typer.Option(default=10000),
         min_property_count: int = typer.Option(default=1000),
         black_property_datatypes: str = typer.Option(default="CM|EI|ES|U"),
         white_qualifier_relations: str = typer.Option(default="P580|P582|P585"),
@@ -228,6 +238,7 @@ def convert(
         serve=serve,
         export=export,
         processor=processor,
+        serve_batch=serve_batch,
         min_property_count=min_property_count,
         black_property_datatypes=black_property_datatypes,
         white_qualifier_relations=white_qualifier_relations,
@@ -314,16 +325,37 @@ def convert(
                 detail: SubjectStatements = SubjectStatements.model_validate(row)
                 entity_list.append(info)
                 entity_details[info.subject.id] = detail
+
             logger.info(f"Load {len(entity_list)} entities from [{output_table.opt}]")
             server = Flask("wikidata_browser", template_folder=args.env.working_dir / "templates")
+            page_dict: dict[int, list[SubjectInfo]] = {
+                i: list(xs)
+                for i, xs in enumerate(ichunked(entity_list, extra_opt.serve_batch), start=1)
+            }
+            page_list: list[PageInfo] = [
+                PageInfo(page=f"{i:04d}", num_entities=len(xs), first_entity=xs[0].subject.title1, last_entity=xs[-1].subject.title1)
+                for i, xs in page_dict.items()
+            ]
+            logger.info(f"Chunk {len(entity_list)} entities into {extra_opt.serve_batch} entities * {len(page_dict)} pages")
 
             @server.route("/")
             def index():
-                return render_template("entity_list.html", entity_list=entity_list)
-                # return redirect(url_for('entity', sub='Q1.html'))
+                return render_template("page_list.html", page_list=page_list)
+                # return redirect(url_for('render_entity_detail', sub='Q1.html'))
+
+            @server.route("/<string:page>.html")
+            def render_entity_list(page: str):
+                try:
+                    page = int(page)
+                except ValueError:
+                    return f"Page Error (page={page})", 404
+                if page in page_dict:
+                    return render_template("entity_list.html", entity_list=page_dict[page])
+                else:
+                    return "Not Found", 404
 
             @server.route("/entity/<path:sub>")
-            def entity(sub: str):
+            def render_entity_detail(sub: str):
                 id = Path(sub).stem
                 entity: SubjectStatements | None = entity_details.get(id)
                 if entity:
