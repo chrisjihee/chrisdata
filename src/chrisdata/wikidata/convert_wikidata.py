@@ -171,12 +171,12 @@ def convert(
         logging_home: str = typer.Option(default="output/wikidata/convert"),
         logging_file: str = typer.Option(default="logging.out"),
         max_workers: int = typer.Option(default=1),
-        debugging: bool = typer.Option(default=False),  # TODO: Replace with False
+        debugging: bool = typer.Option(default=False),
         # input
         input_start: int = typer.Option(default=0),
-        input_limit: int = typer.Option(default=-1),  # TODO: Replace with -1
-        input_batch: int = typer.Option(default=100),  # TODO: Replace with 100
-        input_inter: int = typer.Option(default=100),  # TODO: Replace with 1000
+        input_limit: int = typer.Option(default=-1),
+        input_batch: int = typer.Option(default=500),
+        input_inter: int = typer.Option(default=500),
         input_file_path: str = typer.Option(default="input/wikidata/wikidata-20240916-korean-full.txt"),
         input_prop_path: str = typer.Option(default="input/wikidata/wikidata-properties.jsonl"),
         input_stat_path: str = typer.Option(default="input/wikipedia/kowiki-20230701-all-titles-in-ns0-stat.jsonl"),
@@ -191,7 +191,7 @@ def convert(
         serve: bool = typer.Option(default=True),
         export: bool = typer.Option(default=True),
         processor: str = typer.Option(default="convert_many"),
-        serve_batch: int = typer.Option(default=5000),
+        serve_batch: int = typer.Option(default=1000),
         min_property_count: int = typer.Option(default=1000),
         black_property_datatypes: str = typer.Option(default="CM|EI|ES|U"),
         white_qualifier_relations: str = typer.Option(default="P580|P582|P585"),
