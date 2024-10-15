@@ -1,0 +1,105 @@
+[10.15 11:24:50] ┇ INFO     ┇ =========================================================================================================================================
+[10.15 11:24:50] ┇ INFO     ┇ [INIT] python /home/chris/proj/chrisdata2/src/chrisdata/cli.py wikipedia convert
+[10.15 11:24:50] ┇ INFO     ┇ =========================================================================================================================================
+[10.15 11:24:50] ┇ INFO     ┇ -----+-----------------------+---------------------------------------------------
+[10.15 11:24:50] ┇ INFO     ┇    # | IOArguments           | value
+[10.15 11:24:50] ┇ INFO     ┇ -----+-----------------------+---------------------------------------------------
+[10.15 11:24:50] ┇ INFO     ┇    1 | tag                   |
+[10.15 11:24:50] ┇ INFO     ┇    2 | env.project           | chrisdata
+[10.15 11:24:50] ┇ INFO     ┇    3 | env.job_name          | convert_wikipedia
+[10.15 11:24:50] ┇ INFO     ┇    4 | env.job_version       |
+[10.15 11:24:50] ┇ INFO     ┇    5 | env.hostname          | chris36
+[10.15 11:24:50] ┇ INFO     ┇    6 | env.hostaddr          | 129.254.181.36
+[10.15 11:24:50] ┇ INFO     ┇    7 | env.time_stamp        | 1015.112449
+[10.15 11:24:50] ┇ INFO     ┇    8 | env.python_path       | /home/chris/miniforge3/envs/chrisdata/bin/python
+[10.15 11:24:50] ┇ INFO     ┇    9 | env.current_dir       | /mnt/dat/proj/chrisdata2
+[10.15 11:24:50] ┇ INFO     ┇   10 | env.current_file      | /home/chris/proj/chrisdata2/src/chrisdata/cli.py
+[10.15 11:24:50] ┇ INFO     ┇   11 | env.working_dir       | /mnt/dat/proj/chrisdata2
+[10.15 11:24:50] ┇ INFO     ┇   12 | env.command_args      | ['wikipedia', 'convert']
+[10.15 11:24:50] ┇ INFO     ┇   13 | env.num_ip_addrs      | 1
+[10.15 11:24:50] ┇ INFO     ┇   14 | env.max_workers       | 1
+[10.15 11:24:50] ┇ INFO     ┇   15 | env.calling_sec       | 0.001
+[10.15 11:24:50] ┇ INFO     ┇   16 | env.waiting_sec       | 300.0
+[10.15 11:24:50] ┇ INFO     ┇   17 | env.debugging         | False
+[10.15 11:24:50] ┇ INFO     ┇   18 | env.logging_home      | /mnt/dat/proj/chrisdata2/output/wikipedia/convert
+[10.15 11:24:50] ┇ INFO     ┇   19 | env.logging_file      | logging-1015.112449.out
+[10.15 11:24:50] ┇ INFO     ┇   20 | env.argument_file     |
+[10.15 11:24:50] ┇ INFO     ┇   21 | env.date_format       | [%m.%d %H:%M:%S]
+[10.15 11:24:50] ┇ INFO     ┇   22 | env.message_level     | 20
+[10.15 11:24:50] ┇ INFO     ┇   23 | env.message_format    | %(asctime)s ┇ %(levelname)-8s ┇ %(message)s
+[10.15 11:24:50] ┇ INFO     ┇   24 | time.started          | [10.15 11:24:50]
+[10.15 11:24:50] ┇ INFO     ┇   25 | time.settled          |
+[10.15 11:24:50] ┇ INFO     ┇   26 | time.elapsed          |
+[10.15 11:24:50] ┇ INFO     ┇   27 | input.start           | 0.0
+[10.15 11:24:50] ┇ INFO     ┇   28 | input.limit           | -1.0
+[10.15 11:24:50] ┇ INFO     ┇   29 | input.batch           | 100.0
+[10.15 11:24:50] ┇ INFO     ┇   30 | input.inter           | 50000.0
+[10.15 11:24:50] ┇ INFO     ┇   31 | input.total           | -1.0
+[10.15 11:24:50] ┇ INFO     ┇   32 | input.data            | nan
+[10.15 11:24:50] ┇ INFO     ┇   33 | input.file.name       | kowiki-20230701-all-titles-in-ns0-crawl.jsonl
+[10.15 11:24:50] ┇ INFO     ┇   34 | input.file.home       | input/wikipedia
+[10.15 11:24:50] ┇ INFO     ┇   35 | input.file.user       |
+[10.15 11:24:50] ┇ INFO     ┇   36 | input.file.pswd       |
+[10.15 11:24:50] ┇ INFO     ┇   37 | input.file.reset      | False
+[10.15 11:24:50] ┇ INFO     ┇   38 | input.file.required   | True
+[10.15 11:24:50] ┇ INFO     ┇   39 | input.file.mode       | rb
+[10.15 11:24:50] ┇ INFO     ┇   40 | input.file.encoding   | utf-8
+[10.15 11:24:50] ┇ INFO     ┇   41 | output.file.name      | wikipedia-20230701-convert-1015.112449.jsonl
+[10.15 11:24:50] ┇ INFO     ┇   42 | output.file.home      | output/wikipedia
+[10.15 11:24:50] ┇ INFO     ┇   43 | output.file.user      |
+[10.15 11:24:50] ┇ INFO     ┇   44 | output.file.pswd      |
+[10.15 11:24:50] ┇ INFO     ┇   45 | output.file.reset     | False
+[10.15 11:24:50] ┇ INFO     ┇   46 | output.file.required  | True
+[10.15 11:24:50] ┇ INFO     ┇   47 | output.file.mode      | w
+[10.15 11:24:50] ┇ INFO     ┇   48 | output.file.encoding  | utf-8
+[10.15 11:24:50] ┇ INFO     ┇   49 | output.table.name     | wikipedia-20230701-convert
+[10.15 11:24:50] ┇ INFO     ┇   50 | output.table.home     | localhost:8800/wikipedia
+[10.15 11:24:50] ┇ INFO     ┇   51 | output.table.user     |
+[10.15 11:24:50] ┇ INFO     ┇   52 | output.table.pswd     |
+[10.15 11:24:50] ┇ INFO     ┇   53 | output.table.reset    | True
+[10.15 11:24:50] ┇ INFO     ┇   54 | output.table.required | True
+[10.15 11:24:50] ┇ INFO     ┇   55 | output.table.sort     | _id
+[10.15 11:24:50] ┇ INFO     ┇   56 | output.table.find     | {}
+[10.15 11:24:50] ┇ INFO     ┇   57 | output.table.timeout  | 30000
+[10.15 11:24:50] ┇ INFO     ┇   58 | option.export         | True
+[10.15 11:24:50] ┇ INFO     ┇   59 | option.processor      | convert_many
+[10.15 11:24:50] ┇ INFO     ┇ -----+-----------------------+---------------------------------------------------
+[10.15 11:24:50] ┇ INFO     ┇ Drop an existing table: localhost:8800/wikipedia/wikipedia-20230701-convert
+[10.15 11:24:50] ┇ INFO     ┇ Convert from [input/wikipedia/kowiki-20230701-all-titles-in-ns0-crawl.jsonl] to [output/wikipedia/wikipedia-20230701-convert-1015.112449.jsonl, localhost:8800/wikipedia/wikipedia-20230701-convert]
+[10.15 11:24:50] ┇ INFO     ┇ - [input] total=1410203 | start=0 | limit=-1 | BatchItems=14103x100ea
+[10.15 11:24:50] ┇ INFO     ┇ - [output] file.reset=False | file.mode=w
+[10.15 11:24:50] ┇ INFO     ┇ - [output] table.reset=True | table.timeout=30000
+[10.15 11:24:55] ┇ INFO     ┇ => converting:   4%|█▊                                                | 500/14103 [00:04<03:07, 72.64item/s]
+[10.15 11:24:59] ┇ INFO     ┇ => converting:   7%|███▌                                              | 1000/14103 [00:09<01:48, 120.37item/s]
+[10.15 11:25:03] ┇ INFO     ┇ => converting:  11%|█████▎                                            | 1500/14103 [00:13<01:55, 109.24item/s]
+[10.15 11:25:07] ┇ INFO     ┇ => converting:  14%|███████                                           | 2000/14103 [00:17<01:32, 131.38item/s]
+[10.15 11:25:11] ┇ INFO     ┇ => converting:  18%|████████▊                                         | 2500/14103 [00:20<01:21, 142.41item/s]
+[10.15 11:25:14] ┇ INFO     ┇ => converting:  21%|██████████▋                                       | 3000/14103 [00:24<01:21, 136.14item/s]
+[10.15 11:25:17] ┇ INFO     ┇ => converting:  25%|████████████▍                                     | 3500/14103 [00:27<01:13, 143.69item/s]
+[10.15 11:25:21] ┇ INFO     ┇ => converting:  28%|██████████████▏                                   | 4000/14103 [00:31<01:00, 167.89item/s]
+[10.15 11:25:25] ┇ INFO     ┇ => converting:  32%|███████████████▉                                  | 4500/14103 [00:34<01:01, 155.66item/s]
+[10.15 11:25:28] ┇ INFO     ┇ => converting:  35%|█████████████████▋                                | 5000/14103 [00:37<01:00, 149.43item/s]
+[10.15 11:25:31] ┇ INFO     ┇ => converting:  39%|███████████████████▍                              | 5500/14103 [00:41<01:01, 140.54item/s]
+[10.15 11:25:35] ┇ INFO     ┇ => converting:  43%|█████████████████████▎                            | 6000/14103 [00:44<00:50, 160.43item/s]
+[10.15 11:25:38] ┇ INFO     ┇ => converting:  46%|███████████████████████                           | 6500/14103 [00:48<00:49, 152.71item/s]
+[10.15 11:25:41] ┇ INFO     ┇ => converting:  50%|████████████████████████▊                         | 7000/14103 [00:51<00:47, 148.33item/s]
+[10.15 11:25:45] ┇ INFO     ┇ => converting:  53%|██████████████████████████▌                       | 7500/14103 [00:54<00:48, 136.18item/s]
+[10.15 11:25:48] ┇ INFO     ┇ => converting:  57%|████████████████████████████▎                     | 8000/14103 [00:58<00:56, 108.18item/s]
+[10.15 11:25:51] ┇ INFO     ┇ => converting:  60%|██████████████████████████████▏                   | 8500/14103 [01:01<00:30, 184.87item/s]
+[10.15 11:25:54] ┇ INFO     ┇ => converting:  64%|███████████████████████████████▉                  | 9000/14103 [01:04<00:31, 162.47item/s]
+[10.15 11:25:57] ┇ INFO     ┇ => converting:  67%|█████████████████████████████████▋                | 9500/14103 [01:07<00:27, 165.31item/s]
+[10.15 11:26:01] ┇ INFO     ┇ => converting:  71%|███████████████████████████████████▍              | 10000/14103 [01:11<00:27, 147.41item/s]
+[10.15 11:26:05] ┇ INFO     ┇ => converting:  74%|█████████████████████████████████████▏            | 10500/14103 [01:14<00:30, 117.90item/s]
+[10.15 11:26:08] ┇ INFO     ┇ => converting:  78%|██████████████████████████████████████▉           | 11000/14103 [01:18<00:23, 131.23item/s]
+[10.15 11:26:12] ┇ INFO     ┇ => converting:  82%|████████████████████████████████████████▊         | 11500/14103 [01:21<00:17, 153.09item/s]
+[10.15 11:26:15] ┇ INFO     ┇ => converting:  85%|██████████████████████████████████████████▌       | 12000/14103 [01:24<00:12, 172.63item/s]
+[10.15 11:26:18] ┇ INFO     ┇ => converting:  89%|████████████████████████████████████████████▎     | 12500/14103 [01:28<00:09, 163.78item/s]
+[10.15 11:26:21] ┇ INFO     ┇ => converting:  92%|██████████████████████████████████████████████    | 13000/14103 [01:31<00:07, 155.60item/s]
+[10.15 11:26:24] ┇ INFO     ┇ => converting:  96%|███████████████████████████████████████████████▊  | 13500/14103 [01:34<00:05, 119.11item/s]
+[10.15 11:26:28] ┇ INFO     ┇ => converting:  99%|█████████████████████████████████████████████████▋| 14000/14103 [01:37<00:00, 147.93item/s]
+[10.15 11:26:28] ┇ INFO     ┇ => converting: 100%|██████████████████████████████████████████████████| 14103/14103 [01:38<00:00, 169.28item/s]
+[10.15 11:26:32] ┇ INFO     ┇ =>  exporting: 100%|██████████████████████████████████████████████████| 639039/639039 [00:03<00:00, 223267.08row/s]
+[10.15 11:26:32] ┇ INFO     ┇ Export 639039/1410203 rows to [output/wikipedia/wikipedia-20230701-convert-1015.112449.jsonl]
+[10.15 11:26:32] ┇ INFO     ┇ =========================================================================================================================================
+[10.15 11:26:32] ┇ INFO     ┇ [EXIT] python /home/chris/proj/chrisdata2/src/chrisdata/cli.py wikipedia convert ($=00:01:42.069)
+[10.15 11:26:32] ┇ INFO     ┇ =========================================================================================================================================
