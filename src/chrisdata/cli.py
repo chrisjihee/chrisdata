@@ -1,3 +1,4 @@
+import chrisdata.ner
 import chrisdata.net
 import chrisdata.wikidata
 import chrisdata.wikipedia
@@ -5,6 +6,7 @@ from chrisbase.data import AppTyper
 
 main = AppTyper()
 main.add_typer(chrisdata.net.app, name="net")
+main.add_typer(chrisdata.ner.app, name="ner")
 main.add_typer(chrisdata.wikidata.app, name="wikidata")
 main.add_typer(chrisdata.wikipedia.app, name="wikipedia")
 
