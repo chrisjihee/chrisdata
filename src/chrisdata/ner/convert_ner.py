@@ -9,6 +9,24 @@ from . import *
 
 logger = logging.getLogger(__name__)
 
+def bio_to_entities(words, labels):
+    # BIO notation
+    pairs = zip(words, labels)
+    # convert BIO notation to NER format
+    entities = []
+    entity = None
+    for word, label in pairs:
+        if label == 'O':
+            entity = None
+            continue
+        if label.startswith('B-'):
+            entity = {'type': label[2:], 'words': [word]}
+            entities.append(entity)
+        elif label.startswith('I-') and entity:
+            entity['words'].append(word)
+    for entity in entities:
+        entity['text'] = ' '.join(entity.pop('words'))
+    return entities
 
 @app.command()
 def convert(
@@ -76,3 +94,5 @@ def convert(
             logger.info(x['instance']['labels'])
             logger.info(x['instance']['instruction_inputs'])
             logger.info(x['instance']['prompt_labels'])
+            entities = bio_to_entities(x['instance']['words'], x['instance']['labels'])
+            logger.info(entities)
