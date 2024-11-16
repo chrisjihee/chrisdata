@@ -25,7 +25,7 @@ bold3_pattern = re.compile("'''([^']+)'''")
 bold2_pattern = re.compile("''([^']+)''")
 special_pattern1 = re.compile("{{.+?}}")
 special_pattern2 = re.compile("{{[^}]+?}}")
-reference_pattern = re.compile("<ref[^>]*>.*?</ref>")
+reference_pattern = re.compile("<ref[^>]*>.*?</ref>|<ref[^>]*/>")
 bio_tag_pattern = re.compile("([^ ]+)\(([BIO](-[A-Za-z ]+)?)\)")
 
 
@@ -37,6 +37,8 @@ class ExtraOption(BaseModel):
     max_entity_targets: int = 10
     max_search_candidate: int = 5
     max_targets_per_page: int = 3
+    max_passage_length: int = 1000
+    min_passage_length: int = 100
 
 
 def bio_to_entities(words, labels):
@@ -106,7 +108,7 @@ def process_one(ii_entity: Tuple[int, str], args: IOArguments) -> Optional[Entit
     http_client = http_clients[ii % len(http_clients)]
     # logger.info(f"- {id} | {http_client._transport._pool._local_address:<15s} | {entity}")
 
-    related_passages = []
+    all_entity_passages = []
     # search on web: https://en.wikipedia.org/w/index.php?fulltext=1&ns0=1&search=[entity_text]
     source_url = f"https://en.wikipedia.org/w/index.php?fulltext=1&ns0=1&search={entity.replace(' ', '+')}"
     try:
@@ -133,34 +135,33 @@ def process_one(ii_entity: Tuple[int, str], args: IOArguments) -> Optional[Entit
         document_content = file_pattern.sub("", document_content)
         document_content = space_pattern.sub(" ", document_content)
 
-        # make title pattern with boundary
+        document_passages = []
         title_pattern = re.compile(rf"\b{re.escape(document_title)}\b")
-        target_lines = list()
         for origin in document_content.splitlines():
             target = origin
             target = title_pattern.sub(f"[[{document_title}]]", target)
             target = link2_pattern.sub(r"[[\2]]", target)
             target = bold3_pattern.sub(r"\1", target)
             target = bold2_pattern.sub(r"\1", target)
-            if len(link1_pattern.findall(target)) < args.option.min_entity_links:
+            if args.option.min_passage_length >= 0 and len(target) < args.option.min_passage_length:
+                continue
+            if args.option.max_passage_length >= 0 and len(target) > args.option.max_passage_length:
                 continue
             if f"[[{entity.lower()}]]" not in target.lower():
                 continue
-            target_lines.append(target)
-            # logger.debug(f"- [target] {target}")
-        if len(target_lines) == 0:
-            continue
-        target_lines = shuffled(target_lines)
-        target_lines = target_lines[: args.option.max_targets_per_page]
-        related_passages.extend(target_lines)
+            if len(link1_pattern.findall(target)) < args.option.min_entity_links:
+                continue
+            document_passages.append(target)
+            logger.info(f"- [passage]({len(target)}) {target}")
+        if len(document_passages) > 0:
+            document_passages = shuffled(document_passages)[: args.option.max_targets_per_page]
+            all_entity_passages.extend(document_passages)
 
-    # for trainable_passage in related_passages:
-    #     logger.debug(f"- [trainable_passage] {trainable_passage}")
     return EntityRelatedPassages(
         id=id,
         entity=entity,
-        passages=related_passages,
-        num_passages=len(related_passages),
+        passages=all_entity_passages,
+        num_passages=len(all_entity_passages),
         source_url=source_url,
     )
 
@@ -196,7 +197,7 @@ def convert_GNER(
         job_name: str = typer.Option(default="convert_GNER"),
         logging_home: str = typer.Option(default="output/GNER/convert"),
         logging_file: str = typer.Option(default="logging.out"),
-        max_workers: int = typer.Option(default=12),
+        max_workers: int = typer.Option(default=1),
         debugging: bool = typer.Option(default=False),
         # input
         input_inter: int = typer.Option(default=1),
