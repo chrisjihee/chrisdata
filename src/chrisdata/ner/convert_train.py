@@ -27,6 +27,7 @@ bold2_pattern = re.compile("''([^']+)''")
 special_pattern1 = re.compile("{{.+?}}")
 special_pattern2 = re.compile("{{[^}]+?}}")
 reference_pattern = re.compile("<ref[^>]*>.*?</ref>")
+bio_tag_pattern = re.compile("([^ ]+)\(([BIO](-[A-Za-z ]+)?)\)")
 
 
 class ExtraOption(BaseModel):
@@ -273,7 +274,12 @@ def convert_train(
             print("=" * 80)
             print("sample.instance.prompt_labels: ")
             print(sample.instance.prompt_labels)
-            # sample.instruction_inputs
+            print("=" * 80)
+            words = sample.instance.instruction_inputs.splitlines()[-1].split("Sentence: ")[-1].split()
+            tags = bio_tag_pattern.findall(sample.instance.prompt_labels)
+            assert len(words) == len(tags), f"len(words) != len(tags): {len(words)} != {len(tags)}"
+            for w, t in zip(words, tags):
+                print(f"{w} = {t}")
             exit(1)
 
     for http_client in http_clients:
