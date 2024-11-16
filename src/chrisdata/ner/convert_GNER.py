@@ -152,7 +152,7 @@ def process_one(ii_entity: Tuple[int, str], args: IOArguments) -> Optional[Entit
             if len(link1_pattern.findall(target)) < args.option.min_entity_links:
                 continue
             document_passages.append(target)
-            logger.info(f"- [passage]({len(target)}) {target}")
+            # logger.info(f"- [passage]({len(target)}) {target}")
         if len(document_passages) > 0:
             document_passages = shuffled(document_passages)[: args.option.max_targets_per_page]
             all_entity_passages.extend(document_passages)
@@ -197,7 +197,7 @@ def convert_GNER(
         job_name: str = typer.Option(default="convert_GNER"),
         logging_home: str = typer.Option(default="output/GNER/convert"),
         logging_file: str = typer.Option(default="logging.out"),
-        max_workers: int = typer.Option(default=1),
+        max_workers: int = typer.Option(default=12),
         debugging: bool = typer.Option(default=False),
         # input
         input_inter: int = typer.Option(default=1),
