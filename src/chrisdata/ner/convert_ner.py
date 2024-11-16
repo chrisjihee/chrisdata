@@ -171,7 +171,7 @@ def convert(
         # output
         output_file_path: str = typer.Option(default="output/GNER/zero-shot-test-conv.jsonl"),
         output_table_home: str = typer.Option(default="localhost:8800/ner"),
-        output_table_name: str = typer.Option(default="GNER_tuning_source2"),
+        output_table_name: str = typer.Option(default="GNER_tuning_source"),
         output_table_reset: bool = typer.Option(default=True),
         # option
         min_entity_freq: int = typer.Option(default=2),
