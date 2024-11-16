@@ -117,10 +117,10 @@ def check(
         output=output_opt,
     )
     tqdm = mute_tqdm_cls()
-    logging.getLogger("httpx").setLevel(logging.WARNING)
     assert args.input.data, "input.data is required"
     assert args.output.file, "output.file is required"
     assert args.output.table, "output.table is required"
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
     with (
         JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),

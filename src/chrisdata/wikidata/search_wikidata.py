@@ -293,10 +293,10 @@ class SearchApp:
                 filter=filter_opt,
             )
             tqdm = mute_tqdm_cls()
-            logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
             assert args.input.index, "input.index is required"
             assert args.input.table, "input.table is required"
             assert args.output.index or args.output.table, "output.index or output.table is required"
+            logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
 
             with (
                 JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),

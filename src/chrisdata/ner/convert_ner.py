@@ -185,7 +185,7 @@ def convert(
         logging_home=logging_home,
         logging_file=logging_file,
         message_level=logging.INFO,
-        message_format=LoggingFormat.CHECK_00,  # if not debugging else LoggingFormat.DEBUG_36,
+        message_format=LoggingFormat.DEBUG_36,  # if not debugging else LoggingFormat.DEBUG_36,
         max_workers=1 if debugging else max(max_workers, 1),
     )
     input_opt = InputOption(
@@ -227,6 +227,7 @@ def convert(
     tqdm = mute_tqdm_cls()
     assert args.input.file, "input.file is required"
     assert args.output.file, "output.file is required"
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
     global http_clients
     http_clients = [

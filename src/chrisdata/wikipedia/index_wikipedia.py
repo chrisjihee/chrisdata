@@ -93,9 +93,9 @@ class IndexApp:
                 output=output_opt,
             )
             tqdm = mute_tqdm_cls()
-            logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
             assert args.input.file or args.input.table, "input.file or input.table is required"
             assert args.output.index, "output.index is required"
+            logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
 
             with (
                 JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
