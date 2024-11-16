@@ -162,7 +162,7 @@ def convert(
         job_name: str = typer.Option(default="convert_wikidata"),
         logging_home: str = typer.Option(default="output/wikidata/convert"),
         logging_file: str = typer.Option(default="logging.out"),
-        max_workers: int = typer.Option(default=10),
+        max_workers: int = typer.Option(default=12),
         debugging: bool = typer.Option(default=False),
         # input
         input_file_path: str = typer.Option(default="input/GNER/zero-shot-test.jsonl"),
@@ -177,7 +177,7 @@ def convert(
         min_entity_freq: int = typer.Option(default=2),
         min_entity_chars: int = typer.Option(default=3),
         min_entity_links: int = typer.Option(default=3),
-        max_entity_targets: int = typer.Option(default=100),
+        max_entity_targets: int = typer.Option(default=5000),
         max_search_candidate: int = typer.Option(default=5),
         max_targets_per_page: int = typer.Option(default=3),
 ):
@@ -256,12 +256,12 @@ def convert(
         # process loop
         with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="converting", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for item in input_data.items:
-                logger.info(f"args.env.max_workers={args.env.max_workers}")
+                # logger.info(f"args.env.max_workers={args.env.max_workers}")
                 if args.env.max_workers <= 1:
-                    logger.info("work with process_many1")
+                    # logger.info("work with process_many1")
                     process_many1(item=item, args=args, writer=output_table, item_is_batch=input_data.has_batch_items())
                 else:
-                    logger.info("work with process_many2")
+                    # logger.info("work with process_many2")
                     process_many2(item=item, args=args, writer=output_table, item_is_batch=input_data.has_batch_items())
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
