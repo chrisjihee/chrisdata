@@ -168,20 +168,20 @@ def process_many2(item: Iterable[Tuple[int, str]], args: IOArguments, writer: Mo
 
 
 @app.command()
-def convert(
+def convert_train(
         # env
         project: str = typer.Option(default="chrisdata"),
-        job_name: str = typer.Option(default="convert_wikidata"),
-        logging_home: str = typer.Option(default="output/wikidata/convert"),
+        job_name: str = typer.Option(default="convert_train"),
+        logging_home: str = typer.Option(default="output/GNER/convert"),
         logging_file: str = typer.Option(default="logging.out"),
         max_workers: int = typer.Option(default=12),
         debugging: bool = typer.Option(default=False),
         # input
-        input_file_path: str = typer.Option(default="input/GNER/zero-shot-test.jsonl"),
+        input_file_path: str = typer.Option(default="input/GNER/pile-ner.json"),
         input_batch: int = typer.Option(default=10),
         input_inter: int = typer.Option(default=1),
         # output
-        output_file_path: str = typer.Option(default="output/GNER/zero-shot-test-conv.jsonl"),
+        output_file_path: str = typer.Option(default="output/GNER/convert/train-data.jsonl"),
         output_table_home: str = typer.Option(default="localhost:8800/ner"),
         output_table_name: str = typer.Option(default="GNER_tuning_source"),
         output_table_reset: bool = typer.Option(default=False),

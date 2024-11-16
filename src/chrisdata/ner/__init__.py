@@ -15,4 +15,5 @@ class EntityRelatedPassages(BaseModel):
     source_url: str
 
 
-from . import convert_ner
+from . import convert_test
+from . import convert_train
