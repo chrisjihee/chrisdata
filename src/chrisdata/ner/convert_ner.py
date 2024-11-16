@@ -22,6 +22,7 @@ class ExtraOption(BaseModel):
     min_entity_links: int = 3
     max_entity_targets: int = 10
     max_search_candidate: int = 10
+    max_targets_per_page: int = 3
 
 
 def bio_to_entities(words, labels):
@@ -63,6 +64,7 @@ def convert(
         min_entity_links: int = typer.Option(default=3),
         max_entity_targets: int = typer.Option(default=10),
         max_search_candidate: int = typer.Option(default=5),
+        max_targets_per_page: int = typer.Option(default=3),
 ):
     env = ProjectEnv(
         project=project,
@@ -94,6 +96,7 @@ def convert(
         min_entity_links=min_entity_links,
         max_entity_targets=max_entity_targets,
         max_search_candidate=max_search_candidate,
+        max_targets_per_page=max_targets_per_page,
     )
     args = IOArguments(
         env=env,
@@ -113,12 +116,17 @@ def convert(
     bold2_pattern = re.compile("''([^']+)''")
     special_pattern1 = re.compile("{{.+?}}")
     special_pattern2 = re.compile("{{[^}]+?}}")
+    http_clients = [
+        httpx.Client(
+            transport=httpx.HTTPTransport(local_address=ip_addr),
+            timeout=httpx.Timeout(timeout=120.0),
+        ) for ip_addr in env.ip_addrs
+    ]
 
     with (
         JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
         FileStreamer(args.input.file) as input_file,
         FileStreamer(args.output.file) as output_file,
-        httpx.Client(timeout=httpx.Timeout(timeout=120.0)) as http_client,
     ):
         input_data = args.input.ready_inputs(input_file, total=len(input_file))
         all_entity_texts = []
@@ -137,7 +145,8 @@ def convert(
 
         for ii, entity_text in enumerate(islice(shuffled(entity_freq.keys()), args.option.max_entity_targets), start=1):
             id = f"{ii:08d}"
-            print(f"- {id}: {entity_text}")
+            http_client = http_clients[ii % len(http_clients)]
+            print(f"- {id} | {http_client._transport._pool._local_address:<15s} | {entity_text}")
 
             trainable_passages = []
             # search on web: https://en.wikipedia.org/w/index.php?fulltext=1&ns0=1&search=[entity_text]
@@ -177,7 +186,12 @@ def convert(
                     # print(f"- [target] {target}")
                 if len(target_lines) == 0:
                     continue
+                target_lines = shuffled(target_lines)
+                target_lines = target_lines[: args.option.max_targets_per_page]
                 trainable_passages.extend(target_lines)
 
             for trainable_passage in trainable_passages:
                 print(f"- [trainable_passage] {trainable_passage}")
+
+    for http_client in http_clients:
+        http_client.close()
