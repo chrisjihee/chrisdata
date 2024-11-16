@@ -105,11 +105,12 @@ def convert(
     assert args.input.file, "input.file is required"
     assert args.output.file, "output.file is required"
     reference_pattern = re.compile("<ref[^>]*>.*?</ref>")
-    file_pattern = re.compile("\[\[File: ([^]]+)]]")
+    file_pattern = re.compile("\[\[File:([^]]+)]]")
     double_space_pattern = re.compile("  +")
     link2_pattern = re.compile("\[\[([^|\]]+)\|([^]]+)]]")
     link1_pattern = re.compile("\[\[([^]]+)]]")
-    bold_pattern = re.compile("'''([^']+)'''")
+    bold3_pattern = re.compile("'''([^']+)'''")
+    bold2_pattern = re.compile("''([^']+)''")
     special_pattern1 = re.compile("{{.+?}}")
     special_pattern2 = re.compile("{{[^}]+?}}")
 
@@ -135,7 +136,7 @@ def convert(
         entity_freq = {k: v for k, v in entity_freq.items() if not any(char.isdigit() for char in k)}
 
         for ii, entity_text in enumerate(islice(shuffled(entity_freq.keys()), args.option.max_entity_targets), start=1):
-            id = f"{ii:08d}-{entity_text.replace(' ', '_')}"
+            id = f"{ii:08d}"
             print(f"- {id}: {entity_text}")
 
             trainable_passages = []
@@ -147,7 +148,6 @@ def convert(
                 search_result_url = urljoin(entity_search_url, search_result.select_one("a").attrs['href']).replace('/wiki/', '/w/index.php?title=') + '&action=edit'
                 response = http_client.get(search_result_url)
                 search_result_page = BeautifulSoup(response.text, 'html.parser')
-                Path("test.html").write_text(response.text)
                 try:
                     document_title = (search_result_page.select_one('#firstHeadingTitle') or search_result_page.select_one('#contentSub')).text
                 except:
@@ -167,12 +167,14 @@ def convert(
                     target = origin
                     target = title_pattern.sub(f"[[{document_title}]]", target)
                     target = link2_pattern.sub(r"[[\2]]", target)
-                    target = bold_pattern.sub(r"\1", target)
+                    target = bold3_pattern.sub(r"\1", target)
+                    target = bold2_pattern.sub(r"\1", target)
                     if len(link1_pattern.findall(target)) < args.option.min_entity_links:
                         continue
                     if f"[[{entity_text.lower()}]]" not in target.lower():
                         continue
                     target_lines.append(target)
+                    # print(f"- [target] {target}")
                 if len(target_lines) == 0:
                     continue
                 trainable_passages.extend(target_lines)
