@@ -2,15 +2,15 @@ import json
 import math
 import time
 from concurrent.futures import ProcessPoolExecutor
-from itertools import islice
-from typing import Optional, Tuple, Iterable
+from itertools import groupby, islice
+from typing import Optional, Iterable, Tuple, List
 from urllib.parse import urljoin
 
 import httpx
 import typer
 from bs4 import BeautifulSoup
 
-from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, JobTimer, FileStreamer, TableOption, MongoStreamer
+from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer
 from chrisbase.io import LoggingFormat, new_path, merge_dicts
 from chrisbase.util import mute_tqdm_cls, shuffled
 from . import *
@@ -57,6 +57,16 @@ def bio_to_entities(words, labels):
     for entity in entities:
         entity['text'] = ' '.join(entity.pop('words'))
     return entities
+
+
+def entity_texts_to_freq_dict(entity_texts: List[str], args: IOArguments):
+    # count entity frequency using groupby
+    entity_freq = {k: len(list(g)) for k, g in groupby(sorted(entity_texts)) if entity_text_pattern.fullmatch(k)}
+    # sort by frequency
+    entity_freq = dict(sorted(entity_freq.items(), key=lambda x: x[1], reverse=True))
+    # filter out entities with frequency less than min_entity_chars
+    entity_freq = {k: v for k, v in entity_freq.items() if v >= args.option.min_entity_freq and len(k) >= args.option.min_entity_chars}
+    return entity_freq
 
 
 def get_entity_texts_from_train(input_file: FileStreamer):
@@ -189,18 +199,20 @@ def convert_GNER(
         max_workers: int = typer.Option(default=12),
         debugging: bool = typer.Option(default=False),
         # input
-        # input_file_path: str = typer.Option(default="input/GNER/pile-ner.json"),
-        input_file_path: str = typer.Option(default="input/GNER/zero-shot-test.jsonl"),
-        input_batch: int = typer.Option(default=10),
         input_inter: int = typer.Option(default=1),
+        input_batch: int = typer.Option(default=10),
+        input_file_path: str = typer.Option(default="input/GNER/pile-ner.json"),
+        # input_file_path: str = typer.Option(default="input/GNER/zero-shot-test.jsonl"),
         # output
-        # output_file_path: str = typer.Option(default="output/GNER/convert/train-data.jsonl"),
-        output_file_path: str = typer.Option(default="output/GNER/convert/test-data.jsonl"),
-        output_table_name: str = typer.Option(default="GNER_tuning_source-from-test-data"),
-        output_table_home: str = typer.Option(default="localhost:8800/ner"),
         output_table_reset: bool = typer.Option(default=True),
+        output_table_home: str = typer.Option(default="localhost:8800/GNER"),
+        output_table_name: str = typer.Option(default="inst_tuning_base-from-train"),
+        # output_table_name: str = typer.Option(default="inst_tuning_base-from-test"),
+        output_file_path: str = typer.Option(default="output/GNER/convert/train-data.jsonl"),
+        # output_file_path: str = typer.Option(default="output/GNER/convert/test-data.jsonl"),
         # option
         get_entity_texts_fn: str = typer.Option(default="get_entity_texts_from_train"),
+        # get_entity_texts_fn: str = typer.Option(default="get_entity_texts_from_test"),
         min_entity_freq: int = typer.Option(default=2),
         min_entity_chars: int = typer.Option(default=3),
         min_entity_links: int = typer.Option(default=3),
