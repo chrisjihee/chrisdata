@@ -75,7 +75,7 @@ def check(
         output_file_home: str = typer.Option(default="output/check_ip_addrs"),
         output_file_name: str = typer.Option(default="check_ip_addrs.jsonl"),
         output_file_mode: str = typer.Option(default="w"),
-        output_table_home: str = typer.Option(default="localhost:6382/device"),
+        output_table_home: str = typer.Option(default="localhost:8800/device"),
         output_table_name: str = typer.Option(default="check_ip_addrs"),
         output_table_reset: bool = typer.Option(default=True),
 ):
@@ -131,8 +131,8 @@ def check(
         input_total = args.env.num_ip_addrs
         input_items = args.input.ready_inputs(args.input.data, input_total)
         logger.info(f"Check {input_total} addresses to [{output_table.opt}]")
-        logger.info(f"- amount: {input_items.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
-        with tqdm(total=input_items.total, unit="item", pre="=>", desc="checking", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
+        logger.info(f"- amount: {args.input.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
+        with tqdm(total=input_items.num_item, unit="item", pre="=>", desc="checking", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for batch in input_items.items:
                 if args.env.max_workers <= 1:
                     process_many1(batch=batch, args=args, writer=output_table)

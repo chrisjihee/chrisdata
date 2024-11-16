@@ -1,7 +1,6 @@
 import json
 import re
 from itertools import groupby, islice
-from pathlib import Path
 from urllib.parse import urljoin
 
 import httpx
