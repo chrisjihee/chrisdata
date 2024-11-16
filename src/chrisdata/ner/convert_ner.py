@@ -77,25 +77,33 @@ def get_entity_freq(input_file: FileStreamer, args: IOArguments):
 
 def process_one(ii_entity: Tuple[int, str], args: IOArguments) -> Optional[EntityRelatedPassages]:
     ii, entity = ii_entity
+    id = f"J{ii:08d}"
     if args.env.calling_sec > 0:
         time.sleep(args.env.calling_sec)
     global http_clients
-    id = f"J{ii:08d}"
     http_client = http_clients[ii % len(http_clients)]
     # logger.info(f"- {id} | {http_client._transport._pool._local_address:<15s} | {entity}")
 
     related_passages = []
     # search on web: https://en.wikipedia.org/w/index.php?fulltext=1&ns0=1&search=[entity_text]
     source_url = f"https://en.wikipedia.org/w/index.php?fulltext=1&ns0=1&search={entity.replace(' ', '+')}"
-    search_results = BeautifulSoup(http_client.get(source_url).text, 'html.parser').select("div.mw-search-result-heading")
+    try:
+        search_results = BeautifulSoup(http_client.get(source_url).text, 'html.parser').select("div.mw-search-result-heading")
+    except Exception as e:
+        logger.error(f"{type(e).__name__} on http_client.get(source_url): {source_url}")
+        return None
     for search_result in search_results[: args.option.max_search_candidate]:
         source_link_url = urljoin(source_url, search_result.select_one("a").attrs['href']).replace('/wiki/', '/w/index.php?title=') + '&action=edit'
-        search_result_page = BeautifulSoup(http_client.get(source_link_url).text, 'html.parser')
+        try:
+            search_result_page = BeautifulSoup(http_client.get(source_link_url).text, 'html.parser')
+        except Exception as e:
+            logger.error(f"{type(e).__name__} on http_client.get(source_link_url): {source_link_url}")
+            return None
         try:
             document_title = (search_result_page.select_one('#firstHeadingTitle') or search_result_page.select_one('#contentSub')).text
-        except:
-            logger.error(f"Error: {source_link_url}")
-            exit(1)
+        except Exception as e:
+            logger.error(f"{type(e).__name__} on search_result_page.select_one: {source_link_url}")
+            return None
         document_content = search_result_page.select_one('#wpTextbox1').text
         document_content = reference_pattern.sub("", document_content)
         document_content = special_pattern1.sub("", document_content)
@@ -137,6 +145,8 @@ def process_one(ii_entity: Tuple[int, str], args: IOArguments) -> Optional[Entit
 
 def process_many1(item: Iterable[Tuple[int, str]], args: IOArguments, writer: MongoStreamer, item_is_batch: bool = True):
     inputs = item if item_is_batch else [item]
+    if not writer.opt.reset:
+        inputs = [x for x in inputs if writer.count({"_id": f"J{x[0]:08d}"}) == 0]
     outputs = [process_one(x, args) for x in inputs]
     outputs = {v.id: v for v in outputs if v}
     outputs = [merge_dicts({"_id": k}, v.model_dump(exclude={"id"})) for k, v in outputs.items() if v]
@@ -146,6 +156,8 @@ def process_many1(item: Iterable[Tuple[int, str]], args: IOArguments, writer: Mo
 
 def process_many2(item: Iterable[Tuple[int, str]], args: IOArguments, writer: MongoStreamer, item_is_batch: bool = True):
     inputs = item if item_is_batch else [item]
+    if not writer.opt.reset:
+        inputs = [x for x in inputs if writer.count({"_id": f"J{x[0]:08d}"}) == 0]
     with ProcessPoolExecutor(max_workers=args.env.max_workers) as exe:
         jobs = [exe.submit(process_one, x, args) for x in inputs]
         outputs = [job.result(timeout=args.env.waiting_sec) for job in jobs]
@@ -172,7 +184,7 @@ def convert(
         output_file_path: str = typer.Option(default="output/GNER/zero-shot-test-conv.jsonl"),
         output_table_home: str = typer.Option(default="localhost:8800/ner"),
         output_table_name: str = typer.Option(default="GNER_tuning_source"),
-        output_table_reset: bool = typer.Option(default=True),
+        output_table_reset: bool = typer.Option(default=False),
         # option
         min_entity_freq: int = typer.Option(default=2),
         min_entity_chars: int = typer.Option(default=3),
