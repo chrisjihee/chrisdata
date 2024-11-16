@@ -18,7 +18,6 @@ from . import *
 
 logger = logging.getLogger(__name__)
 http_clients: Optional[List[httpx.Client]] = None
-reference_pattern = re.compile("<ref[^>]*>.*?</ref>")
 file_pattern = re.compile("\[\[File:([^]]+)]]")
 space_pattern = re.compile("  +")
 link2_pattern = re.compile("\[\[([^|\]]+)\|([^]]+)]]")
@@ -27,6 +26,7 @@ bold3_pattern = re.compile("'''([^']+)'''")
 bold2_pattern = re.compile("''([^']+)''")
 special_pattern1 = re.compile("{{.+?}}")
 special_pattern2 = re.compile("{{[^}]+?}}")
+reference_pattern = re.compile("<ref[^>]*>.*?</ref>")
 
 
 class ExtraOption(BaseModel):
