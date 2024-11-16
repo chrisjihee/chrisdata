@@ -82,7 +82,7 @@ def process_one(ii_entity: Tuple[int, str], args: IOArguments) -> Optional[Entit
     global http_clients
     id = f"J{ii:08d}"
     http_client = http_clients[ii % len(http_clients)]
-    logger.info(f"- {id} | {http_client._transport._pool._local_address:<15s} | {entity}")
+    # logger.info(f"- {id} | {http_client._transport._pool._local_address:<15s} | {entity}")
 
     related_passages = []
     # search on web: https://en.wikipedia.org/w/index.php?fulltext=1&ns0=1&search=[entity_text]
@@ -162,22 +162,22 @@ def convert(
         job_name: str = typer.Option(default="convert_wikidata"),
         logging_home: str = typer.Option(default="output/wikidata/convert"),
         logging_file: str = typer.Option(default="logging.out"),
-        max_workers: int = typer.Option(default=1),
+        max_workers: int = typer.Option(default=10),
         debugging: bool = typer.Option(default=False),
         # input
         input_file_path: str = typer.Option(default="input/GNER/zero-shot-test.jsonl"),
-        input_batch: int = typer.Option(default=3),
+        input_batch: int = typer.Option(default=10),
         input_inter: int = typer.Option(default=1),
         # output
         output_file_path: str = typer.Option(default="output/GNER/zero-shot-test-conv.jsonl"),
         output_table_home: str = typer.Option(default="localhost:8800/ner"),
-        output_table_name: str = typer.Option(default="GNER_tuning_source"),
+        output_table_name: str = typer.Option(default="GNER_tuning_source2"),
         output_table_reset: bool = typer.Option(default=True),
         # option
         min_entity_freq: int = typer.Option(default=2),
         min_entity_chars: int = typer.Option(default=3),
         min_entity_links: int = typer.Option(default=3),
-        max_entity_targets: int = typer.Option(default=10),
+        max_entity_targets: int = typer.Option(default=100),
         max_search_candidate: int = typer.Option(default=5),
         max_targets_per_page: int = typer.Option(default=3),
 ):
@@ -248,19 +248,33 @@ def convert(
     ):
         # set entity list
         entity_freq = get_entity_freq(input_file, args)
+        logger.info("Number of entities in entity_freq: %d", len(entity_freq))
         entity_list = sorted(islice(shuffled(entity_freq.keys()), args.option.max_entity_targets), key=lambda x: str(x).upper())
+        logger.info("Number of entities in entity_list: %d", len(entity_list))
         input_data = args.input.ready_inputs(enumerate(entity_list, start=1), total=len(entity_list))
 
         # process loop
         with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="converting", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for item in input_data.items:
+                logger.info(f"args.env.max_workers={args.env.max_workers}")
                 if args.env.max_workers <= 1:
+                    logger.info("work with process_many1")
                     process_many1(item=item, args=args, writer=output_table, item_is_batch=input_data.has_batch_items())
                 else:
+                    logger.info("work with process_many2")
                     process_many2(item=item, args=args, writer=output_table, item_is_batch=input_data.has_batch_items())
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
+
+        # export loop
+        with tqdm(total=len(output_table), unit="row", pre="=>", desc="exporting", unit_divisor=args.input.inter * 10) as prog:
+            for row in output_table:
+                output_file.fp.write(json.dumps(row, ensure_ascii=False) + '\n')
+                prog.update()
+                if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
+                    logger.info(prog)
+            logger.info(f"Export {prog.n}/{len(entity_list)} rows to [{output_file.opt}]")
 
     for http_client in http_clients:
         http_client.close()
