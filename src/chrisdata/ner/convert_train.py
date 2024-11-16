@@ -1,17 +1,16 @@
 import json
-import math
 import re
 import time
 from concurrent.futures import ProcessPoolExecutor
-from itertools import groupby, islice
-from typing import Optional, List, Tuple, Iterable
+from itertools import islice
+from typing import Optional, Tuple, Iterable
 from urllib.parse import urljoin
 
 import httpx
 import typer
 from bs4 import BeautifulSoup
 
-from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer
+from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, JobTimer, FileStreamer, TableOption, MongoStreamer
 from chrisbase.io import LoggingFormat, new_path, merge_dicts
 from chrisbase.util import mute_tqdm_cls, shuffled
 from . import *
@@ -59,21 +58,18 @@ def bio_to_entities(words, labels):
     return entities
 
 
-def get_entity_freq(input_file: FileStreamer, args: IOArguments):
+def get_entity_texts_from_train(input_file: FileStreamer):
     all_entity_texts = []
-    for ii, sample in enumerate([json.loads(a) for a in input_file]):
-        entities = bio_to_entities(sample['instance']['words'], sample['instance']['labels'])
+    for train_sample in json.load(input_file.fp):
+        sample = GNER_TrainSampleComp.model_validate(train_sample)
+        words = sample.instance.instruction_inputs.splitlines()[-1].split("Sentence: ")[-1].split()
+        labels = [g[1] for g in bio_tag_pattern.findall(sample.instance.prompt_labels)]
+        if len(words) != len(labels):
+            continue
+        entities = bio_to_entities(words, labels)
         entity_texts = [entity['text'] for entity in entities]
         all_entity_texts.extend(entity_texts)
-    # count entity frequency using groupby
-    entity_freq = {k: len(list(g)) for k, g in groupby(sorted(all_entity_texts))}
-    # sort by frequency
-    entity_freq = dict(sorted(entity_freq.items(), key=lambda x: x[1], reverse=True))
-    # filter out entities with frequency less than 2
-    entity_freq = {k: v for k, v in entity_freq.items() if v >= args.option.min_entity_freq and len(k) >= args.option.min_entity_chars}
-    # filter out entities containing digits
-    entity_freq = {k: v for k, v in entity_freq.items() if not any(char.isdigit() for char in k)}
-    return entity_freq
+    return all_entity_texts
 
 
 def process_one(ii_entity: Tuple[int, str], args: IOArguments) -> Optional[EntityRelatedPassages]:
@@ -190,7 +186,7 @@ def convert_train(
         min_entity_freq: int = typer.Option(default=2),
         min_entity_chars: int = typer.Option(default=3),
         min_entity_links: int = typer.Option(default=3),
-        max_entity_targets: int = typer.Option(default=5000),
+        max_entity_targets: int = typer.Option(default=50000),
         max_search_candidate: int = typer.Option(default=5),
         max_targets_per_page: int = typer.Option(default=3),
 ):
@@ -260,27 +256,12 @@ def convert_train(
         MongoStreamer(args.output.table) as output_table,
     ):
         # set entity list
-        train_data = json.load(input_file.fp)
-        print(type(train_data))
-        print(len(train_data))
-        for train_sample in train_data:
-            print(type(train_sample))
-            print(train_sample.keys())
-            print(train_sample['instance'].keys())
-            sample = GNER_TrainSampleComp.model_validate(train_sample)
-            print("=" * 80)
-            print("sample.instance.instruction_inputs: ")
-            print(sample.instance.instruction_inputs)
-            print("=" * 80)
-            print("sample.instance.prompt_labels: ")
-            print(sample.instance.prompt_labels)
-            print("=" * 80)
-            words = sample.instance.instruction_inputs.splitlines()[-1].split("Sentence: ")[-1].split()
-            tags = bio_tag_pattern.findall(sample.instance.prompt_labels)
-            assert len(words) == len(tags), f"len(words) != len(tags): {len(words)} != {len(tags)}"
-            for w, t in zip(words, tags):
-                print(f"{w} = {t}")
-            exit(1)
+        entity_texts = get_entity_texts_from_train(input_file)
+        entity_freq = entity_texts_to_freq_dict(entity_texts, args)
+        logger.info("Number of entities in entity_freq: %d", len(entity_freq))
+        entity_list = sorted(islice(shuffled(entity_freq.keys()), args.option.max_entity_targets), key=lambda x: str(x).upper())
+        logger.info("Number of entities in entity_list: %d", len(entity_list))
+        # print(entity_list)
 
     for http_client in http_clients:
         http_client.close()

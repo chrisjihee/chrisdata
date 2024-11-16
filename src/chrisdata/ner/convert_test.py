@@ -58,21 +58,13 @@ def bio_to_entities(words, labels):
     return entities
 
 
-def get_entity_freq(input_file: FileStreamer, args: IOArguments):
+def get_entity_texts_from_test(input_file: FileStreamer):
     all_entity_texts = []
     for ii, sample in enumerate([json.loads(a) for a in input_file]):
         entities = bio_to_entities(sample['instance']['words'], sample['instance']['labels'])
         entity_texts = [entity['text'] for entity in entities]
         all_entity_texts.extend(entity_texts)
-    # count entity frequency using groupby
-    entity_freq = {k: len(list(g)) for k, g in groupby(sorted(all_entity_texts))}
-    # sort by frequency
-    entity_freq = dict(sorted(entity_freq.items(), key=lambda x: x[1], reverse=True))
-    # filter out entities with frequency less than 2
-    entity_freq = {k: v for k, v in entity_freq.items() if v >= args.option.min_entity_freq and len(k) >= args.option.min_entity_chars}
-    # filter out entities containing digits
-    entity_freq = {k: v for k, v in entity_freq.items() if not any(char.isdigit() for char in k)}
-    return entity_freq
+    return all_entity_texts
 
 
 def process_one(ii_entity: Tuple[int, str], args: IOArguments) -> Optional[EntityRelatedPassages]:
@@ -259,7 +251,8 @@ def convert_test(
         MongoStreamer(args.output.table) as output_table,
     ):
         # set entity list
-        entity_freq = get_entity_freq(input_file, args)
+        entity_texts = get_entity_texts_from_test(input_file)
+        entity_freq = entity_texts_to_freq_dict(entity_texts, args)
         logger.info("Number of entities in entity_freq: %d", len(entity_freq))
         entity_list = sorted(islice(shuffled(entity_freq.keys()), args.option.max_entity_targets), key=lambda x: str(x).upper())
         logger.info("Number of entities in entity_list: %d", len(entity_list))
