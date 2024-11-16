@@ -1,10 +1,10 @@
 import json
 import math
 import re
-from concurrent.futures import ProcessPoolExecutor
 import time
+from concurrent.futures import ProcessPoolExecutor
 from itertools import groupby, islice
-from typing import Optional, List
+from typing import Optional, List, Tuple, Iterable
 from urllib.parse import urljoin
 
 import httpx
@@ -12,7 +12,7 @@ import typer
 from bs4 import BeautifulSoup
 
 from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer
-from chrisbase.io import LoggingFormat, new_path
+from chrisbase.io import LoggingFormat, new_path, merge_dicts
 from chrisbase.util import mute_tqdm_cls, shuffled
 from . import *
 
@@ -75,7 +75,8 @@ def get_entity_freq(input_file: FileStreamer, args: IOArguments):
     return entity_freq
 
 
-def process_one(ii: int, entity: str, args: IOArguments):
+def process_one(ii_entity: Tuple[int, str], args: IOArguments) -> Optional[EntityRelatedPassages]:
+    ii, entity = ii_entity
     if args.env.calling_sec > 0:
         time.sleep(args.env.calling_sec)
     global http_clients
@@ -134,22 +135,24 @@ def process_one(ii: int, entity: str, args: IOArguments):
     )
 
 
-def process_many1(item: str, args: IOArguments, writer: MongoStreamer, item_is_batch: bool = True):
+def process_many1(item: Iterable[Tuple[int, str]], args: IOArguments, writer: MongoStreamer, item_is_batch: bool = True):
     inputs = item if item_is_batch else [item]
-    rows = [process_one(i, x, args) for i, x in enumerate(inputs, start=1)]
-    rows = [row.model_dump() for row in rows if row]
-    if len(rows) > 0:
-        writer.table.insert_many(rows)
+    outputs = [process_one(x, args) for x in inputs]
+    outputs = {v.id: v for v in outputs if v}
+    outputs = [merge_dicts({"_id": k}, v.model_dump(exclude={"id"})) for k, v in outputs.items() if v]
+    if len(outputs) > 0:
+        writer.table.insert_many(outputs)
 
 
-def process_many2(item: str, args: IOArguments, writer: MongoStreamer, item_is_batch: bool = True):
+def process_many2(item: Iterable[Tuple[int, str]], args: IOArguments, writer: MongoStreamer, item_is_batch: bool = True):
     inputs = item if item_is_batch else [item]
     with ProcessPoolExecutor(max_workers=args.env.max_workers) as exe:
-        jobs = [exe.submit(process_one, i, x, args) for i, x in enumerate(inputs, start=1)]
-        rows = [job.result(timeout=args.env.waiting_sec) for job in jobs]
-    rows = [row.model_dump() for row in rows if row]
-    if len(rows) > 0:
-        writer.table.insert_many(rows)
+        jobs = [exe.submit(process_one, x, args) for x in inputs]
+        outputs = [job.result(timeout=args.env.waiting_sec) for job in jobs]
+    outputs = {v.id: v for v in outputs if v}
+    outputs = [merge_dicts({"_id": k}, v.model_dump(exclude={"id"})) for k, v in outputs.items() if v]
+    if len(outputs) > 0:
+        writer.table.insert_many(outputs)
 
 
 @app.command()
@@ -246,8 +249,9 @@ def convert(
         # set entity list
         entity_freq = get_entity_freq(input_file, args)
         entity_list = sorted(islice(shuffled(entity_freq.keys()), args.option.max_entity_targets), key=lambda x: str(x).upper())
-        input_data = args.input.ready_inputs(entity_list, total=len(entity_list))
+        input_data = args.input.ready_inputs(enumerate(entity_list, start=1), total=len(entity_list))
 
+        # process loop
         with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="converting", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for item in input_data.items:
                 if args.env.max_workers <= 1:
