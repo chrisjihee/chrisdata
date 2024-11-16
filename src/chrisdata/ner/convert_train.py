@@ -1,5 +1,4 @@
 import json
-import re
 import time
 from concurrent.futures import ProcessPoolExecutor
 from itertools import islice

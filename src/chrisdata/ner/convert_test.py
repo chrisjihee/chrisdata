@@ -1,17 +1,16 @@
 import json
 import math
-import re
 import time
 from concurrent.futures import ProcessPoolExecutor
-from itertools import groupby, islice
-from typing import Optional, List, Tuple, Iterable
+from itertools import islice
+from typing import Optional, Tuple, Iterable
 from urllib.parse import urljoin
 
 import httpx
 import typer
 from bs4 import BeautifulSoup
 
-from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer
+from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, JobTimer, FileStreamer, TableOption, MongoStreamer
 from chrisbase.io import LoggingFormat, new_path, merge_dicts
 from chrisbase.util import mute_tqdm_cls, shuffled
 from . import *
