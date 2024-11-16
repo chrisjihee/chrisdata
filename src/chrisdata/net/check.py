@@ -129,11 +129,11 @@ def check(
     ):
         # check local ip addresses
         input_total = args.env.num_ip_addrs
-        input_items = args.input.ready_inputs(args.input.data, input_total)
+        input_data = args.input.ready_inputs(args.input.data, input_total)
         logger.info(f"Check {input_total} addresses to [{output_table.opt}]")
-        logger.info(f"- amount: {args.input.total}{'' if input_items.has_single_items() else f' * {args.input.batch}'} ({type(input_items).__name__})")
-        with tqdm(total=input_items.num_item, unit="item", pre="=>", desc="checking", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
-            for batch in input_items.items:
+        logger.info(f"- amount: {args.input.total}{'' if input_data.has_single_items() else f' * {args.input.batch}'} ({type(input_data).__name__})")
+        with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="checking", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
+            for batch in input_data.items:
                 if args.env.max_workers <= 1:
                     process_many1(batch=batch, args=args, writer=output_table)
                 else:

@@ -7,14 +7,12 @@ app = AppTyper()
 logger = logging.getLogger(__name__)
 
 
-class WebResponse(BaseModel):
+class EntityRelatedPassages(BaseModel):
     id: str
-    uri: str
-    ip: str | None = None
-    status: int | None = None
-    size: float | None = None
-    text: str | None = None
-    elapsed: float | None = None
+    entity: str
+    passages: list[str]
+    num_passages: int
+    source_url: str
 
 
 from . import convert_ner

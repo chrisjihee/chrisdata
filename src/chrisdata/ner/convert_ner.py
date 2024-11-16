@@ -1,18 +1,32 @@
 import json
+import math
 import re
+from concurrent.futures import ProcessPoolExecutor
+import time
 from itertools import groupby, islice
+from typing import Optional, List
 from urllib.parse import urljoin
 
 import httpx
 import typer
 from bs4 import BeautifulSoup
 
-from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer
+from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer
 from chrisbase.io import LoggingFormat, new_path
 from chrisbase.util import mute_tqdm_cls, shuffled
 from . import *
 
 logger = logging.getLogger(__name__)
+http_clients: Optional[List[httpx.Client]] = None
+reference_pattern = re.compile("<ref[^>]*>.*?</ref>")
+file_pattern = re.compile("\[\[File:([^]]+)]]")
+space_pattern = re.compile("  +")
+link2_pattern = re.compile("\[\[([^|\]]+)\|([^]]+)]]")
+link1_pattern = re.compile("\[\[([^]]+)]]")
+bold3_pattern = re.compile("'''([^']+)'''")
+bold2_pattern = re.compile("''([^']+)''")
+special_pattern1 = re.compile("{{.+?}}")
+special_pattern2 = re.compile("{{[^}]+?}}")
 
 
 class ExtraOption(BaseModel):
@@ -45,9 +59,8 @@ def bio_to_entities(words, labels):
 
 
 def get_entity_freq(input_file: FileStreamer, args: IOArguments):
-    input_data = args.input.ready_inputs(input_file, total=len(input_file))
     all_entity_texts = []
-    for ii, sample in enumerate([json.loads(a) for a in input_data.items]):
+    for ii, sample in enumerate([json.loads(a) for a in input_file]):
         entities = bio_to_entities(sample['instance']['words'], sample['instance']['labels'])
         entity_texts = [entity['text'] for entity in entities]
         all_entity_texts.extend(entity_texts)
@@ -62,6 +75,83 @@ def get_entity_freq(input_file: FileStreamer, args: IOArguments):
     return entity_freq
 
 
+def process_one(ii: int, entity: str, args: IOArguments):
+    if args.env.calling_sec > 0:
+        time.sleep(args.env.calling_sec)
+    global http_clients
+    id = f"J{ii:08d}"
+    http_client = http_clients[ii % len(http_clients)]
+    logger.info(f"- {id} | {http_client._transport._pool._local_address:<15s} | {entity}")
+
+    related_passages = []
+    # search on web: https://en.wikipedia.org/w/index.php?fulltext=1&ns0=1&search=[entity_text]
+    source_url = f"https://en.wikipedia.org/w/index.php?fulltext=1&ns0=1&search={entity.replace(' ', '+')}"
+    search_results = BeautifulSoup(http_client.get(source_url).text, 'html.parser').select("div.mw-search-result-heading")
+    for search_result in search_results[: args.option.max_search_candidate]:
+        source_link_url = urljoin(source_url, search_result.select_one("a").attrs['href']).replace('/wiki/', '/w/index.php?title=') + '&action=edit'
+        search_result_page = BeautifulSoup(http_client.get(source_link_url).text, 'html.parser')
+        try:
+            document_title = (search_result_page.select_one('#firstHeadingTitle') or search_result_page.select_one('#contentSub')).text
+        except:
+            logger.error(f"Error: {source_link_url}")
+            exit(1)
+        document_content = search_result_page.select_one('#wpTextbox1').text
+        document_content = reference_pattern.sub("", document_content)
+        document_content = special_pattern1.sub("", document_content)
+        document_content = special_pattern2.sub("", document_content)
+        document_content = file_pattern.sub("", document_content)
+        document_content = space_pattern.sub(" ", document_content)
+
+        # make title pattern with boundary
+        title_pattern = re.compile(rf"\b{re.escape(document_title)}\b")
+        target_lines = list()
+        for origin in document_content.splitlines():
+            target = origin
+            target = title_pattern.sub(f"[[{document_title}]]", target)
+            target = link2_pattern.sub(r"[[\2]]", target)
+            target = bold3_pattern.sub(r"\1", target)
+            target = bold2_pattern.sub(r"\1", target)
+            if len(link1_pattern.findall(target)) < args.option.min_entity_links:
+                continue
+            if f"[[{entity.lower()}]]" not in target.lower():
+                continue
+            target_lines.append(target)
+            # logger.debug(f"- [target] {target}")
+        if len(target_lines) == 0:
+            continue
+        target_lines = shuffled(target_lines)
+        target_lines = target_lines[: args.option.max_targets_per_page]
+        related_passages.extend(target_lines)
+
+    # for trainable_passage in related_passages:
+    #     logger.debug(f"- [trainable_passage] {trainable_passage}")
+    return EntityRelatedPassages(
+        id=id,
+        entity=entity,
+        passages=related_passages,
+        num_passages=len(related_passages),
+        source_url=source_url,
+    )
+
+
+def process_many1(item: str, args: IOArguments, writer: MongoStreamer, item_is_batch: bool = True):
+    inputs = item if item_is_batch else [item]
+    rows = [process_one(i, x, args) for i, x in enumerate(inputs, start=1)]
+    rows = [row.model_dump() for row in rows if row]
+    if len(rows) > 0:
+        writer.table.insert_many(rows)
+
+
+def process_many2(item: str, args: IOArguments, writer: MongoStreamer, item_is_batch: bool = True):
+    inputs = item if item_is_batch else [item]
+    with ProcessPoolExecutor(max_workers=args.env.max_workers) as exe:
+        jobs = [exe.submit(process_one, i, x, args) for i, x in enumerate(inputs, start=1)]
+        rows = [job.result(timeout=args.env.waiting_sec) for job in jobs]
+    rows = [row.model_dump() for row in rows if row]
+    if len(rows) > 0:
+        writer.table.insert_many(rows)
+
+
 @app.command()
 def convert(
         # env
@@ -73,8 +163,13 @@ def convert(
         debugging: bool = typer.Option(default=False),
         # input
         input_file_path: str = typer.Option(default="input/GNER/zero-shot-test.jsonl"),
+        input_batch: int = typer.Option(default=3),
+        input_inter: int = typer.Option(default=1),
         # output
         output_file_path: str = typer.Option(default="output/GNER/zero-shot-test-conv.jsonl"),
+        output_table_home: str = typer.Option(default="localhost:8800/ner"),
+        output_table_name: str = typer.Option(default="GNER_tuning_source"),
+        output_table_reset: bool = typer.Option(default=True),
         # option
         min_entity_freq: int = typer.Option(default=2),
         min_entity_chars: int = typer.Option(default=3),
@@ -94,6 +189,8 @@ def convert(
         max_workers=1 if debugging else max(max_workers, 1),
     )
     input_opt = InputOption(
+        batch=input_batch if not debugging else 1,
+        inter=input_inter if not debugging else 1,
         file=FileOption.from_path(
             path=input_file_path,
             required=True,
@@ -104,6 +201,12 @@ def convert(
             path=output_file_path,
             name=new_path(output_file_path, post=env.time_stamp).name,
             mode="w",
+            required=True,
+        ),
+        table=TableOption(
+            home=output_table_home,
+            name=output_table_name,
+            reset=output_table_reset,
             required=True,
         ),
     )
@@ -124,15 +227,8 @@ def convert(
     tqdm = mute_tqdm_cls()
     assert args.input.file, "input.file is required"
     assert args.output.file, "output.file is required"
-    reference_pattern = re.compile("<ref[^>]*>.*?</ref>")
-    file_pattern = re.compile("\[\[File:([^]]+)]]")
-    double_space_pattern = re.compile("  +")
-    link2_pattern = re.compile("\[\[([^|\]]+)\|([^]]+)]]")
-    link1_pattern = re.compile("\[\[([^]]+)]]")
-    bold3_pattern = re.compile("'''([^']+)'''")
-    bold2_pattern = re.compile("''([^']+)''")
-    special_pattern1 = re.compile("{{.+?}}")
-    special_pattern2 = re.compile("{{[^}]+?}}")
+
+    global http_clients
     http_clients = [
         httpx.Client(
             transport=httpx.HTTPTransport(local_address=ip_addr),
@@ -144,60 +240,22 @@ def convert(
         JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
         FileStreamer(args.input.file) as input_file,
         FileStreamer(args.output.file) as output_file,
+        MongoStreamer(args.output.table) as output_table,
     ):
         # set entity list
         entity_freq = get_entity_freq(input_file, args)
         entity_list = sorted(islice(shuffled(entity_freq.keys()), args.option.max_entity_targets), key=lambda x: str(x).upper())
+        input_data = args.input.ready_inputs(entity_list, total=len(entity_list))
 
-        for ii, entity_text in enumerate(entity_list, start=1):
-            id = f"{ii:08d}"
-            http_client = http_clients[ii % len(http_clients)]
-            print(f"- {id} | {http_client._transport._pool._local_address:<15s} | {entity_text}")
-
-            trainable_passages = []
-            # search on web: https://en.wikipedia.org/w/index.php?fulltext=1&ns0=1&search=[entity_text]
-            entity_search_url = f"https://en.wikipedia.org/w/index.php?fulltext=1&ns0=1&search={entity_text.replace(' ', '+')}"
-            response = http_client.get(entity_search_url)
-            search_results = BeautifulSoup(response.text, 'html.parser').select("div.mw-search-result-heading")
-            for search_result in search_results[: max_search_candidate]:
-                search_result_url = urljoin(entity_search_url, search_result.select_one("a").attrs['href']).replace('/wiki/', '/w/index.php?title=') + '&action=edit'
-                response = http_client.get(search_result_url)
-                search_result_page = BeautifulSoup(response.text, 'html.parser')
-                try:
-                    document_title = (search_result_page.select_one('#firstHeadingTitle') or search_result_page.select_one('#contentSub')).text
-                except:
-                    print(f"Error: {search_result_url}")
-                    exit(1)
-                document_content = search_result_page.select_one('#wpTextbox1').text
-                document_content = special_pattern1.sub("", document_content)
-                document_content = special_pattern2.sub("", document_content)
-                document_content = file_pattern.sub("", document_content)
-                document_content = reference_pattern.sub("", document_content)
-                document_content = double_space_pattern.sub(" ", document_content)
-
-                # make title pattern with boundary
-                title_pattern = re.compile(rf"\b{re.escape(document_title)}\b")
-                target_lines = list()
-                for origin in document_content.splitlines():
-                    target = origin
-                    target = title_pattern.sub(f"[[{document_title}]]", target)
-                    target = link2_pattern.sub(r"[[\2]]", target)
-                    target = bold3_pattern.sub(r"\1", target)
-                    target = bold2_pattern.sub(r"\1", target)
-                    if len(link1_pattern.findall(target)) < args.option.min_entity_links:
-                        continue
-                    if f"[[{entity_text.lower()}]]" not in target.lower():
-                        continue
-                    target_lines.append(target)
-                    # print(f"- [target] {target}")
-                if len(target_lines) == 0:
-                    continue
-                target_lines = shuffled(target_lines)
-                target_lines = target_lines[: args.option.max_targets_per_page]
-                trainable_passages.extend(target_lines)
-
-            for trainable_passage in trainable_passages:
-                print(f"- [trainable_passage] {trainable_passage}")
+        with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="converting", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
+            for item in input_data.items:
+                if args.env.max_workers <= 1:
+                    process_many1(item=item, args=args, writer=output_table, item_is_batch=input_data.has_batch_items())
+                else:
+                    process_many2(item=item, args=args, writer=output_table, item_is_batch=input_data.has_batch_items())
+                prog.update()
+                if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
+                    logger.info(prog)
 
     for http_client in http_clients:
         http_client.close()
