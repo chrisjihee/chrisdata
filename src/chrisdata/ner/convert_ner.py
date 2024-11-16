@@ -44,6 +44,24 @@ def bio_to_entities(words, labels):
     return entities
 
 
+def get_entity_freq(input_file: FileStreamer, args: IOArguments):
+    input_data = args.input.ready_inputs(input_file, total=len(input_file))
+    all_entity_texts = []
+    for ii, sample in enumerate([json.loads(a) for a in input_data.items]):
+        entities = bio_to_entities(sample['instance']['words'], sample['instance']['labels'])
+        entity_texts = [entity['text'] for entity in entities]
+        all_entity_texts.extend(entity_texts)
+    # count entity frequency using groupby
+    entity_freq = {k: len(list(g)) for k, g in groupby(sorted(all_entity_texts))}
+    # sort by frequency
+    entity_freq = dict(sorted(entity_freq.items(), key=lambda x: x[1], reverse=True))
+    # filter out entities with frequency less than 2
+    entity_freq = {k: v for k, v in entity_freq.items() if v >= args.option.min_entity_freq and len(k) >= args.option.min_entity_chars}
+    # filter out entities containing digits
+    entity_freq = {k: v for k, v in entity_freq.items() if not any(char.isdigit() for char in k)}
+    return entity_freq
+
+
 @app.command()
 def convert(
         # env
@@ -127,22 +145,11 @@ def convert(
         FileStreamer(args.input.file) as input_file,
         FileStreamer(args.output.file) as output_file,
     ):
-        input_data = args.input.ready_inputs(input_file, total=len(input_file))
-        all_entity_texts = []
-        for ii, sample in enumerate([json.loads(a) for a in input_data.items]):
-            entities = bio_to_entities(sample['instance']['words'], sample['instance']['labels'])
-            entity_texts = [entity['text'] for entity in entities]
-            all_entity_texts.extend(entity_texts)
-        # count entity frequency using groupby
-        entity_freq = {k: len(list(g)) for k, g in groupby(sorted(all_entity_texts))}
-        # sort by frequency
-        entity_freq = dict(sorted(entity_freq.items(), key=lambda x: x[1], reverse=True))
-        # filter out entities with frequency less than 2
-        entity_freq = {k: v for k, v in entity_freq.items() if v >= args.option.min_entity_freq and len(k) >= args.option.min_entity_chars}
-        # filter out entities containing digits
-        entity_freq = {k: v for k, v in entity_freq.items() if not any(char.isdigit() for char in k)}
+        # set entity list
+        entity_freq = get_entity_freq(input_file, args)
+        entity_list = sorted(islice(shuffled(entity_freq.keys()), args.option.max_entity_targets), key=lambda x: str(x).upper())
 
-        for ii, entity_text in enumerate(islice(shuffled(entity_freq.keys()), args.option.max_entity_targets), start=1):
+        for ii, entity_text in enumerate(entity_list, start=1):
             id = f"{ii:08d}"
             http_client = http_clients[ii % len(http_clients)]
             print(f"- {id} | {http_client._transport._pool._local_address:<15s} | {entity_text}")
