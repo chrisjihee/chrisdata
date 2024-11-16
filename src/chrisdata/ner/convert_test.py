@@ -182,8 +182,8 @@ def convert_test(
         input_inter: int = typer.Option(default=1),
         # output
         output_file_path: str = typer.Option(default="output/GNER/convert/test-data.jsonl"),
+        output_table_name: str = typer.Option(default="GNER_tuning_source-from-test-data"),
         output_table_home: str = typer.Option(default="localhost:8800/ner"),
-        output_table_name: str = typer.Option(default="GNER_tuning_source"),
         output_table_reset: bool = typer.Option(default=False),
         # option
         min_entity_freq: int = typer.Option(default=2),

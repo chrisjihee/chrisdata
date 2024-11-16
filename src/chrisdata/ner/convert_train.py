@@ -182,9 +182,9 @@ def convert_train(
         input_inter: int = typer.Option(default=1),
         # output
         output_file_path: str = typer.Option(default="output/GNER/convert/train-data.jsonl"),
+        output_table_name: str = typer.Option(default="GNER_tuning_source-from-train-data"),
         output_table_home: str = typer.Option(default="localhost:8800/ner"),
-        output_table_name: str = typer.Option(default="GNER_tuning_source"),
-        output_table_reset: bool = typer.Option(default=False),
+        output_table_reset: bool = typer.Option(default=True),
         # option
         min_entity_freq: int = typer.Option(default=2),
         min_entity_chars: int = typer.Option(default=3),
@@ -259,34 +259,22 @@ def convert_train(
         MongoStreamer(args.output.table) as output_table,
     ):
         # set entity list
-        entity_freq = get_entity_freq(input_file, args)
-        logger.info("Number of entities in entity_freq: %d", len(entity_freq))
-        entity_list = sorted(islice(shuffled(entity_freq.keys()), args.option.max_entity_targets), key=lambda x: str(x).upper())
-        logger.info("Number of entities in entity_list: %d", len(entity_list))
-        input_data = args.input.ready_inputs(enumerate(entity_list, start=1), total=len(entity_list))
-
-        # process loop
-        with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="converting", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
-            for item in input_data.items:
-                # logger.info(f"args.env.max_workers={args.env.max_workers}")
-                if args.env.max_workers <= 1:
-                    # logger.info("work with process_many1")
-                    process_many1(item=item, args=args, writer=output_table, item_is_batch=input_data.has_batch_items())
-                else:
-                    # logger.info("work with process_many2")
-                    process_many2(item=item, args=args, writer=output_table, item_is_batch=input_data.has_batch_items())
-                prog.update()
-                if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
-                    logger.info(prog)
-
-        # export loop
-        with tqdm(total=len(output_table), unit="row", pre="=>", desc="exporting", unit_divisor=args.input.inter * 10) as prog:
-            for row in output_table:
-                output_file.fp.write(json.dumps(row, ensure_ascii=False) + '\n')
-                prog.update()
-                if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
-                    logger.info(prog)
-            logger.info(f"Export {prog.n}/{len(entity_list)} rows to [{output_file.opt}]")
+        train_data = json.load(input_file.fp)
+        print(type(train_data))
+        print(len(train_data))
+        for train_sample in train_data:
+            print(type(train_sample))
+            print(train_sample.keys())
+            print(train_sample['instance'].keys())
+            sample = GNER_TrainSampleComp.model_validate(train_sample)
+            print("=" * 80)
+            print("sample.instance.instruction_inputs: ")
+            print(sample.instance.instruction_inputs)
+            print("=" * 80)
+            print("sample.instance.prompt_labels: ")
+            print(sample.instance.prompt_labels)
+            # sample.instruction_inputs
+            exit(1)
 
     for http_client in http_clients:
         http_client.close()
