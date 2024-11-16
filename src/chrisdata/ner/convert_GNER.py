@@ -26,14 +26,16 @@ bold2_pattern = re.compile("''([^']+)''")
 special_pattern1 = re.compile("{{.+?}}")
 special_pattern2 = re.compile("{{[^}]+?}}")
 reference_pattern = re.compile("<ref[^>]*>.*?</ref>")
+bio_tag_pattern = re.compile("([^ ]+)\(([BIO](-[A-Za-z ]+)?)\)")
 
 
 class ExtraOption(BaseModel):
+    get_entity_texts_fn: str = "get_entity_texts_from_train"
     min_entity_freq: int = 1
     min_entity_chars: int = 3
     min_entity_links: int = 3
     max_entity_targets: int = 10
-    max_search_candidate: int = 10
+    max_search_candidate: int = 5
     max_targets_per_page: int = 3
 
 
@@ -57,10 +59,29 @@ def bio_to_entities(words, labels):
     return entities
 
 
+def get_entity_texts_from_train(input_file: FileStreamer):
+    all_entity_texts = []
+    for sample in json.load(input_file.fp):
+        sample = GNER_TrainSampleComp.model_validate(sample)
+        labels = [g[1] for g in bio_tag_pattern.findall(sample.instance.prompt_labels)]
+        words = sample.instance.instruction_inputs.splitlines()[-1].split("Sentence: ")[-1].split()
+        if len(words) != len(labels):
+            continue
+        entities = bio_to_entities(words, labels)
+        entity_texts = [entity['text'] for entity in entities]
+        all_entity_texts.extend(entity_texts)
+    return all_entity_texts
+
+
 def get_entity_texts_from_test(input_file: FileStreamer):
     all_entity_texts = []
-    for ii, sample in enumerate([json.loads(a) for a in input_file]):
-        entities = bio_to_entities(sample['instance']['words'], sample['instance']['labels'])
+    for sample in input_file:
+        sample = json.loads(sample)
+        labels = sample['instance']['labels']
+        words = sample['instance']['words']
+        if len(words) != len(labels):
+            continue
+        entities = bio_to_entities(words, labels)
         entity_texts = [entity['text'] for entity in entities]
         all_entity_texts.extend(entity_texts)
     return all_entity_texts
@@ -159,28 +180,31 @@ def process_many2(item: Iterable[Tuple[int, str]], args: IOArguments, writer: Mo
 
 
 @app.command()
-def convert_test(
+def convert_GNER(
         # env
         project: str = typer.Option(default="chrisdata"),
-        job_name: str = typer.Option(default="convert_test"),
+        job_name: str = typer.Option(default="convert_GNER"),
         logging_home: str = typer.Option(default="output/GNER/convert"),
         logging_file: str = typer.Option(default="logging.out"),
         max_workers: int = typer.Option(default=12),
         debugging: bool = typer.Option(default=False),
         # input
+        # input_file_path: str = typer.Option(default="input/GNER/pile-ner.json"),
         input_file_path: str = typer.Option(default="input/GNER/zero-shot-test.jsonl"),
         input_batch: int = typer.Option(default=10),
         input_inter: int = typer.Option(default=1),
         # output
+        # output_file_path: str = typer.Option(default="output/GNER/convert/train-data.jsonl"),
         output_file_path: str = typer.Option(default="output/GNER/convert/test-data.jsonl"),
         output_table_name: str = typer.Option(default="GNER_tuning_source-from-test-data"),
         output_table_home: str = typer.Option(default="localhost:8800/ner"),
-        output_table_reset: bool = typer.Option(default=False),
+        output_table_reset: bool = typer.Option(default=True),
         # option
+        get_entity_texts_fn: str = typer.Option(default="get_entity_texts_from_train"),
         min_entity_freq: int = typer.Option(default=2),
         min_entity_chars: int = typer.Option(default=3),
         min_entity_links: int = typer.Option(default=3),
-        max_entity_targets: int = typer.Option(default=5000),
+        max_entity_targets: int = typer.Option(default=70000),
         max_search_candidate: int = typer.Option(default=5),
         max_targets_per_page: int = typer.Option(default=3),
 ):
@@ -217,6 +241,7 @@ def convert_test(
         ),
     )
     extra_opt = ExtraOption(
+        get_entity_texts_fn=get_entity_texts_fn,
         min_entity_freq=min_entity_freq,
         min_entity_chars=min_entity_chars,
         min_entity_links=min_entity_links,
@@ -250,7 +275,13 @@ def convert_test(
         MongoStreamer(args.output.table) as output_table,
     ):
         # set entity list
-        entity_texts = get_entity_texts_from_test(input_file)
+        if args.option.get_entity_texts_fn == "get_entity_texts_from_train":
+            entity_texts = get_entity_texts_from_train(input_file)
+        elif args.option.get_entity_texts_fn == "get_entity_texts_from_test":
+            entity_texts = get_entity_texts_from_test(input_file)
+        else:
+            raise ValueError(f"Unknown get_entity_texts_fn: {args.option.get_entity_texts_fn}")
+        logger.info("Number of entities in entity_texts: %d", len(entity_texts))
         entity_freq = entity_texts_to_freq_dict(entity_texts, args)
         logger.info("Number of entities in entity_freq: %d", len(entity_freq))
         entity_list = sorted(islice(shuffled(entity_freq.keys()), args.option.max_entity_targets), key=lambda x: str(x).upper())
