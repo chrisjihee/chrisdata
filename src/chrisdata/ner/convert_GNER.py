@@ -2,6 +2,7 @@ import json
 import math
 import time
 from concurrent.futures import ProcessPoolExecutor
+from enum import Enum
 from itertools import groupby, islice
 from typing import Optional, Iterable, Tuple, List
 from urllib.parse import urljoin
@@ -16,7 +17,6 @@ from chrisbase.util import mute_tqdm_cls, shuffled
 from . import *
 
 logger = logging.getLogger(__name__)
-http_clients: Optional[List[httpx.Client]] = None
 file_pattern = re.compile("\[\[File:([^]]+)]]")
 space_pattern = re.compile("  +")
 link2_pattern = re.compile("\[\[([^|\]]+)\|([^]]+)]]")
@@ -29,8 +29,49 @@ reference_pattern = re.compile("<ref[^>]*>.*?</ref>|<ref[^>]*/>")
 bio_tag_pattern = re.compile("([^ ]+)\(([BIO](-[A-Za-z ]+)?)\)")
 
 
+class GetEntityTextsFn(str, Enum):
+    from_train = "from_train"
+    from_test = "from_test"
+
+    @staticmethod
+    def _get_entity_texts_from_train(input_file: FileStreamer):
+        all_entity_texts = []
+        for sample in json.load(input_file.fp):
+            sample = GNER_TrainSampleComp.model_validate(sample)
+            labels = [g[1] for g in bio_tag_pattern.findall(sample.instance.prompt_labels)]
+            words = sample.instance.instruction_inputs.splitlines()[-1].split("Sentence: ")[-1].split()
+            if len(words) != len(labels):
+                continue
+            entities = bio_to_entities(words, labels)
+            entity_texts = [entity['text'] for entity in entities]
+            all_entity_texts.extend(entity_texts)
+        return all_entity_texts
+
+    @staticmethod
+    def _get_entity_texts_from_test(input_file: FileStreamer):
+        all_entity_texts = []
+        for sample in input_file:
+            sample = json.loads(sample)
+            labels = sample['instance']['labels']
+            words = sample['instance']['words']
+            if len(words) != len(labels):
+                continue
+            entities = bio_to_entities(words, labels)
+            entity_texts = [entity['text'] for entity in entities]
+            all_entity_texts.extend(entity_texts)
+        return all_entity_texts
+
+    def get_entity_texts(self, input_file: FileStreamer):
+        if self == GetEntityTextsFn.from_train:
+            return GetEntityTextsFn._get_entity_texts_from_train(input_file)
+        elif self == GetEntityTextsFn.from_test:
+            return GetEntityTextsFn._get_entity_texts_from_test(input_file)
+        else:
+            raise ValueError(f"Unknown GetEntityTextsFn: {self}")
+
+
 class ExtraOption(BaseModel):
-    get_entity_texts_fn: str = "get_entity_texts_from_train"
+    get_entity_texts_fn: GetEntityTextsFn
     min_entity_freq: int = 1
     min_entity_chars: int = 3
     min_entity_links: int = 3
@@ -61,51 +102,23 @@ def bio_to_entities(words, labels):
     return entities
 
 
-def entity_texts_to_freq_dict(entity_texts: List[str], args: IOArguments):
+def entity_texts_to_freq_dict(entity_texts: List[str], extra_opt: ExtraOption):
     # count entity frequency using groupby
     entity_freq = {k: len(list(g)) for k, g in groupby(sorted(entity_texts)) if entity_text_pattern.fullmatch(k)}
     # sort by frequency
     entity_freq = dict(sorted(entity_freq.items(), key=lambda x: x[1], reverse=True))
     # filter out entities with frequency less than min_entity_chars
-    entity_freq = {k: v for k, v in entity_freq.items() if v >= args.option.min_entity_freq and len(k) >= args.option.min_entity_chars}
+    entity_freq = {k: v for k, v in entity_freq.items() if v >= extra_opt.min_entity_freq and len(k) >= extra_opt.min_entity_chars}
     return entity_freq
 
 
-def get_entity_texts_from_train(input_file: FileStreamer):
-    all_entity_texts = []
-    for sample in json.load(input_file.fp):
-        sample = GNER_TrainSampleComp.model_validate(sample)
-        labels = [g[1] for g in bio_tag_pattern.findall(sample.instance.prompt_labels)]
-        words = sample.instance.instruction_inputs.splitlines()[-1].split("Sentence: ")[-1].split()
-        if len(words) != len(labels):
-            continue
-        entities = bio_to_entities(words, labels)
-        entity_texts = [entity['text'] for entity in entities]
-        all_entity_texts.extend(entity_texts)
-    return all_entity_texts
-
-
-def get_entity_texts_from_test(input_file: FileStreamer):
-    all_entity_texts = []
-    for sample in input_file:
-        sample = json.loads(sample)
-        labels = sample['instance']['labels']
-        words = sample['instance']['words']
-        if len(words) != len(labels):
-            continue
-        entities = bio_to_entities(words, labels)
-        entity_texts = [entity['text'] for entity in entities]
-        all_entity_texts.extend(entity_texts)
-    return all_entity_texts
-
-
-def process_one(ii_entity: Tuple[int, str], args: IOArguments) -> Optional[EntityRelatedPassages]:
-    ii, entity = ii_entity
-    id = f"J{ii:08d}"
+def process_one(idx_entity: Tuple[int, str], args: IOArguments) -> Optional[EntityRelatedPassages]:
+    idx, entity = idx_entity
+    job_id = f"J{idx:08d}"
     if args.env.calling_sec > 0:
         time.sleep(args.env.calling_sec)
-    global http_clients
-    http_client = http_clients[ii % len(http_clients)]
+    extra_opt: ExtraOption = ExtraOption.model_validate(args.option)
+    http_client: httpx.Client = args.env.http_clients[idx]
     # logger.info(f"- {id} | {http_client._transport._pool._local_address:<15s} | {entity}")
 
     all_entity_passages = []
@@ -116,7 +129,7 @@ def process_one(ii_entity: Tuple[int, str], args: IOArguments) -> Optional[Entit
     except Exception as e:
         logger.error(f"{type(e).__name__} on http_client.get(source_url): {source_url}")
         return None
-    for search_result in search_results[: args.option.max_search_candidate]:
+    for search_result in search_results[: extra_opt.max_search_candidate]:
         source_link_url = urljoin(source_url, search_result.select_one("a").attrs['href']).replace('/wiki/', '/w/index.php?title=') + '&action=edit'
         try:
             search_result_page = BeautifulSoup(http_client.get(source_link_url).text, 'html.parser')
@@ -143,22 +156,24 @@ def process_one(ii_entity: Tuple[int, str], args: IOArguments) -> Optional[Entit
             target = link2_pattern.sub(r"[[\2]]", target)
             target = bold3_pattern.sub(r"\1", target)
             target = bold2_pattern.sub(r"\1", target)
-            if args.option.min_passage_length >= 0 and len(target) < args.option.min_passage_length:
-                continue
-            if args.option.max_passage_length >= 0 and len(target) > args.option.max_passage_length:
-                continue
+            if extra_opt.min_passage_length >= 0:
+                if len(target) < extra_opt.min_passage_length:
+                    continue
+            if extra_opt.max_passage_length >= 0:
+                if len(target) > extra_opt.max_passage_length:
+                    continue
             if f"[[{entity.lower()}]]" not in target.lower():
                 continue
-            if len(link1_pattern.findall(target)) < args.option.min_entity_links:
+            if len(link1_pattern.findall(target)) < extra_opt.min_entity_links:
                 continue
             document_passages.append(target)
             # logger.info(f"- [passage]({len(target)}) {target}")
         if len(document_passages) > 0:
-            document_passages = shuffled(document_passages)[: args.option.max_targets_per_page]
+            document_passages = shuffled(document_passages)[: extra_opt.max_targets_per_page]
             all_entity_passages.extend(document_passages)
 
     return EntityRelatedPassages(
-        id=id,
+        id=job_id,
         entity=entity,
         passages=all_entity_passages,
         num_passages=len(all_entity_passages),
@@ -202,18 +217,14 @@ def convert_GNER(
         # input
         input_inter: int = typer.Option(default=1),
         input_batch: int = typer.Option(default=10),
-        input_file_path: str = typer.Option(default="input/GNER/pile-ner.json"),
-        # input_file_path: str = typer.Option(default="input/GNER/zero-shot-test.jsonl"),
+        input_file_path: str = typer.Option(default=...),  # "input/GNER/pile-ner.json" or "input/GNER/zero-shot-test.jsonl"
         # output
         output_table_reset: bool = typer.Option(default=True),
         output_table_home: str = typer.Option(default="localhost:8800/GNER"),
-        output_table_name: str = typer.Option(default="inst_tuning_base-from-train"),
-        # output_table_name: str = typer.Option(default="inst_tuning_base-from-test"),
-        output_file_path: str = typer.Option(default="output/GNER/convert/train-data.jsonl"),
-        # output_file_path: str = typer.Option(default="output/GNER/convert/test-data.jsonl"),
+        output_table_name: str = typer.Option(default=...),  # "inst_tuning_base-from-train" or "inst_tuning_base-from-test"
+        output_file_path: str = typer.Option(default=...),  # "output/GNER/convert/train-data.jsonl" or "output/GNER/convert/test-data.jsonl"
         # option
-        get_entity_texts_fn: str = typer.Option(default="get_entity_texts_from_train"),
-        # get_entity_texts_fn: str = typer.Option(default="get_entity_texts_from_test"),
+        get_entity_texts_fn: GetEntityTextsFn = typer.Option(default=...),  # "from_train" or "from_test"
         min_entity_freq: int = typer.Option(default=2),
         min_entity_chars: int = typer.Option(default=3),
         min_entity_links: int = typer.Option(default=3),
@@ -273,14 +284,6 @@ def convert_GNER(
     assert args.output.file, "output.file is required"
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
-    global http_clients
-    http_clients = [
-        httpx.Client(
-            transport=httpx.HTTPTransport(local_address=ip_addr),
-            timeout=httpx.Timeout(timeout=120.0),
-        ) for ip_addr in env.ip_addrs
-    ]
-
     with (
         JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
         FileStreamer(args.input.file) as input_file,
@@ -288,21 +291,16 @@ def convert_GNER(
         MongoStreamer(args.output.table) as output_table,
     ):
         # set entity list
-        if args.option.get_entity_texts_fn == "get_entity_texts_from_train":
-            entity_texts = get_entity_texts_from_train(input_file)
-        elif args.option.get_entity_texts_fn == "get_entity_texts_from_test":
-            entity_texts = get_entity_texts_from_test(input_file)
-        else:
-            raise ValueError(f"Unknown get_entity_texts_fn: {args.option.get_entity_texts_fn}")
+        entity_texts = extra_opt.get_entity_texts_fn.get_entity_texts(input_file)
         logger.info("Number of entities in entity_texts: %d", len(entity_texts))
-        entity_freq = entity_texts_to_freq_dict(entity_texts, args)
+        entity_freq = entity_texts_to_freq_dict(entity_texts, extra_opt)
         logger.info("Number of entities in entity_freq: %d", len(entity_freq))
-        entity_list = sorted(islice(shuffled(entity_freq.keys()), args.option.max_entity_targets), key=lambda x: str(x).upper())
+        entity_list = sorted(islice(shuffled(entity_freq.keys()), extra_opt.max_entity_targets), key=lambda x: str(x).upper())
         logger.info("Number of entities in entity_list: %d", len(entity_list))
         input_data = args.input.ready_inputs(enumerate(entity_list, start=1), total=len(entity_list))
 
         # process loop
-        with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="converting", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
+        with tqdm(total=input_data.num_item, unit="item", pre="=>", desc="crawling", unit_divisor=math.ceil(args.input.inter / args.input.batch)) as prog:
             for item in input_data.items:
                 # logger.info(f"args.env.max_workers={args.env.max_workers}")
                 if args.env.max_workers <= 1:
@@ -323,6 +321,3 @@ def convert_GNER(
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
             logger.info(f"Export {prog.n}/{len(entity_list)} rows to [{output_file.opt}]")
-
-    for http_client in http_clients:
-        http_client.close()
