@@ -209,22 +209,29 @@ def process_many2(item: Iterable[Tuple[int, str]], args: IOArguments, writer: Mo
 def crawl_entity_passage(
         # env
         project: str = typer.Option(default="chrisdata"),
-        job_name: str = typer.Option(default="convert_GNER"),
-        logging_home: str = typer.Option(default="output/GNER/convert"),
+        job_name: str = typer.Option(default="crawl_entity_passage"),
+        logging_home: str = typer.Option(default="output/GNER"),
         logging_file: str = typer.Option(default="logging.out"),
         max_workers: int = typer.Option(default=12),
         debugging: bool = typer.Option(default=False),
         # input
         input_inter: int = typer.Option(default=1),
         input_batch: int = typer.Option(default=10),
-        input_file_path: str = typer.Option(default=...),  # "input/GNER/pile-ner.json" or "input/GNER/zero-shot-test.jsonl"
+        input_file_path: str = typer.Option(default=...),
+        # input_file_path = "input/GNER/pile-ner.json"
+        # input_file_path = "input/GNER/zero-shot-test.jsonl"
         # output
         output_table_reset: bool = typer.Option(default=True),
         output_table_home: str = typer.Option(default="localhost:8800/GNER"),
-        output_table_name: str = typer.Option(default=...),  # "inst_tuning_base-from-train" or "inst_tuning_base-from-test"
-        output_file_path: str = typer.Option(default=...),  # "output/GNER/convert/train-data.jsonl" or "output/GNER/convert/test-data.jsonl"
+        output_table_name: str = typer.Option(default=...),
+        # output_table_name = "inst_tuning_base-from-train"
+        # output_table_name = "inst_tuning_base-from-test"
+        output_file_path: str = typer.Option(default=...),
+        # output_file_path = "output/GNER/inst_tuning_base-from-train.jsonl"
+        # output_file_path = "output/GNER/inst_tuning_base-from-test.jsonl"
         # option
-        get_entity_texts_fn: GetEntityTextsFn = typer.Option(default=...),  # "from_train" or "from_test"
+        get_entity_texts_fn: GetEntityTextsFn = typer.Option(default=...),
+        # get_entity_texts_fn = "from_train" or "from_test"
         min_entity_freq: int = typer.Option(default=2),
         min_entity_chars: int = typer.Option(default=3),
         min_entity_links: int = typer.Option(default=3),
@@ -321,3 +328,71 @@ def crawl_entity_passage(
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
             logger.info(f"Export {prog.n}/{len(entity_list)} rows to [{output_file.opt}]")
+
+
+@app.command()
+def convert_passage_to_conll(
+        # env
+        project: str = typer.Option(default="chrisdata"),
+        job_name: str = typer.Option(default="convert_passage_to_conll"),
+        logging_home: str = typer.Option(default="output/GNER"),
+        logging_file: str = typer.Option(default="logging.out"),
+        max_workers: int = typer.Option(default=12),
+        debugging: bool = typer.Option(default=False),
+        # input
+        input_inter: int = typer.Option(default=1),
+        input_batch: int = typer.Option(default=10),
+        input_file_path: str = typer.Argument(default=...),
+        # input_file_path = "output/GNER/inst_tuning_base-from-train.jsonl"
+        # input_file_path = "output/GNER/inst_tuning_base-from-test.jsonl"
+        # output
+        output_dir_path: str = typer.Argument(default=...),
+        # output_dir_path = "input/GNER/pile-ner-entity-detection"
+        # output_dir_path = "input/GNER/zero-ner-entity-detection"
+):
+    env = ProjectEnv(
+        project=project,
+        job_name=job_name,
+        debugging=debugging,
+        logging_home=logging_home,
+        logging_file=logging_file,
+        message_level=logging.INFO,
+        message_format=LoggingFormat.CHECK_00,  # if not debugging else LoggingFormat.DEBUG_36,
+        max_workers=1 if debugging else max(max_workers, 1),
+    )
+    input_opt = InputOption(
+        batch=input_batch if not debugging else 1,
+        inter=input_inter if not debugging else 1,
+        file=FileOption.from_path(
+            path=input_file_path,
+            required=True,
+        ),
+    )
+    output_opt = OutputOption(
+        file=FileOption.from_path(
+            path=output_dir_path,
+            name=new_path(output_dir_path, post=env.time_stamp).name,
+        ),
+    )
+    args = IOArguments(
+        env=env,
+        input=input_opt,
+        output=output_opt,
+    )
+    tqdm = mute_tqdm_cls()
+    assert args.input.file, "input.file is required"
+    assert args.output.file, "output.file is required"
+
+    with (
+        JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+        FileStreamer(args.input.file) as input_file,
+        FileStreamer(args.output.file) as output_dir,
+    ):
+        # print(output_dir.path / "label.txt")
+        # print(output_dir.path / "train.txt")
+        # print(output_dir.path / "dev.txt")
+        # print(output_dir.path / "test.txt")
+        all_passages = []
+        for row in input_file:
+            all_passages.extend(EntityRelatedPassages.model_validate_json(row).passages)
+        logger.info("Number of passages in all_passages: %d", len(all_passages))

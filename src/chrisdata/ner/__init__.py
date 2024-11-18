@@ -11,7 +11,7 @@ entity_text_pattern = re.compile(r'[A-Za-z ]+')
 
 
 class EntityRelatedPassages(BaseModel):
-    id: str
+    id: str = None
     entity: str
     passages: list[str]
     num_passages: int
