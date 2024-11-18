@@ -3,10 +3,8 @@ import logging
 import math
 import time
 from concurrent.futures import ProcessPoolExecutor
-from itertools import islice
 from typing import Iterable
 
-import httpx
 import typer
 
 from chrisbase.data import FileStreamer, MongoStreamer
@@ -17,38 +15,37 @@ from chrisbase.util import mute_tqdm_cls
 from chrisdata.net import app, IPCheckResult
 
 logger = logging.getLogger(__name__)
+check_target = "https://api64.ipify.org?format=json"
 
 
-def process_one(ip: str, args: IOArguments):
+def process_one(idx: int, args: IOArguments):
     if args.env.calling_sec > 0:
         time.sleep(args.env.calling_sec)
-    uri = "https://api64.ipify.org?format=json"
-    _id = '.'.join(f"{int(a):03d}" for a in ip.split('.')[-2:])
-    with httpx.Client(
-            transport=httpx.HTTPTransport(local_address=ip),
-            timeout=httpx.Timeout(timeout=120.0)
-    ) as cli:
-        response = cli.get(uri)
-        result = IPCheckResult(
-            _id=_id,
-            uri=uri,
-            ip=ip,
-            status=response.status_code,
-            elapsed=round(response.elapsed.total_seconds(), 3),
-            size=round(response.num_bytes_downloaded / 1024, 6),
-            text=response.text,
-        )
-        return result
+    http_client = args.env.http_clients[idx]
+    local_addr = args.env.http_clients.get_local_addr(idx)
+    _id = '.'.join(f"{int(a):03d}" for a in local_addr.split('.')[-2:])
+
+    response = http_client.get(check_target)
+    result = IPCheckResult(
+        _id=_id,
+        uri=check_target,
+        ip=local_addr,
+        status=response.status_code,
+        elapsed=round(response.elapsed.total_seconds(), 3),
+        size=round(response.num_bytes_downloaded / 1024, 6),
+        text=response.text,
+    )
+    return result
 
 
-def process_many1(batch: Iterable[str], args: IOArguments, writer: MongoStreamer):
+def process_many1(batch: Iterable[int], args: IOArguments, writer: MongoStreamer):
     rows = [process_one(x, args) for x in batch]
     rows = [row.to_dict() for row in rows if row]
     if len(rows) > 0:
         writer.table.insert_many(rows)
 
 
-def process_many2(batch: Iterable[str], args: IOArguments, writer: MongoStreamer):
+def process_many2(batch: Iterable[int], args: IOArguments, writer: MongoStreamer):
     with ProcessPoolExecutor(max_workers=args.env.max_workers) as exe:
         jobs = [exe.submit(process_one, x, args) for x in batch]
         rows = [job.result(timeout=args.env.waiting_sec) for job in jobs]
@@ -64,7 +61,7 @@ def check(
         job_name: str = typer.Option(default="check_ip_addrs"),
         output_home: str = typer.Option(default="output/check_ip_addrs"),
         logging_file: str = typer.Option(default="logging.out"),
-        max_workers: int = typer.Option(default=24),
+        max_workers: int = typer.Option(default=5),
         debugging: bool = typer.Option(default=False),
         # input
         input_start: int = typer.Option(default=0),
@@ -89,13 +86,13 @@ def check(
         message_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
         max_workers=1 if debugging else max(max_workers, 1),
     )
-    assert env.num_ip_addrs > 0, f"env.num_ip_addrs={env.num_ip_addrs}"
+    assert len(env.http_clients) > 0, f"env.http_clients={env.http_clients}"
     input_opt = InputOption(
         start=input_start,
         limit=input_limit,
         batch=input_batch,
         inter=input_inter,
-        data=islice(env.ip_addrs, env.num_ip_addrs),
+        data=list(range(len(env.http_clients))),
     )
     output_opt = OutputOption(
         file=FileOption(
@@ -128,7 +125,7 @@ def check(
         MongoStreamer(args.output.table) as output_table,
     ):
         # check local ip addresses
-        input_total = args.env.num_ip_addrs
+        input_total = len(args.env.http_clients)
         input_data = args.input.ready_inputs(args.input.data, input_total)
         logger.info(f"Check {input_total} addresses to [{output_table.opt}]")
         logger.info(f"- amount: {args.input.total}{'' if input_data.has_single_items() else f' * {args.input.batch}'} ({type(input_data).__name__})")

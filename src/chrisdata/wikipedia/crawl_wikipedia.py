@@ -22,13 +22,10 @@ app = AppTyper()
 
 
 class WikipediaEx(Wikipedia):
-    def __init__(self, *args, ip=None, max_retrial=10, retrial_sec=10.0, **kwargs) -> None:
+    def __init__(self, *args, httpx_client=None, max_retrial=10, retrial_sec=10.0, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        if ip:
-            self._httpx_client = httpx.Client(
-                transport=httpx.HTTPTransport(local_address=ip),
-                timeout=httpx.Timeout(timeout=120.0)
-            )
+        if httpx_client:
+            self._httpx_client = httpx_client
         self.max_retrial = max_retrial
         self.retrial_sec = retrial_sec
 
@@ -186,8 +183,8 @@ def reset_global_api(args: ProgramArguments):
     assert args.data.lang, "No lang option on args.data"
     global api_list_per_ip
     api_list_per_ip.clear()
-    for ip in args.env.ip_addrs:
-        api_list_per_ip.append(WikipediaEx(user_agent=f"{args.env.project}/1.0", language=args.data.lang, ip=ip,
+    for http_client in args.env.http_clients:
+        api_list_per_ip.append(WikipediaEx(user_agent=f"{args.env.project}/1.0", language=args.data.lang, httpx_client=http_client,
                                            max_retrial=args.net.max_retrial, retrial_sec=args.net.retrial_sec,
                                            timeout=args.net.waiting_sec))
     return len(api_list_per_ip)
