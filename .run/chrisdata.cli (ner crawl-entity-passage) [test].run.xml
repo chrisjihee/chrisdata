@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="chrisdata.cli (ner convert-gner) [help]" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="chrisdata.cli (ner crawl-entity-passage) [test]" type="PythonConfigurationType" factoryName="Python">
     <module name="chrisdata2" />
     <option name="ENV_FILES" value="" />
     <option name="INTERPRETER_OPTIONS" value="" />
@@ -14,7 +14,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="chrisdata.cli" />
-    <option name="PARAMETERS" value="ner convert-gner --help" />
+    <option name="PARAMETERS" value="ner crawl-entity-passage --input-file-path input/GNER/zero-shot-test.jsonl --output-table-name inst_tuning_base-from-test --output-file-path output/GNER/inst_tuning_base-from-test.jsonl --get-entity-texts-fn from_test" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="true" />

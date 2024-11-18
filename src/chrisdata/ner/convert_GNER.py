@@ -206,7 +206,7 @@ def process_many2(item: Iterable[Tuple[int, str]], args: IOArguments, writer: Mo
 
 
 @app.command()
-def convert_GNER(
+def crawl_entity_passage(
         # env
         project: str = typer.Option(default="chrisdata"),
         job_name: str = typer.Option(default="convert_GNER"),
