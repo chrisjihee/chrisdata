@@ -474,6 +474,8 @@ def compare_eval_results(
         input_file2: str = typer.Argument(default="GNER/output/flan-t5-base-concept-learning-24ep.out"),
         # output
         output_file: str = typer.Argument(default="GNER/output/flan-t5-base-comparison.xlsx"),
+        # option
+        combine: bool = typer.Option(default="False"),
 ):
     env = ProjectEnv(
         project=project,
@@ -496,7 +498,6 @@ def compare_eval_results(
     args = CommonArguments(
         env=env,
     )
-    tqdm = mute_tqdm_cls()
 
     class EvalMetrics(BaseModel):
         mit_movie: float = Field(alias="eval_mit-movie_f1")
@@ -523,6 +524,8 @@ def compare_eval_results(
         FileStreamer(file_opt1) as input_file1,
         FileStreamer(file_opt2) as input_file2,
     ):
+        logger.info("combine: %s", combine)
+        logger.info("Loading input files: %s, %s", input_file1.path, input_file2.path)
         lines_1st = [x.replace("'", '"') for x in key_lines(key="'eval_runtime'", path=input_file1.path)]
         lines_2nd = [x.replace("'", '"') for x in key_lines(key="'eval_runtime'", path=input_file2.path)]
         for a in lines_1st:
@@ -537,9 +540,16 @@ def compare_eval_results(
 
         df_1st = DataFrame([x.model_dump() for x in results.metrics_1st]).set_index("epoch")
         df_2nd = DataFrame([x.model_dump() for x in results.metrics_2st]).set_index("epoch")
-        df_diff = df_2nd.subtract(df_1st)
+        logger.info("1st DataFrame:\n" + df_1st.to_string())
+        logger.info("2nd DataFrame:\n" + df_2nd.to_string())
 
-        combined_df = pd.concat([df_1st, df_2nd, df_diff], axis=1, keys=["1st", "2nd", "diff"])
-        combined_df = combined_df[["1st", "2nd", "diff"]].stack(level=0)
-        logger.info("Combined DataFrame:\n" + combined_df.to_string())
-        combined_df.to_excel(output_file)
+        if combine:
+            df_diff = df_2nd.subtract(df_1st)
+            combined_df = pd.concat([df_1st, df_2nd, df_diff], axis=1, keys=["1st", "2nd", "diff"])
+            combined_df = combined_df[["1st", "2nd", "diff"]].stack(level=0)
+            logger.info("Combined DataFrame:\n" + combined_df.to_string())
+            combined_df.to_excel(output_file)
+        else:
+            with pd.ExcelWriter(output_file) as writer:
+                df_1st.to_excel(writer, sheet_name='Sheet1', startrow=0)
+                df_2nd.to_excel(writer, sheet_name='Sheet1', startrow=len(df_1st) + 2)
