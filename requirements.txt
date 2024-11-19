@@ -1,6 +1,8 @@
+chrisbase
+datasets
+jsonlines
 elasticsearch
+beautifulsoup4
 Wikipedia-API==0.6.0
 qwikidata
-jsonlines
-beautifulsoup4
 Flask
