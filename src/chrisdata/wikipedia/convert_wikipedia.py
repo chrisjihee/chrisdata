@@ -1,9 +1,9 @@
 import json
 import math
-from dataclasses import field
 from typing import Iterable
 
 import typer
+from pydantic import Field
 
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption, FileStreamer, MongoStreamer, IOArguments
 from chrisbase.data import JobTimer, ProjectEnv
@@ -16,8 +16,8 @@ parsed_ids = set()  # for duplicated crawling data
 
 
 class ExtraOption(BaseModel):
-    export: bool = field(default=True)
-    processor: str | None = field(default=None)
+    export: bool = Field(default=True)
+    processor: str | None = Field(default=None)
 
 
 def convert_one(item: dict) -> WikipediaStat | None:

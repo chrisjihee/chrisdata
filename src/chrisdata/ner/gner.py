@@ -7,11 +7,14 @@ from typing import Optional, Iterable, Tuple, List
 from urllib.parse import urljoin
 
 import httpx
+import pandas as pd
 import typer
 from bs4 import BeautifulSoup
+from pandas import DataFrame
+from pydantic import Field
 
-from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer
-from chrisbase.io import LoggingFormat, new_path, merge_dicts
+from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, CommonArguments
+from chrisbase.io import LoggingFormat, new_path, merge_dicts, key_lines
 from chrisbase.util import mute_tqdm_cls, shuffled
 from . import *
 
@@ -455,3 +458,88 @@ def convert_json_to_jsonl(
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
         logger.info("Number of samples in output_file: %d", prog.n)
+
+
+@app.command("compare_eval")
+def compare_eval_results(
+        # env
+        project: str = typer.Option(default="chrisdata"),
+        job_name: str = typer.Option(default="convert_json_to_jsonl"),
+        logging_home: str = typer.Option(default="output/GNER"),
+        logging_file: str = typer.Option(default="compare_eval.out"),
+        max_workers: int = typer.Option(default=1),
+        debugging: bool = typer.Option(default=False),
+        # input
+        input_file1: str = typer.Argument(default="GNER/output/flan-t5-base-task-adaptation-12ep.out"),
+        input_file2: str = typer.Argument(default="GNER/output/flan-t5-base-concept-learning-24ep.out"),
+        # output
+        output_file: str = typer.Argument(default="GNER/output/flan-t5-base-comparison.xlsx"),
+):
+    env = ProjectEnv(
+        project=project,
+        job_name=job_name,
+        debugging=debugging,
+        logging_home=logging_home,
+        logging_file=logging_file,
+        message_level=logging.INFO,
+        message_format=LoggingFormat.CHECK_00,  # if not debugging else LoggingFormat.DEBUG_36,
+        max_workers=1 if debugging else max(max_workers, 1),
+    )
+    file_opt1 = FileOption.from_path(
+        path=input_file1,
+        required=True,
+    )
+    file_opt2 = FileOption.from_path(
+        path=input_file2,
+        required=True,
+    )
+    args = CommonArguments(
+        env=env,
+    )
+    tqdm = mute_tqdm_cls()
+
+    class EvalMetrics(BaseModel):
+        mit_movie: float = Field(alias="eval_mit-movie_f1")
+        mit_restaurant: float = Field(alias="eval_mit-restaurant_f1")
+        crossner_ai: float = Field(alias="eval_crossner_ai_f1")
+        crossner_literature: float = Field(alias="eval_crossner_literature_f1")
+        crossner_music: float = Field(alias="eval_crossner_music_f1")
+        crossner_politics: float = Field(alias="eval_crossner_politics_f1")
+        crossner_science: float = Field(alias="eval_crossner_science_f1")
+        wiki_passage: float = Field(alias="eval_wiki_passage_from_zero_f1", default=0.0)
+        target_average: float = Field(default=None)
+        epoch: float
+
+        def calc(self):
+            self.target_average = (self.mit_movie + self.mit_restaurant + self.crossner_ai + self.crossner_literature + self.crossner_music + self.crossner_politics + self.crossner_science) / 7
+            return self
+
+    class EvalResults(BaseModel):
+        metrics_1st: List[EvalMetrics]
+        metrics_2st: List[EvalMetrics]
+
+    with (
+        JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+        FileStreamer(file_opt1) as input_file1,
+        FileStreamer(file_opt2) as input_file2,
+    ):
+        lines_1st = [x.replace("'", '"') for x in key_lines(key="'eval_runtime'", path=input_file1.path)]
+        lines_2nd = [x.replace("'", '"') for x in key_lines(key="'eval_runtime'", path=input_file2.path)]
+        for a in lines_1st:
+            EvalMetrics.model_validate_json(a)
+        for a in lines_2nd:
+            EvalMetrics.model_validate_json(a)
+
+        results = EvalResults(
+            metrics_1st=[EvalMetrics.model_validate_json(x).calc() for x in lines_1st],
+            metrics_2st=[EvalMetrics.model_validate_json(x).calc() for x in lines_2nd],
+        )
+
+        df_1st = DataFrame([x.model_dump() for x in results.metrics_1st]).set_index("epoch")
+        df_2nd = DataFrame([x.model_dump() for x in results.metrics_2st]).set_index("epoch")
+        df_diff = df_2nd.subtract(df_1st)
+
+        combined_df = pd.concat([df_1st, df_2nd, df_diff], axis=1, keys=["1st", "2nd", "diff"])
+        combined_df = combined_df[["1st", "2nd", "diff"]].stack(level=0)
+        logger.info("Combined DataFrame:\n" + combined_df.to_string())
+        combined_df.to_excel(output_file)

@@ -7,6 +7,7 @@ import typer
 from bs4 import BeautifulSoup
 from flask import Flask, render_template
 from more_itertools import ichunked
+from pydantic import Field
 
 from chrisbase.data import InputOption, OutputOption, FileOption, TableOption, FileStreamer
 from chrisbase.data import JobTimer, ProjectEnv
@@ -39,13 +40,13 @@ class PageInfo(BaseModel):
 
 
 class ExtraOption(BaseModel):
-    serve: bool = field(default=False)
-    export: bool = field(default=False)
-    processor: str | None = field(default=None)
-    serve_batch: int = field(default=1000)
-    min_property_count: int = field(default=1000)
-    black_property_datatypes: str = field(default="CM|EI|ES|U")
-    white_qualifier_relations: str = field(default="P580|P582|P585")
+    serve: bool = Field(default=False)
+    export: bool = Field(default=False)
+    processor: str | None = Field(default=None)
+    serve_batch: int = Field(default=1000)
+    min_property_count: int = Field(default=1000)
+    black_property_datatypes: str = Field(default="CM|EI|ES|U")
+    white_qualifier_relations: str = Field(default="P580|P582|P585")
 
     def black_property_datatype_list(self):
         return [x.strip() for x in self.black_property_datatypes.split("|")]
