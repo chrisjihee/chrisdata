@@ -1,0 +1,68 @@
+[11.19 15:51:52] ┇ INFO     ┇ =========================================================================================================================================
+[11.19 15:51:52] ┇ INFO     ┇ [INIT] python /home/chris/proj/chrisdata2/src/chrisdata/cli.py ner convert_json input/GNER/pile-ner.json input/GNER/pile-ner.jsonl
+[11.19 15:51:52] ┇ INFO     ┇ =========================================================================================================================================
+[11.19 15:51:52] ┇ INFO     ┇ -----+----------------------+----------------------------------------------------------------------------------
+[11.19 15:51:52] ┇ INFO     ┇    # | IOArguments          | value
+[11.19 15:51:52] ┇ INFO     ┇ -----+----------------------+----------------------------------------------------------------------------------
+[11.19 15:51:52] ┇ INFO     ┇    1 | tag                  |
+[11.19 15:51:52] ┇ INFO     ┇    2 | env.project          | chrisdata
+[11.19 15:51:52] ┇ INFO     ┇    3 | env.job_name         | convert_json_to_conll
+[11.19 15:51:52] ┇ INFO     ┇    4 | env.job_version      |
+[11.19 15:51:52] ┇ INFO     ┇    5 | env.hostname         | chris36
+[11.19 15:51:52] ┇ INFO     ┇    6 | env.hostaddr         | 129.254.181.36
+[11.19 15:51:52] ┇ INFO     ┇    7 | env.time_stamp       | 1119.155151
+[11.19 15:51:52] ┇ INFO     ┇    8 | env.python_path      | /home/chris/miniforge3/envs/chrisdata/bin/python
+[11.19 15:51:52] ┇ INFO     ┇    9 | env.current_dir      | /mnt/dat/proj/chrisdata2
+[11.19 15:51:52] ┇ INFO     ┇   10 | env.current_file     | /home/chris/proj/chrisdata2/src/chrisdata/cli.py
+[11.19 15:51:52] ┇ INFO     ┇   11 | env.working_dir      | /mnt/dat/proj/chrisdata2
+[11.19 15:51:52] ┇ INFO     ┇   12 | env.command_args     | ['ner', 'convert_json', 'input/GNER/pile-ner.json', 'input/GNER/pile-ner.jsonl']
+[11.19 15:51:52] ┇ INFO     ┇   13 | env.max_workers      | 1
+[11.19 15:51:52] ┇ INFO     ┇   14 | env.calling_sec      | 0.001
+[11.19 15:51:52] ┇ INFO     ┇   15 | env.waiting_sec      | 300.0
+[11.19 15:51:52] ┇ INFO     ┇   16 | env.debugging        | False
+[11.19 15:51:52] ┇ INFO     ┇   17 | env.logging_home     | /mnt/dat/proj/chrisdata2/output/GNER
+[11.19 15:51:52] ┇ INFO     ┇   18 | env.logging_file     | convert_json-1119.155151.out
+[11.19 15:51:52] ┇ INFO     ┇   19 | env.argument_file    |
+[11.19 15:51:52] ┇ INFO     ┇   20 | env.date_format      | [%m.%d %H:%M:%S]
+[11.19 15:51:52] ┇ INFO     ┇   21 | env.message_level    | 20
+[11.19 15:51:52] ┇ INFO     ┇   22 | env.message_format   | %(asctime)s ┇ %(levelname)-8s ┇ %(message)s
+[11.19 15:51:52] ┇ INFO     ┇   23 | time.started         | [11.19 15:51:52]
+[11.19 15:51:52] ┇ INFO     ┇   24 | time.settled         |
+[11.19 15:51:52] ┇ INFO     ┇   25 | time.elapsed         |
+[11.19 15:51:52] ┇ INFO     ┇   26 | input.start          | 0.0
+[11.19 15:51:52] ┇ INFO     ┇   27 | input.limit          | -1.0
+[11.19 15:51:52] ┇ INFO     ┇   28 | input.batch          | 1.0
+[11.19 15:51:52] ┇ INFO     ┇   29 | input.inter          | 10000.0
+[11.19 15:51:52] ┇ INFO     ┇   30 | input.data           | nan
+[11.19 15:51:52] ┇ INFO     ┇   31 | input.file.name      | pile-ner.json
+[11.19 15:51:52] ┇ INFO     ┇   32 | input.file.home      | input/GNER
+[11.19 15:51:52] ┇ INFO     ┇   33 | input.file.user      |
+[11.19 15:51:52] ┇ INFO     ┇   34 | input.file.pswd      |
+[11.19 15:51:52] ┇ INFO     ┇   35 | input.file.reset     | False
+[11.19 15:51:52] ┇ INFO     ┇   36 | input.file.required  | True
+[11.19 15:51:52] ┇ INFO     ┇   37 | input.file.mode      | rb
+[11.19 15:51:52] ┇ INFO     ┇   38 | input.file.encoding  | utf-8
+[11.19 15:51:52] ┇ INFO     ┇   39 | output.file.name     | pile-ner-1119.155151.jsonl
+[11.19 15:51:52] ┇ INFO     ┇   40 | output.file.home     | input/GNER
+[11.19 15:51:52] ┇ INFO     ┇   41 | output.file.user     |
+[11.19 15:51:52] ┇ INFO     ┇   42 | output.file.pswd     |
+[11.19 15:51:52] ┇ INFO     ┇   43 | output.file.reset    | False
+[11.19 15:51:52] ┇ INFO     ┇   44 | output.file.required | False
+[11.19 15:51:52] ┇ INFO     ┇   45 | output.file.mode     | w
+[11.19 15:51:52] ┇ INFO     ┇   46 | output.file.encoding | utf-8
+[11.19 15:51:52] ┇ INFO     ┇ -----+----------------------+----------------------------------------------------------------------------------
+[11.19 15:51:54] ┇ INFO     ┇ => converting:   9%|████▋                                             | 10000/105659 [00:01<00:08, 11235.30item/s]
+[11.19 15:51:54] ┇ INFO     ┇ => converting:  19%|█████████▍                                        | 20000/105659 [00:02<00:05, 15105.64item/s]
+[11.19 15:51:55] ┇ INFO     ┇ => converting:  28%|██████████████▏                                   | 30000/105659 [00:02<00:05, 14961.50item/s]
+[11.19 15:51:56] ┇ INFO     ┇ => converting:  38%|██████████████████▉                               | 40000/105659 [00:03<00:04, 14614.90item/s]
+[11.19 15:51:56] ┇ INFO     ┇ => converting:  47%|███████████████████████▋                          | 50000/105659 [00:04<00:03, 15258.52item/s]
+[11.19 15:51:57] ┇ INFO     ┇ => converting:  57%|████████████████████████████▍                     | 60000/105659 [00:04<00:02, 15233.56item/s]
+[11.19 15:51:58] ┇ INFO     ┇ => converting:  66%|█████████████████████████████████▏                | 70000/105659 [00:05<00:02, 15205.30item/s]
+[11.19 15:51:58] ┇ INFO     ┇ => converting:  76%|█████████████████████████████████████▊            | 80000/105659 [00:06<00:01, 13889.18item/s]
+[11.19 15:51:59] ┇ INFO     ┇ => converting:  85%|██████████████████████████████████████████▌       | 90000/105659 [00:06<00:01, 14414.25item/s]
+[11.19 15:52:00] ┇ INFO     ┇ => converting:  95%|███████████████████████████████████████████████▎  | 100000/105659 [00:07<00:00, 14713.37item/s]
+[11.19 15:52:00] ┇ INFO     ┇ => converting: 100%|██████████████████████████████████████████████████| 105659/105659 [00:07<00:00, 15398.21item/s]
+[11.19 15:52:00] ┇ INFO     ┇ Number of samples in output_file: 105659
+[11.19 15:52:01] ┇ INFO     ┇ =========================================================================================================================================
+[11.19 15:52:01] ┇ INFO     ┇ [EXIT] python /home/chris/proj/chrisdata2/src/chrisdata/cli.py ner convert_json input/GNER/pile-ner.json input/GNER/pile-ner.jsonl ($=00:00:08.602)
+[11.19 15:52:01] ┇ INFO     ┇ =========================================================================================================================================
