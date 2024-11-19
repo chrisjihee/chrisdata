@@ -556,10 +556,10 @@ def compare_eval_results(
         max_workers: int = typer.Option(default=1),
         debugging: bool = typer.Option(default=False),
         # input
-        input_file1: str = typer.Argument(default="GNER/output/flan-t5-base-task-adaptation-12ep.out"),
-        input_file2: str = typer.Argument(default="GNER/output/flan-t5-base-concept-learning-24ep.out"),
+        input_file1: str = typer.Argument(default=...),
+        input_file2: str = typer.Argument(default=...),
         # output
-        output_file: str = typer.Argument(default="GNER/output/flan-t5-base-comparison.xlsx"),
+        output_file: str = typer.Argument(default=...),
         # option
         combine: bool = typer.Option(default="False"),
 ):
