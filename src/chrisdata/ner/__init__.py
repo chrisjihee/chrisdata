@@ -2,8 +2,9 @@ import logging
 import random
 import re
 from pathlib import Path
+from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from chrisbase.data import AppTyper
 from .gner_dataset import GNERDataset, GNERConfig
@@ -117,6 +118,23 @@ class GenNERSampleWrapper(BaseModel):
         self.id = self.instance.id = self.id or self.instance.id
         if self.dataset == "unknown" and path:
             self.dataset = Path(path).stem
+        return self
+
+
+class GenNERMetrics(BaseModel):
+    mit_movie: float = Field(alias="eval_mit-movie_f1")
+    mit_restaurant: float = Field(alias="eval_mit-restaurant_f1")
+    crossner_ai: float = Field(alias="eval_crossner_ai_f1")
+    crossner_literature: float = Field(alias="eval_crossner_literature_f1")
+    crossner_music: float = Field(alias="eval_crossner_music_f1")
+    crossner_politics: float = Field(alias="eval_crossner_politics_f1")
+    crossner_science: float = Field(alias="eval_crossner_science_f1")
+    wiki_passage: float = Field(alias="eval_wiki_passage_from_zero_f1", default=0.0)
+    target_average: float = Field(default=None)
+    epoch: float
+
+    def calc(self):
+        self.target_average = (self.mit_movie + self.mit_restaurant + self.crossner_ai + self.crossner_literature + self.crossner_music + self.crossner_politics + self.crossner_science) / 7
         return self
 
 

@@ -3,7 +3,7 @@ import time
 from concurrent.futures import ProcessPoolExecutor
 from enum import Enum
 from itertools import groupby, islice
-from typing import Optional, Iterable, Tuple, List
+from typing import Optional, Iterable, Tuple
 from urllib.parse import urljoin
 
 import httpx
@@ -11,7 +11,6 @@ import pandas as pd
 import typer
 from bs4 import BeautifulSoup
 from pandas import DataFrame
-from pydantic import Field
 
 from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, CommonArguments
 from chrisbase.io import LoggingFormat, new_path, merge_dicts, key_lines
@@ -499,26 +498,6 @@ def compare_eval_results(
         env=env,
     )
 
-    class EvalMetrics(BaseModel):
-        mit_movie: float = Field(alias="eval_mit-movie_f1")
-        mit_restaurant: float = Field(alias="eval_mit-restaurant_f1")
-        crossner_ai: float = Field(alias="eval_crossner_ai_f1")
-        crossner_literature: float = Field(alias="eval_crossner_literature_f1")
-        crossner_music: float = Field(alias="eval_crossner_music_f1")
-        crossner_politics: float = Field(alias="eval_crossner_politics_f1")
-        crossner_science: float = Field(alias="eval_crossner_science_f1")
-        wiki_passage: float = Field(alias="eval_wiki_passage_from_zero_f1", default=0.0)
-        target_average: float = Field(default=None)
-        epoch: float
-
-        def calc(self):
-            self.target_average = (self.mit_movie + self.mit_restaurant + self.crossner_ai + self.crossner_literature + self.crossner_music + self.crossner_politics + self.crossner_science) / 7
-            return self
-
-    class EvalResults(BaseModel):
-        metrics_1st: List[EvalMetrics]
-        metrics_2st: List[EvalMetrics]
-
     with (
         JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
         FileStreamer(file_opt1) as input_file1,
@@ -526,20 +505,16 @@ def compare_eval_results(
     ):
         logger.info("combine: %s", combine)
         logger.info("Loading input files: %s, %s", input_file1.path, input_file2.path)
+
         lines_1st = [x.replace("'", '"') for x in key_lines(key="'eval_runtime'", path=input_file1.path)]
         lines_2nd = [x.replace("'", '"') for x in key_lines(key="'eval_runtime'", path=input_file2.path)]
-        for a in lines_1st:
-            EvalMetrics.model_validate_json(a)
-        for a in lines_2nd:
-            EvalMetrics.model_validate_json(a)
 
-        results = EvalResults(
-            metrics_1st=[EvalMetrics.model_validate_json(x).calc() for x in lines_1st],
-            metrics_2st=[EvalMetrics.model_validate_json(x).calc() for x in lines_2nd],
-        )
+        metrics_1st = [GenNERMetrics.model_validate_json(x).calc() for x in lines_1st]
+        metrics_2nd = [GenNERMetrics.model_validate_json(x).calc() for x in lines_2nd]
 
-        df_1st = DataFrame([x.model_dump() for x in results.metrics_1st]).set_index("epoch")
-        df_2nd = DataFrame([x.model_dump() for x in results.metrics_2st]).set_index("epoch")
+        df_1st = DataFrame([x.model_dump() for x in metrics_1st]).set_index("epoch")
+        df_2nd = DataFrame([x.model_dump() for x in metrics_2nd]).set_index("epoch")
+
         logger.info("1st DataFrame:\n" + df_1st.to_string())
         logger.info("2nd DataFrame:\n" + df_2nd.to_string())
 
