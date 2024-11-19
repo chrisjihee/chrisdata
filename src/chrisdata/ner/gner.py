@@ -10,7 +10,6 @@ import httpx
 import pandas as pd
 import typer
 from bs4 import BeautifulSoup
-from pandas import DataFrame
 
 from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, CommonArguments
 from chrisbase.io import LoggingFormat, new_path, merge_dicts, key_lines
@@ -512,8 +511,8 @@ def compare_eval_results(
         metrics_1st = [GenNERMetrics.model_validate_json(x).calc() for x in lines_1st]
         metrics_2nd = [GenNERMetrics.model_validate_json(x).calc() for x in lines_2nd]
 
-        df_1st = DataFrame([x.model_dump() for x in metrics_1st]).set_index("epoch")
-        df_2nd = DataFrame([x.model_dump() for x in metrics_2nd]).set_index("epoch")
+        df_1st = pd.DataFrame([x.model_dump() for x in metrics_1st]).set_index("epoch")
+        df_2nd = pd.DataFrame([x.model_dump() for x in metrics_2nd]).set_index("epoch")
 
         logger.info("1st DataFrame:\n" + df_1st.to_string())
         logger.info("2nd DataFrame:\n" + df_2nd.to_string())
