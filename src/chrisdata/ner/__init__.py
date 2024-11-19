@@ -129,8 +129,8 @@ class GenNERMetrics(BaseModel):
     crossner_music: float = Field(alias="eval_crossner_music_f1")
     crossner_politics: float = Field(alias="eval_crossner_politics_f1")
     crossner_science: float = Field(alias="eval_crossner_science_f1")
-    wiki_passage: float = Field(alias="eval_wiki_passage_from_zero_f1", default=0.0)
     target_average: float = Field(default=None)
+    wiki_passage: float = Field(alias="eval_wiki_passage_from_zero-test_f1", default=0.0)
     epoch: float
 
     def calc(self):
