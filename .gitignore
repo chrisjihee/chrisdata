@@ -125,6 +125,7 @@ venv.bak/
 dmypy.json
 
 # custom
+*.lock
 chrisbase/
 chrislab/
 output*/
@@ -133,3 +134,5 @@ elasticsearch*/
 input/Wiki*
 input/wiki*
 debug-*
+GNER
+GoLLIE

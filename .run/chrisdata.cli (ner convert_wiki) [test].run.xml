@@ -14,7 +14,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="chrisdata.cli" />
-    <option name="PARAMETERS" value="ner convert_wiki output/GNER/wiki_passage_from_zero.jsonl input/GNER/wiki_linked_entity_zero" />
+    <option name="PARAMETERS" value="ner convert_wiki output/GNER/wiki_passage_from_zero.jsonl GNER/data/linked-entity-zero.jsonl" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="true" />
