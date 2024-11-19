@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 
 from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer
 from chrisbase.io import LoggingFormat, new_path, merge_dicts
-from chrisbase.util import mute_tqdm_cls, shuffled
+from chrisbase.util import mute_tqdm_cls, shuffled, grouped
 from . import *
 
 logger = logging.getLogger(__name__)
@@ -437,17 +437,13 @@ def convert_json_to_conll(
         # print(output_dir.path / "train.txt")
         # print(output_dir.path / "dev.txt")
         # print(output_dir.path / "test.txt")
-        # all_labels = set()
-        all_pairs = []
-        for sample in ner_samples(input_file):
-            print(sample)
-            rich.print(sample)
-            exit(1)
-        # for words, labels in valid_words_labels(input_file):
-        #     all_pairs.append((words, labels))
-        # all_labels.update(labels)
-        print(all_pairs[0])
-        # print(len(all_labels))
-        # for a in all_pairs[0]:
-        #     print(a)
-        logger.info("Number of samples in all_samples: %d", len(all_pairs))
+        grouped_samples = grouped(ner_samples(input_file), attrgetter='label_list')
+        num_group = 0
+        for label_list, samples in grouped_samples:
+            num_group += 1
+            print(label_list)
+            for sample in samples:
+                print(sample)
+            print()
+
+        logger.info("Number of groups in grouped_samples: %d", num_group)

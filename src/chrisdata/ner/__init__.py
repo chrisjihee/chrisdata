@@ -59,7 +59,7 @@ class GenNERSampleWrapper(BaseModel):
         label_list, sentence = instruction_lines[-2:]
         label_list = label_list.split("Use the specific entity tags:")[-1].strip()
         label_list = [x.strip() for x in re.split("[,.]|and O", label_list) if x.strip()]
-        self.label_list = label_list
+        self.label_list = sorted(label_list)
 
         words = sentence.split("Sentence:")[-1].strip().split()
         self.instance.words = words
