@@ -4,18 +4,16 @@ import time
 from concurrent.futures import ProcessPoolExecutor
 from enum import Enum
 from itertools import groupby, islice
-from pathlib import Path
 from typing import Optional, Iterable, Tuple, List
 from urllib.parse import urljoin
 
 import httpx
-import rich
 import typer
 from bs4 import BeautifulSoup
 
 from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer
 from chrisbase.io import LoggingFormat, new_path, merge_dicts
-from chrisbase.util import mute_tqdm_cls, shuffled, grouped
+from chrisbase.util import mute_tqdm_cls, shuffled
 from . import *
 
 logger = logging.getLogger(__name__)
@@ -50,7 +48,7 @@ def ner_samples_from_json(input_file: FileStreamer) -> Iterable[GenNERSampleWrap
     for sample in json.load(input_file.fp):
         sample = GenNERSampleWrapper.model_validate(sample)
         if not sample.instance.words or not sample.instance.labels or not sample.label_list:
-            sample.set_words_labels_by_instruction()
+            sample.set_missing_values(input_file.path)
         yield sample
 
 
@@ -58,7 +56,7 @@ def ner_samples_from_jsonl(input_file: FileStreamer) -> Iterable[GenNERSampleWra
     for sample in input_file:
         sample = GenNERSampleWrapper.model_validate_json(sample)
         if not sample.instance.words or not sample.instance.labels or not sample.label_list:
-            sample.set_words_labels_by_instruction()
+            sample.set_missing_values(input_file.path)
         yield sample
 
 
@@ -378,7 +376,7 @@ def convert_wiki_to_conll(
 
 
 @app.command("convert_json")
-def convert_json_to_conll(
+def convert_json_to_jsonl(
         # env
         project: str = typer.Option(default="chrisdata"),
         job_name: str = typer.Option(default="convert_json_to_conll"),
@@ -387,13 +385,13 @@ def convert_json_to_conll(
         max_workers: int = typer.Option(default=1),
         debugging: bool = typer.Option(default=False),
         # input
-        input_inter: int = typer.Option(default=1),
-        input_batch: int = typer.Option(default=10),
+        input_inter: int = typer.Option(default=10000),
+        input_total: int = typer.Option(default=105659),
         input_file: str = typer.Argument(default=...),
         # input_file = "input/GNER/pile-ner.json"
         # output
-        output_dir: str = typer.Argument(default=...),
-        # output_dir = "input/GNER/pilener"
+        output_file: str = typer.Argument(default=...),
+        # output_dir = "input/GNER/pile-ner.jsonl"
 ):
     env = ProjectEnv(
         project=project,
@@ -406,7 +404,6 @@ def convert_json_to_conll(
         max_workers=1 if debugging else max(max_workers, 1),
     )
     input_opt = InputOption(
-        batch=input_batch if not debugging else 1,
         inter=input_inter if not debugging else 1,
         file=FileOption.from_path(
             path=input_file,
@@ -415,8 +412,9 @@ def convert_json_to_conll(
     )
     output_opt = OutputOption(
         file=FileOption.from_path(
-            path=output_dir,
-            name=new_path(output_dir, post=env.time_stamp).name,
+            path=output_file,
+            name=new_path(output_file, post=env.time_stamp).name,
+            mode="w",
         ),
     )
     args = IOArguments(
@@ -431,19 +429,12 @@ def convert_json_to_conll(
     with (
         JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
         FileStreamer(args.input.file) as input_file,
-        FileStreamer(args.output.file) as output_dir,
+        FileStreamer(args.output.file) as output_file,
     ):
-        # print(output_dir.path / "label.txt")
-        # print(output_dir.path / "train.txt")
-        # print(output_dir.path / "dev.txt")
-        # print(output_dir.path / "test.txt")
-        grouped_samples = grouped(ner_samples(input_file), attrgetter='label_list')
-        num_group = 0
-        for label_list, samples in grouped_samples:
-            num_group += 1
-            print(label_list)
-            for sample in samples:
-                print(sample)
-            print()
-
-        logger.info("Number of groups in grouped_samples: %d", num_group)
+        with tqdm(total=input_total, unit="item", pre="=>", desc="converting", unit_divisor=args.input.inter) as prog:
+            for sample in ner_samples(input_file):
+                output_file.fp.write(sample.model_dump_json() + "\n")
+                prog.update()
+                if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
+                    logger.info(prog)
+        logger.info("Number of samples in output_file: %d", prog.n)

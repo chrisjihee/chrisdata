@@ -1,5 +1,6 @@
 import logging
 import re
+from pathlib import Path
 
 from pydantic import BaseModel
 
@@ -54,7 +55,7 @@ class GenNERSampleWrapper(BaseModel):
     label_list: list[str] = None
     instance: GenNERSample
 
-    def set_words_labels_by_instruction(self):
+    def set_missing_values(self, path: Path | str = None):
         instruction_lines = self.instance.instruction_inputs.splitlines()
         label_list, sentence = instruction_lines[-2:]
         label_list = label_list.split("Use the specific entity tags:")[-1].strip()
@@ -67,6 +68,10 @@ class GenNERSampleWrapper(BaseModel):
         labels = self.instance.prompt_labels
         labels = [g[1] for g in bio_tag_pattern.findall(labels)]
         self.instance.labels = labels
+
+        self.id = self.instance.id = self.id or self.instance.id
+        if self.dataset == "unknown" and path:
+            self.dataset = Path(path).stem
         return self
 
 
