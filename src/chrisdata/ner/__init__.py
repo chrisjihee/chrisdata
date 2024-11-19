@@ -18,15 +18,15 @@ class EntityRelatedPassages(BaseModel):
     source_url: str
 
 
-class GNER_TrainSample(BaseModel):
+class GenerativeInstance(BaseModel):
     instruction_inputs: str
     prompt_labels: str
 
 
-class GNER_TrainSampleComp(BaseModel):
+class SplitInstance(BaseModel):
     id: str
     split: str
-    instance: GNER_TrainSample
+    instance: GenerativeInstance
 
 
 from . import convert_GNER

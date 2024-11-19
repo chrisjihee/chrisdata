@@ -4,6 +4,7 @@ import time
 from concurrent.futures import ProcessPoolExecutor
 from enum import Enum
 from itertools import groupby, islice
+from pathlib import Path
 from typing import Optional, Iterable, Tuple, List
 from urllib.parse import urljoin
 
@@ -29,49 +30,7 @@ reference_pattern = re.compile("<ref[^>]*>.*?</ref>|<ref[^>]*/>")
 bio_tag_pattern = re.compile("([^ ]+)\(([BIO](-[A-Za-z ]+)?)\)")
 
 
-class GetEntityTextsFn(str, Enum):
-    from_train = "from_train"
-    from_test = "from_test"
-
-    @staticmethod
-    def _get_entity_texts_from_train(input_file: FileStreamer):
-        all_entity_texts = []
-        for sample in json.load(input_file.fp):
-            sample = GNER_TrainSampleComp.model_validate(sample)
-            labels = [g[1] for g in bio_tag_pattern.findall(sample.instance.prompt_labels)]
-            words = sample.instance.instruction_inputs.splitlines()[-1].split("Sentence: ")[-1].split()
-            if len(words) != len(labels):
-                continue
-            entities = bio_to_entities(words, labels)
-            entity_texts = [entity['text'] for entity in entities]
-            all_entity_texts.extend(entity_texts)
-        return all_entity_texts
-
-    @staticmethod
-    def _get_entity_texts_from_test(input_file: FileStreamer):
-        all_entity_texts = []
-        for sample in input_file:
-            sample = json.loads(sample)
-            labels = sample['instance']['labels']
-            words = sample['instance']['words']
-            if len(words) != len(labels):
-                continue
-            entities = bio_to_entities(words, labels)
-            entity_texts = [entity['text'] for entity in entities]
-            all_entity_texts.extend(entity_texts)
-        return all_entity_texts
-
-    def get_entity_texts(self, input_file: FileStreamer):
-        if self == GetEntityTextsFn.from_train:
-            return GetEntityTextsFn._get_entity_texts_from_train(input_file)
-        elif self == GetEntityTextsFn.from_test:
-            return GetEntityTextsFn._get_entity_texts_from_test(input_file)
-        else:
-            raise ValueError(f"Unknown GetEntityTextsFn: {self}")
-
-
 class ExtraOption(BaseModel):
-    get_entity_texts_fn: GetEntityTextsFn
     min_entity_freq: int = 1
     min_entity_chars: int = 3
     min_entity_links: int = 3
@@ -100,6 +59,45 @@ def bio_to_entities(words, labels):
     for entity in entities:
         entity['text'] = ' '.join(entity.pop('words'))
     return entities
+
+
+class EntityTextSource(str, Enum):
+    JSON = ".JSON"
+    JSONL = ".JSONL"
+
+
+def get_entity_texts_from_json(input_file: FileStreamer):
+    for sample in json.load(input_file.fp):
+        sample = SplitInstance.model_validate(sample)
+        labels = [g[1] for g in bio_tag_pattern.findall(sample.instance.prompt_labels)]
+        words = sample.instance.instruction_inputs.splitlines()[-1].split("Sentence: ")[-1].split()
+        yield words, labels
+
+
+def get_entity_texts_from_jsonl(input_file: FileStreamer):
+    for sample in input_file:
+        sample = json.loads(sample)
+        labels = sample['instance']['labels']
+        words = sample['instance']['words']
+        yield words, labels
+
+
+def get_entity_texts(input_file: FileStreamer):
+    suffix = input_file.path.suffix.upper()
+    if suffix == EntityTextSource.JSON:
+        sample_pairs = get_entity_texts_from_json(input_file)
+    elif suffix == EntityTextSource.JSONL:
+        sample_pairs = get_entity_texts_from_jsonl(input_file)
+    else:
+        raise ValueError(f"Unsupported entity_text_source: {suffix}")
+    all_entity_texts = []
+    for words, labels in sample_pairs:
+        if len(words) != len(labels):
+            continue
+        entities = bio_to_entities(words, labels)
+        entity_texts = [entity['text'] for entity in entities]
+        all_entity_texts.extend(entity_texts)
+    return all_entity_texts
 
 
 def entity_texts_to_freq_dict(entity_texts: List[str], extra_opt: ExtraOption):
@@ -205,11 +203,11 @@ def process_many2(item: Iterable[Tuple[int, str]], args: IOArguments, writer: Mo
         writer.table.insert_many(outputs)
 
 
-@app.command()
-def crawl_entity_passage(
+@app.command("crawl_wiki")
+def crawl_wiki_by_entity(
         # env
         project: str = typer.Option(default="chrisdata"),
-        job_name: str = typer.Option(default="crawl_entity_passage"),
+        job_name: str = typer.Option(default="crawl_wiki_by_entity"),
         logging_home: str = typer.Option(default="output/GNER"),
         logging_file: str = typer.Option(default="logging.out"),
         max_workers: int = typer.Option(default=12),
@@ -217,21 +215,16 @@ def crawl_entity_passage(
         # input
         input_inter: int = typer.Option(default=1),
         input_batch: int = typer.Option(default=10),
-        input_file_path: str = typer.Option(default=...),
-        # input_file_path = "input/GNER/pile-ner.json"
-        # input_file_path = "input/GNER/zero-shot-test.jsonl"
+        input_file: str = typer.Argument(default=...),
+        # input_file = "input/GNER/pile-ner.json"
+        # input_file = "input/GNER/zero-shot-test.jsonl"
         # output
-        output_table_reset: bool = typer.Option(default=True),
+        output_file: str = typer.Argument(default=...),
+        # output_file = "output/GNER/wiki_passage_from_pile.jsonl"
+        # output_file = "output/GNER/wiki_passage_from_zero.jsonl"
         output_table_home: str = typer.Option(default="localhost:8800/GNER"),
-        output_table_name: str = typer.Option(default=...),
-        # output_table_name = "inst_tuning_base-from-train"
-        # output_table_name = "inst_tuning_base-from-test"
-        output_file_path: str = typer.Option(default=...),
-        # output_file_path = "output/GNER/inst_tuning_base-from-train.jsonl"
-        # output_file_path = "output/GNER/inst_tuning_base-from-test.jsonl"
+        output_table_reset: bool = typer.Option(default=True),
         # option
-        get_entity_texts_fn: GetEntityTextsFn = typer.Option(default=...),
-        # get_entity_texts_fn = "from_train" or "from_test"
         min_entity_freq: int = typer.Option(default=2),
         min_entity_chars: int = typer.Option(default=3),
         min_entity_links: int = typer.Option(default=3),
@@ -253,26 +246,24 @@ def crawl_entity_passage(
         batch=input_batch if not debugging else 1,
         inter=input_inter if not debugging else 1,
         file=FileOption.from_path(
-            path=input_file_path,
+            path=input_file,
             required=True,
         ),
     )
     output_opt = OutputOption(
         file=FileOption.from_path(
-            path=output_file_path,
-            name=new_path(output_file_path, post=env.time_stamp).name,
+            path=output_file,
+            name=new_path(output_file, post=env.time_stamp).name,
             mode="w",
-            required=True,
         ),
         table=TableOption(
             home=output_table_home,
-            name=output_table_name,
+            name=Path(output_file).stem,
             reset=output_table_reset,
             required=True,
         ),
     )
     extra_opt = ExtraOption(
-        get_entity_texts_fn=get_entity_texts_fn,
         min_entity_freq=min_entity_freq,
         min_entity_chars=min_entity_chars,
         min_entity_links=min_entity_links,
@@ -289,6 +280,7 @@ def crawl_entity_passage(
     tqdm = mute_tqdm_cls()
     assert args.input.file, "input.file is required"
     assert args.output.file, "output.file is required"
+    assert args.output.table, "output.table is required"
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
     with (
@@ -298,7 +290,7 @@ def crawl_entity_passage(
         MongoStreamer(args.output.table) as output_table,
     ):
         # set entity list
-        entity_texts = extra_opt.get_entity_texts_fn.get_entity_texts(input_file)
+        entity_texts = get_entity_texts(input_file)
         logger.info("Number of entities in entity_texts: %d", len(entity_texts))
         entity_freq = entity_texts_to_freq_dict(entity_texts, extra_opt)
         logger.info("Number of entities in entity_freq: %d", len(entity_freq))
@@ -330,25 +322,25 @@ def crawl_entity_passage(
             logger.info(f"Export {prog.n}/{len(entity_list)} rows to [{output_file.opt}]")
 
 
-@app.command()
-def convert_passage_to_conll(
+@app.command("convert_wiki")
+def convert_wiki_to_conll(
         # env
         project: str = typer.Option(default="chrisdata"),
-        job_name: str = typer.Option(default="convert_passage_to_conll"),
+        job_name: str = typer.Option(default="convert_wiki_to_conll"),
         logging_home: str = typer.Option(default="output/GNER"),
         logging_file: str = typer.Option(default="logging.out"),
-        max_workers: int = typer.Option(default=12),
+        max_workers: int = typer.Option(default=1),
         debugging: bool = typer.Option(default=False),
         # input
         input_inter: int = typer.Option(default=1),
         input_batch: int = typer.Option(default=10),
-        input_file_path: str = typer.Argument(default=...),
-        # input_file_path = "output/GNER/inst_tuning_base-from-train.jsonl"
-        # input_file_path = "output/GNER/inst_tuning_base-from-test.jsonl"
+        input_file: str = typer.Argument(default=...),
+        # input_file = "output/GNER/wiki_passage_from_pile.jsonl"
+        # input_file = "output/GNER/wiki_passage_from_zero.jsonl"
         # output
-        output_dir_path: str = typer.Argument(default=...),
-        # output_dir_path = "input/GNER/pile-ner-entity-detection"
-        # output_dir_path = "input/GNER/zero-ner-entity-detection"
+        output_dir: str = typer.Argument(default=...),
+        # output_dir = "input/GNER/wiki_linked_entity_pile"
+        # output_dir = "input/GNER/wiki_linked_entity_zero"
 ):
     env = ProjectEnv(
         project=project,
@@ -364,14 +356,14 @@ def convert_passage_to_conll(
         batch=input_batch if not debugging else 1,
         inter=input_inter if not debugging else 1,
         file=FileOption.from_path(
-            path=input_file_path,
+            path=input_file,
             required=True,
         ),
     )
     output_opt = OutputOption(
         file=FileOption.from_path(
-            path=output_dir_path,
-            name=new_path(output_dir_path, post=env.time_stamp).name,
+            path=output_dir,
+            name=new_path(output_dir, post=env.time_stamp).name,
         ),
     )
     args = IOArguments(
@@ -396,3 +388,71 @@ def convert_passage_to_conll(
         for row in input_file:
             all_passages.extend(EntityRelatedPassages.model_validate_json(row).passages)
         logger.info("Number of passages in all_passages: %d", len(all_passages))
+
+
+@app.command("convert_json")
+def convert_json_to_conll(
+        # env
+        project: str = typer.Option(default="chrisdata"),
+        job_name: str = typer.Option(default="convert_json_to_conll"),
+        logging_home: str = typer.Option(default="output/GNER"),
+        logging_file: str = typer.Option(default="logging.out"),
+        max_workers: int = typer.Option(default=1),
+        debugging: bool = typer.Option(default=False),
+        # input
+        input_inter: int = typer.Option(default=1),
+        input_batch: int = typer.Option(default=10),
+        input_file: str = typer.Argument(default=...),
+        # input_file = "input/GNER/pile-ner.json"
+        # output
+        output_dir: str = typer.Argument(default=...),
+        # output_dir = "input/GNER/pilener"
+):
+    env = ProjectEnv(
+        project=project,
+        job_name=job_name,
+        debugging=debugging,
+        logging_home=logging_home,
+        logging_file=logging_file,
+        message_level=logging.INFO,
+        message_format=LoggingFormat.CHECK_00,  # if not debugging else LoggingFormat.DEBUG_36,
+        max_workers=1 if debugging else max(max_workers, 1),
+    )
+    input_opt = InputOption(
+        batch=input_batch if not debugging else 1,
+        inter=input_inter if not debugging else 1,
+        file=FileOption.from_path(
+            path=input_file,
+            required=True,
+        ),
+    )
+    output_opt = OutputOption(
+        file=FileOption.from_path(
+            path=output_dir,
+            name=new_path(output_dir, post=env.time_stamp).name,
+        ),
+    )
+    args = IOArguments(
+        env=env,
+        input=input_opt,
+        output=output_opt,
+    )
+    tqdm = mute_tqdm_cls()
+    assert args.input.file, "input.file is required"
+    assert args.output.file, "output.file is required"
+
+    with (
+        JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+        FileStreamer(args.input.file) as input_file,
+        FileStreamer(args.output.file) as output_dir,
+    ):
+        # print(output_dir.path / "label.txt")
+        # print(output_dir.path / "train.txt")
+        # print(output_dir.path / "dev.txt")
+        # print(output_dir.path / "test.txt")
+        all_samples = []
+        for sample in json.load(input_file.fp):
+            sample = SplitInstance.model_validate(sample)
+            print(sample)
+            all_samples.append(sample)
+        logger.info("Number of samples in all_samples: %d", len(all_samples))
