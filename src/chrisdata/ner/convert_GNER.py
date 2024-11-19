@@ -9,6 +9,7 @@ from typing import Optional, Iterable, Tuple, List
 from urllib.parse import urljoin
 
 import httpx
+import rich
 import typer
 from bs4 import BeautifulSoup
 
@@ -27,7 +28,6 @@ bold2_pattern = re.compile("''([^']+)''")
 special_pattern1 = re.compile("{{.+?}}")
 special_pattern2 = re.compile("{{[^}]+?}}")
 reference_pattern = re.compile("<ref[^>]*>.*?</ref>|<ref[^>]*/>")
-bio_tag_pattern = re.compile("([^ ]+)\(([BIO](-[A-Za-z ]+)?)\)")
 
 
 class ExtraOption(BaseModel):
@@ -41,59 +41,46 @@ class ExtraOption(BaseModel):
     min_passage_length: int = 100
 
 
-def bio_to_entities(words, labels):
-    # BIO notation
-    pairs = zip(words, labels)
-    # convert BIO notation to NER format
-    entities = []
-    entity = None
-    for word, label in pairs:
-        if label == 'O':
-            entity = None
-            continue
-        if label.startswith('B-'):
-            entity = {'type': label[2:], 'words': [word]}
-            entities.append(entity)
-        elif label.startswith('I-') and entity:
-            entity['words'].append(word)
-    for entity in entities:
-        entity['text'] = ' '.join(entity.pop('words'))
-    return entities
-
-
 class EntityTextSource(str, Enum):
     JSON = ".JSON"
     JSONL = ".JSONL"
 
 
-def get_entity_texts_from_json(input_file: FileStreamer):
+def ner_samples_from_json(input_file: FileStreamer) -> Iterable[GenNERSampleWrapper]:
     for sample in json.load(input_file.fp):
-        sample = SplitInstance.model_validate(sample)
-        labels = [g[1] for g in bio_tag_pattern.findall(sample.instance.prompt_labels)]
-        words = sample.instance.instruction_inputs.splitlines()[-1].split("Sentence: ")[-1].split()
-        yield words, labels
+        sample = GenNERSampleWrapper.model_validate(sample)
+        if not sample.instance.words or not sample.instance.labels or not sample.label_list:
+            sample.set_words_labels_by_instruction()
+        yield sample
 
 
-def get_entity_texts_from_jsonl(input_file: FileStreamer):
+def ner_samples_from_jsonl(input_file: FileStreamer) -> Iterable[GenNERSampleWrapper]:
     for sample in input_file:
-        sample = json.loads(sample)
-        labels = sample['instance']['labels']
-        words = sample['instance']['words']
-        yield words, labels
+        sample = GenNERSampleWrapper.model_validate_json(sample)
+        if not sample.instance.words or not sample.instance.labels or not sample.label_list:
+            sample.set_words_labels_by_instruction()
+        yield sample
+
+
+def ner_samples(input_file: FileStreamer) -> Iterable[GenNERSampleWrapper]:
+    suffix = input_file.path.suffix.upper()
+    if suffix == EntityTextSource.JSON:
+        return ner_samples_from_json(input_file)
+    elif suffix == EntityTextSource.JSONL:
+        return ner_samples_from_jsonl(input_file)
+    else:
+        raise ValueError(f"Unsupported suffix: {suffix}")
+
+
+def valid_words_labels(input_file: FileStreamer):
+    for sample in ner_samples(input_file):
+        if len(sample.instance.words) == len(sample.instance.labels):
+            yield sample.instance.words, sample.instance.labels
 
 
 def get_entity_texts(input_file: FileStreamer):
-    suffix = input_file.path.suffix.upper()
-    if suffix == EntityTextSource.JSON:
-        sample_pairs = get_entity_texts_from_json(input_file)
-    elif suffix == EntityTextSource.JSONL:
-        sample_pairs = get_entity_texts_from_jsonl(input_file)
-    else:
-        raise ValueError(f"Unsupported entity_text_source: {suffix}")
     all_entity_texts = []
-    for words, labels in sample_pairs:
-        if len(words) != len(labels):
-            continue
+    for words, labels in valid_words_labels(input_file):
         entities = bio_to_entities(words, labels)
         entity_texts = [entity['text'] for entity in entities]
         all_entity_texts.extend(entity_texts)
@@ -209,7 +196,7 @@ def crawl_wiki_by_entity(
         project: str = typer.Option(default="chrisdata"),
         job_name: str = typer.Option(default="crawl_wiki_by_entity"),
         logging_home: str = typer.Option(default="output/GNER"),
-        logging_file: str = typer.Option(default="logging.out"),
+        logging_file: str = typer.Option(default="crawl_wiki.out"),
         max_workers: int = typer.Option(default=12),
         debugging: bool = typer.Option(default=False),
         # input
@@ -328,7 +315,7 @@ def convert_wiki_to_conll(
         project: str = typer.Option(default="chrisdata"),
         job_name: str = typer.Option(default="convert_wiki_to_conll"),
         logging_home: str = typer.Option(default="output/GNER"),
-        logging_file: str = typer.Option(default="logging.out"),
+        logging_file: str = typer.Option(default="convert_wiki.out"),
         max_workers: int = typer.Option(default=1),
         debugging: bool = typer.Option(default=False),
         # input
@@ -396,7 +383,7 @@ def convert_json_to_conll(
         project: str = typer.Option(default="chrisdata"),
         job_name: str = typer.Option(default="convert_json_to_conll"),
         logging_home: str = typer.Option(default="output/GNER"),
-        logging_file: str = typer.Option(default="logging.out"),
+        logging_file: str = typer.Option(default="convert_json.out"),
         max_workers: int = typer.Option(default=1),
         debugging: bool = typer.Option(default=False),
         # input
@@ -450,9 +437,17 @@ def convert_json_to_conll(
         # print(output_dir.path / "train.txt")
         # print(output_dir.path / "dev.txt")
         # print(output_dir.path / "test.txt")
-        all_samples = []
-        for sample in json.load(input_file.fp):
-            sample = SplitInstance.model_validate(sample)
+        # all_labels = set()
+        all_pairs = []
+        for sample in ner_samples(input_file):
             print(sample)
-            all_samples.append(sample)
-        logger.info("Number of samples in all_samples: %d", len(all_samples))
+            rich.print(sample)
+            exit(1)
+        # for words, labels in valid_words_labels(input_file):
+        #     all_pairs.append((words, labels))
+        # all_labels.update(labels)
+        print(all_pairs[0])
+        # print(len(all_labels))
+        # for a in all_pairs[0]:
+        #     print(a)
+        logger.info("Number of samples in all_samples: %d", len(all_pairs))
