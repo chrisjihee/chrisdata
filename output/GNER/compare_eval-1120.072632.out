@@ -1,0 +1,49 @@
+[11.20 07:26:33] ┇ INFO     ┇ =========================================================================================================================================
+[11.20 07:26:33] ┇ INFO     ┇ [INIT] python /mnt/dat/proj/chrisdata2/src/chrisdata/cli.py ner compare_eval GNER/output/llama3_1b_supervised-base.out GNER/output/llama3_1b_supervised-plus.out GNER/output/llama3_1b_supervised.xlsx
+[11.20 07:26:33] ┇ INFO     ┇ =========================================================================================================================================
+[11.20 07:26:33] ┇ INFO     ┇ -----+--------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------
+[11.20 07:26:33] ┇ INFO     ┇    # | CommonArguments    | value
+[11.20 07:26:33] ┇ INFO     ┇ -----+--------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------
+[11.20 07:26:33] ┇ INFO     ┇    1 | tag                |
+[11.20 07:26:33] ┇ INFO     ┇    2 | env.project        | chrisdata
+[11.20 07:26:33] ┇ INFO     ┇    3 | env.job_name       | convert_json_to_jsonl
+[11.20 07:26:33] ┇ INFO     ┇    4 | env.job_version    |
+[11.20 07:26:33] ┇ INFO     ┇    5 | env.hostname       | chris36
+[11.20 07:26:33] ┇ INFO     ┇    6 | env.hostaddr       | 129.254.181.36
+[11.20 07:26:33] ┇ INFO     ┇    7 | env.time_stamp     | 1120.072632
+[11.20 07:26:33] ┇ INFO     ┇    8 | env.python_path    | /home/chris/miniforge3/envs/chrisdata/bin/python
+[11.20 07:26:33] ┇ INFO     ┇    9 | env.current_dir    | /mnt/dat/proj/chrisdata2/scripts
+[11.20 07:26:33] ┇ INFO     ┇   10 | env.current_file   | /mnt/dat/proj/chrisdata2/src/chrisdata/cli.py
+[11.20 07:26:33] ┇ INFO     ┇   11 | env.working_dir    | /mnt/dat/proj/chrisdata2
+[11.20 07:26:33] ┇ INFO     ┇   12 | env.command_args   | ['ner', 'compare_eval', 'GNER/output/llama3_1b_supervised-base.out', 'GNER/output/llama3_1b_supervised-plus.out', 'GNER/output/llama3_1b_supervised.xlsx']
+[11.20 07:26:33] ┇ INFO     ┇   13 | env.max_workers    | 1
+[11.20 07:26:33] ┇ INFO     ┇   14 | env.calling_sec    | 0.001
+[11.20 07:26:33] ┇ INFO     ┇   15 | env.waiting_sec    | 300.0
+[11.20 07:26:33] ┇ INFO     ┇   16 | env.debugging      | False
+[11.20 07:26:33] ┇ INFO     ┇   17 | env.logging_home   | /mnt/dat/proj/chrisdata2/output/GNER
+[11.20 07:26:33] ┇ INFO     ┇   18 | env.logging_file   | compare_eval-1120.072632.out
+[11.20 07:26:33] ┇ INFO     ┇   19 | env.argument_file  |
+[11.20 07:26:33] ┇ INFO     ┇   20 | env.date_format    | [%m.%d %H:%M:%S]
+[11.20 07:26:33] ┇ INFO     ┇   21 | env.message_level  | 20
+[11.20 07:26:33] ┇ INFO     ┇   22 | env.message_format | %(asctime)s ┇ %(levelname)-8s ┇ %(message)s
+[11.20 07:26:33] ┇ INFO     ┇   23 | time.started       | [11.20 07:26:33]
+[11.20 07:26:33] ┇ INFO     ┇   24 | time.settled       |
+[11.20 07:26:33] ┇ INFO     ┇   25 | time.elapsed       |
+[11.20 07:26:33] ┇ INFO     ┇ -----+--------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------
+[11.20 07:26:33] ┇ INFO     ┇ combine: False
+[11.20 07:26:33] ┇ INFO     ┇ Loading input files: GNER/output/llama3_1b_supervised-base.out, GNER/output/llama3_1b_supervised-plus.out
+[11.20 07:26:33] ┇ INFO     ┇ 1st DataFrame:
+       mit_movie  mit_restaurant  crossner_ai  crossner_literature  crossner_music  crossner_politics  crossner_science  target_average  wiki_passage
+epoch                                                                                                                                                
+1.0     0.858890        0.772798     0.551475             0.616989        0.644760           0.719090          0.648295        0.687471           0.0
+2.0     0.875535        0.785883     0.643120             0.684744        0.762867           0.759266          0.672096        0.740502           0.0
+3.0     0.883769        0.803682     0.650739             0.729502        0.779133           0.801075          0.726447        0.767764           0.0
+[11.20 07:26:33] ┇ INFO     ┇ 2nd DataFrame:
+       mit_movie  mit_restaurant  crossner_ai  crossner_literature  crossner_music  crossner_politics  crossner_science  target_average  wiki_passage
+epoch                                                                                                                                                
+0.99    0.850442        0.761326     0.510434             0.612880        0.660465           0.635376          0.553912        0.654976      0.783826
+1.99    0.875106        0.783926     0.583556             0.636027        0.736790           0.739676          0.590217        0.706471      0.813455
+2.99    0.881527        0.803294     0.632967             0.690618        0.775716           0.759938          0.688595        0.747522      0.834464
+[11.20 07:26:33] ┇ INFO     ┇ =========================================================================================================================================
+[11.20 07:26:33] ┇ INFO     ┇ [EXIT] python /mnt/dat/proj/chrisdata2/src/chrisdata/cli.py ner compare_eval GNER/output/llama3_1b_supervised-base.out GNER/output/llama3_1b_supervised-plus.out GNER/output/llama3_1b_supervised.xlsx ($=00:00:00.095)
+[11.20 07:26:33] ┇ INFO     ┇ =========================================================================================================================================
