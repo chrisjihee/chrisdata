@@ -1,3 +1,4 @@
+import json
 import math
 import time
 from concurrent.futures import ProcessPoolExecutor
@@ -12,7 +13,7 @@ import typer
 from bs4 import BeautifulSoup
 
 from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, CommonArguments
-from chrisbase.io import LoggingFormat, new_path, merge_dicts, key_lines
+from chrisbase.io import LoggingFormat, new_path, merge_dicts, key_lines, glob_dirs
 from chrisbase.util import mute_tqdm_cls, shuffled
 from . import *
 
@@ -370,27 +371,114 @@ def convert_wiki_to_jsonl(
         label_list = [label_name]
         with tqdm(total=len(all_passages), unit="item", pre="=>", desc="converting", unit_divisor=args.input.inter) as prog:
             for i, wiki_passage in enumerate(all_passages):
-                sample_id = f"new_{i}"
+                instance_id = f"new_{i}"
                 instance = GenNERSample.from_wiki_passage(
                     wiki_passage=wiki_passage,
                     label=label_name,
-                    id=sample_id,
+                    id=instance_id,
                 ).set_instruction_prompt(
                     instruction_file=instruction_file,
                     label_list=label_list,
                 )
-                sample = GenNERSampleWrapper(
-                    id=sample_id,
+                wrapped = GenNERSampleWrapper(
+                    id=instance_id,
                     dataset=input_file.path.stem,
                     split=split_name,
                     label_list=label_list,
                     instance=instance,
                 )
-                output_file.fp.write(sample.model_dump_json() + "\n")
+                output_file.fp.write(wrapped.model_dump_json() + "\n")
                 prog.update()
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
         logger.info("Number of samples in output_file: %d", prog.n)
+
+
+@app.command("convert_conll")
+def convert_conll_to_jsonl(
+        # env
+        project: str = typer.Option(default="chrisdata"),
+        job_name: str = typer.Option(default="convert_conll_to_jsonl"),
+        logging_home: str = typer.Option(default="output/GNER"),
+        logging_file: str = typer.Option(default="convert_conll.out"),
+        max_workers: int = typer.Option(default=1),
+        debugging: bool = typer.Option(default=False),
+        # input
+        input_inter: int = typer.Option(default=1000),
+        input_dirs: str = typer.Argument(default=...),
+        instruction_file: str = typer.Option(default="GNER/configs/instruction_configs/instruction.json"),
+        # output
+        output_file: str = typer.Argument(default=...),
+        # option
+        split_name: str = typer.Option(default="train"),  # "train", "dev", "test"
+):
+    env = ProjectEnv(
+        project=project,
+        job_name=job_name,
+        debugging=debugging,
+        logging_home=logging_home,
+        logging_file=logging_file,
+        message_level=logging.INFO,
+        message_format=LoggingFormat.CHECK_00,  # if not debugging else LoggingFormat.DEBUG_36,
+        max_workers=1 if debugging else max(max_workers, 1),
+    )
+    input_opt = InputOption(
+        inter=input_inter if not debugging else 1,
+        file=FileOption.from_path(
+            path=input_dirs,
+        ),
+    )
+    output_opt = OutputOption(
+        file=FileOption.from_path(
+            path=output_file,
+            name=new_path(output_file, post=env.time_stamp).name,
+            mode="w",
+        ),
+    )
+    args = IOArguments(
+        env=env,
+        input=input_opt,
+        output=output_opt,
+    )
+    tqdm = mute_tqdm_cls(desc_size=25)
+    assert args.input.file, "input.file is required"
+    assert args.output.file, "output.file is required"
+
+    with (
+        JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+        FileStreamer(args.input.file) as input_dirs,
+        FileStreamer(args.output.file) as output_file,
+    ):
+        logger.info("split_name: %s", split_name)
+        num_outputs = 0
+        dataset_builder = GNERDataset()
+        for dataset_dir in glob_dirs(input_dirs.path.parent, input_dirs.path.name):
+            dataset_path = dataset_dir / Path(split_name).with_suffix(".txt")
+            labels_path = dataset_dir / Path("label").with_suffix(".txt")
+            if dataset_path.exists() and labels_path.exists():
+                instances, label_list = dataset_builder._load_dataset(dataset_path, labels_path)
+                with tqdm(total=len(instances), unit="item", pre="=>", desc=dataset_dir.stem, unit_divisor=args.input.inter) as prog:
+                    for instance in instances:
+                        instance_id = f"{instance.pop('id')}"
+                        instance = GenNERSample.model_validate(
+                            merge_dicts({"id": f"{instance_id}"}, instance)
+                        ).set_instruction_prompt(
+                            instruction_file=instruction_file,
+                            label_list=label_list,
+                        )
+                        wrapped = GenNERSampleWrapper(
+                            id=instance_id,
+                            dataset=dataset_dir.stem,
+                            split=split_name,
+                            label_list=label_list,
+                            instance=instance,
+                        )
+                        output_file.fp.write(wrapped.model_dump_json() + "\n")
+                        num_outputs += 1
+                        prog.update()
+                        if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
+                            logger.info(prog)
+        logger.info(f"Number of samples in {output_file.path}: %d", num_outputs)
 
 
 @app.command("convert_json")
