@@ -358,14 +358,15 @@ def convert_wiki_to_jsonl(
         FileStreamer(args.input.file) as input_file,
         FileStreamer(args.output.file) as output_file,
     ):
+        logger.info("split_name: %s", split_name)
+        logger.info("label_name: %s", label_name)
+
         all_passages = []
         for row in input_file:
             all_passages.extend(EntityRelatedPassages.model_validate_json(row).passages)
         logger.info("Number of passages in all_passages: %d", len(all_passages))
 
         label_list = [label_name]
-        logger.info("Use label_list: %s", label_list)
-
         with tqdm(total=len(all_passages), unit="item", pre="=>", desc="converting", unit_divisor=args.input.inter) as prog:
             for i, wiki_passage in enumerate(all_passages):
                 sample_id = f"new_{i}"
