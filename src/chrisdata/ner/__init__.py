@@ -75,4 +75,4 @@ class GenNERSampleWrapper(BaseModel):
         return self
 
 
-from . import convert_GNER
+from . import gner
