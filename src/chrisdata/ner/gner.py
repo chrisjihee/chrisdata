@@ -1,4 +1,3 @@
-import json
 import math
 import time
 from concurrent.futures import ProcessPoolExecutor
@@ -17,15 +16,6 @@ from chrisbase.util import mute_tqdm_cls, shuffled
 from . import *
 
 logger = logging.getLogger(__name__)
-file_pattern = re.compile("\[\[File:([^]]+)]]")
-space_pattern = re.compile("  +")
-link2_pattern = re.compile("\[\[([^|\]]+)\|([^]]+)]]")
-link1_pattern = re.compile("\[\[([^]]+)]]")
-bold3_pattern = re.compile("'''([^']+)'''")
-bold2_pattern = re.compile("''([^']+)''")
-special_pattern1 = re.compile("{{.+?}}")
-special_pattern2 = re.compile("{{[^}]+?}}")
-reference_pattern = re.compile("<ref[^>]*>.*?</ref>|<ref[^>]*/>")
 
 
 class ExtraOption(BaseModel):
@@ -48,7 +38,7 @@ def ner_samples_from_json(input_file: FileStreamer) -> Iterable[GenNERSampleWrap
     for sample in json.load(input_file.fp):
         sample = GenNERSampleWrapper.model_validate(sample)
         if not sample.instance.words or not sample.instance.labels or not sample.label_list:
-            sample.set_missing_values(input_file.path)
+            sample.set_missing_values_by_instruction_prompt(input_file.path)
         yield sample
 
 
@@ -56,7 +46,7 @@ def ner_samples_from_jsonl(input_file: FileStreamer) -> Iterable[GenNERSampleWra
     for sample in input_file:
         sample = GenNERSampleWrapper.model_validate_json(sample)
         if not sample.instance.words or not sample.instance.labels or not sample.label_list:
-            sample.set_missing_values(input_file.path)
+            sample.set_missing_values_by_instruction_prompt(input_file.path)
         yield sample
 
 
@@ -201,8 +191,8 @@ def crawl_wiki_by_entity(
         input_inter: int = typer.Option(default=1),
         input_batch: int = typer.Option(default=10),
         input_file: str = typer.Argument(default=...),
-        # input_file = "input/GNER/pile-ner.json"
-        # input_file = "input/GNER/zero-shot-test.jsonl"
+        # input_file = "GNER/data/pile-ner.json"
+        # input_file = "GNER/data/zero-shot-test.jsonl"
         # output
         output_file: str = typer.Argument(default=...),
         # output_file = "output/GNER/wiki_passage_from_pile.jsonl"
@@ -308,24 +298,27 @@ def crawl_wiki_by_entity(
 
 
 @app.command("convert_wiki")
-def convert_wiki_to_conll(
+def convert_wiki_to_jsonl(
         # env
         project: str = typer.Option(default="chrisdata"),
-        job_name: str = typer.Option(default="convert_wiki_to_conll"),
+        job_name: str = typer.Option(default="convert_wiki_to_jsonl"),
         logging_home: str = typer.Option(default="output/GNER"),
         logging_file: str = typer.Option(default="convert_wiki.out"),
         max_workers: int = typer.Option(default=1),
         debugging: bool = typer.Option(default=False),
         # input
-        input_inter: int = typer.Option(default=1),
-        input_batch: int = typer.Option(default=10),
+        input_inter: int = typer.Option(default=1000),
         input_file: str = typer.Argument(default=...),
         # input_file = "output/GNER/wiki_passage_from_pile.jsonl"
         # input_file = "output/GNER/wiki_passage_from_zero.jsonl"
+        instruction_file: str = typer.Option(default="GNER/configs/instruction_configs/instruction.json"),
         # output
-        output_dir: str = typer.Argument(default=...),
-        # output_dir = "input/GNER/wiki_linked_entity_pile"
-        # output_dir = "input/GNER/wiki_linked_entity_zero"
+        output_file: str = typer.Argument(default=...),
+        # output_file = "GNER/data/linked-entity-pile.jsonl"
+        # output_file = "GNER/data/linked-entity-zero.jsonl"
+        # option
+        split_name: str = typer.Option(default="train"),
+        label_name: str = typer.Option(default="LinkedEntity"),
 ):
     env = ProjectEnv(
         project=project,
@@ -338,7 +331,6 @@ def convert_wiki_to_conll(
         max_workers=1 if debugging else max(max_workers, 1),
     )
     input_opt = InputOption(
-        batch=input_batch if not debugging else 1,
         inter=input_inter if not debugging else 1,
         file=FileOption.from_path(
             path=input_file,
@@ -347,8 +339,9 @@ def convert_wiki_to_conll(
     )
     output_opt = OutputOption(
         file=FileOption.from_path(
-            path=output_dir,
-            name=new_path(output_dir, post=env.time_stamp).name,
+            path=output_file,
+            name=new_path(output_file, post=env.time_stamp).name,
+            mode="w",
         ),
     )
     args = IOArguments(
@@ -363,23 +356,46 @@ def convert_wiki_to_conll(
     with (
         JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
         FileStreamer(args.input.file) as input_file,
-        FileStreamer(args.output.file) as output_dir,
+        FileStreamer(args.output.file) as output_file,
     ):
-        # print(output_dir.path / "label.txt")
-        # print(output_dir.path / "train.txt")
-        # print(output_dir.path / "dev.txt")
-        # print(output_dir.path / "test.txt")
         all_passages = []
         for row in input_file:
             all_passages.extend(EntityRelatedPassages.model_validate_json(row).passages)
         logger.info("Number of passages in all_passages: %d", len(all_passages))
+
+        label_list = [label_name]
+        logger.info("Use label_list: %s", label_list)
+
+        with tqdm(total=len(all_passages), unit="item", pre="=>", desc="converting", unit_divisor=args.input.inter) as prog:
+            for i, wiki_passage in enumerate(all_passages):
+                sample_id = f"new_{i}"
+                instance = GenNERSample.from_wiki_passage(
+                    wiki_passage=wiki_passage,
+                    label=label_name,
+                    id=sample_id,
+                ).set_instruction_prompt(
+                    instruction_file=instruction_file,
+                    label_list=label_list,
+                )
+                sample = GenNERSampleWrapper(
+                    id=sample_id,
+                    dataset=input_file.path.stem,
+                    split=split_name,
+                    label_list=label_list,
+                    instance=instance,
+                )
+                output_file.fp.write(sample.model_dump_json() + "\n")
+                prog.update()
+                if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
+                    logger.info(prog)
+        logger.info("Number of samples in output_file: %d", prog.n)
 
 
 @app.command("convert_json")
 def convert_json_to_jsonl(
         # env
         project: str = typer.Option(default="chrisdata"),
-        job_name: str = typer.Option(default="convert_json_to_conll"),
+        job_name: str = typer.Option(default="convert_json_to_jsonl"),
         logging_home: str = typer.Option(default="output/GNER"),
         logging_file: str = typer.Option(default="convert_json.out"),
         max_workers: int = typer.Option(default=1),
@@ -391,7 +407,7 @@ def convert_json_to_jsonl(
         # input_file = "input/GNER/pile-ner.json"
         # output
         output_file: str = typer.Argument(default=...),
-        # output_dir = "input/GNER/pile-ner.jsonl"
+        # output_file = "input/GNER/pile-ner.jsonl"
 ):
     env = ProjectEnv(
         project=project,

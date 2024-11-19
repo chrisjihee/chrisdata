@@ -1,16 +1,34 @@
 import logging
+import random
 import re
 from pathlib import Path
 
 from pydantic import BaseModel
 
 from chrisbase.data import AppTyper
+from .gner_dataset import GNERDataset, GNERConfig
 
 app = AppTyper()
 logger = logging.getLogger(__name__)
-entity_text_pattern = re.compile(r'[A-Za-z ]+')
-bio_tag_pattern = re.compile("([^ ]+)\(([BIO](-[A-Za-z ]+)?)\)")
 
+# NER patterns
+bio_tag_pattern = re.compile("([^ ]+)\(([BIO](-[A-Za-z ]+)?)\)")
+entity_text_pattern = re.compile(r'[A-Za-z ]+')
+
+# Wiki patterns
+file_pattern = re.compile("\[\[File:([^]]+)]]")
+space_pattern = re.compile("  +")
+link2_pattern = re.compile("\[\[([^|\]]+)\|([^]]+)]]")
+link1_pattern = re.compile("\[\[([^]]+)]]")
+bold3_pattern = re.compile("'''([^']+)'''")
+bold2_pattern = re.compile("''([^']+)''")
+special_pattern1 = re.compile("{{.+?}}")
+special_pattern2 = re.compile("{{[^}]+?}}")
+reference_pattern = re.compile("<ref[^>]*>.*?</ref>|<ref[^>]*/>")
+
+
+# TODO: remove comments! comment_pattern = re.compile("<!--.*?-->")
+# <!--Before adding other occupations, please discuss on the talk page. Do not add unless they are notable per [[MOS:LEADSENTENCE]]-->
 
 def bio_to_entities(words, labels):
     # BIO notation
@@ -44,8 +62,35 @@ class GenNERSample(BaseModel):
     id: str = None
     words: list[str] = None
     labels: list[str] = None
-    instruction_inputs: str
-    prompt_labels: str
+    instruction_inputs: str = None
+    prompt_labels: str = None
+
+    @staticmethod
+    def from_wiki_passage(wiki_passage: str, label: str, id: str = None) -> "GenNERSample":
+        words_labels, prev_end = list(), 0
+        for m in link1_pattern.finditer(wiki_passage):
+            words_labels.extend([(w, 'O') for w in wiki_passage[prev_end: m.start()].split()])
+            words_labels.extend([(w, f'B-{label}' if i == 0 else f'I-{label}') for i, w in enumerate(m.group(1).split())])
+            prev_end = m.end()
+        words_labels.extend([(w, 'O') for w in wiki_passage[prev_end:].split()])
+        words, labels = list(zip(*words_labels))
+        return GenNERSample(words=words, labels=labels, id=id)
+
+    def set_instruction_prompt(self, instruction_file: Path | str, label_list: list[str]):
+        words = self.words
+        labels = self.labels
+
+        dataset = GNERDataset()
+        dataset.config = GNERConfig(instruction_file=instruction_file)
+
+        instruction = dataset._get_instruction()
+        random.shuffle(label_list)
+        instruction += f"\nUse the specific entity tags: {', '.join(label_list)} and O.\n"
+        instruction += "Sentence: " + " ".join(words)
+        self.instruction_inputs = instruction
+        self.prompt_labels = dataset._generate_labeled_string(words, labels)
+
+        return self
 
 
 class GenNERSampleWrapper(BaseModel):
@@ -55,7 +100,7 @@ class GenNERSampleWrapper(BaseModel):
     label_list: list[str] = None
     instance: GenNERSample
 
-    def set_missing_values(self, path: Path | str = None):
+    def set_missing_values_by_instruction_prompt(self, path: Path | str = None):
         instruction_lines = self.instance.instruction_inputs.splitlines()
         label_list, sentence = instruction_lines[-2:]
         label_list = label_list.split("Use the specific entity tags:")[-1].strip()
