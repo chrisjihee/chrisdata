@@ -1,0 +1,68 @@
+[11.20 08:59:09] ┇ INFO     ┇ =========================================================================================================================================
+[11.20 08:59:09] ┇ INFO     ┇ [INIT] python /mnt/dat/proj/chrisdata2/src/chrisdata/cli.py ner convert_wiki output/GNER/wiki_passage_from_zero-train.jsonl GNER/data/linked-entity-zero-train.jsonl --split-name train
+[11.20 08:59:09] ┇ INFO     ┇ =========================================================================================================================================
+[11.20 08:59:09] ┇ INFO     ┇ -----+----------------------+------------------------------------------------------------------------------------------------------------------------------------------------
+[11.20 08:59:09] ┇ INFO     ┇    # | IOArguments          | value
+[11.20 08:59:09] ┇ INFO     ┇ -----+----------------------+------------------------------------------------------------------------------------------------------------------------------------------------
+[11.20 08:59:09] ┇ INFO     ┇    1 | tag                  |
+[11.20 08:59:09] ┇ INFO     ┇    2 | env.project          | chrisdata
+[11.20 08:59:09] ┇ INFO     ┇    3 | env.job_name         | convert_wiki_to_jsonl
+[11.20 08:59:09] ┇ INFO     ┇    4 | env.job_version      |
+[11.20 08:59:09] ┇ INFO     ┇    5 | env.hostname         | chris36
+[11.20 08:59:09] ┇ INFO     ┇    6 | env.hostaddr         | 129.254.181.36
+[11.20 08:59:09] ┇ INFO     ┇    7 | env.time_stamp       | 1120.085908
+[11.20 08:59:09] ┇ INFO     ┇    8 | env.python_path      | /home/chris/miniforge3/envs/chrisdata/bin/python
+[11.20 08:59:09] ┇ INFO     ┇    9 | env.current_dir      | /mnt/dat/proj/chrisdata2/scripts
+[11.20 08:59:09] ┇ INFO     ┇   10 | env.current_file     | /mnt/dat/proj/chrisdata2/src/chrisdata/cli.py
+[11.20 08:59:09] ┇ INFO     ┇   11 | env.working_dir      | /mnt/dat/proj/chrisdata2
+[11.20 08:59:09] ┇ INFO     ┇   12 | env.command_args     | ['ner', 'convert_wiki', 'output/GNER/wiki_passage_from_zero-train.jsonl', 'GNER/data/linked-entity-zero-train.jsonl', '--split-name', 'train']
+[11.20 08:59:09] ┇ INFO     ┇   13 | env.max_workers      | 1
+[11.20 08:59:09] ┇ INFO     ┇   14 | env.calling_sec      | 0.001
+[11.20 08:59:09] ┇ INFO     ┇   15 | env.waiting_sec      | 300.0
+[11.20 08:59:09] ┇ INFO     ┇   16 | env.debugging        | False
+[11.20 08:59:09] ┇ INFO     ┇   17 | env.logging_home     | /mnt/dat/proj/chrisdata2/output/GNER
+[11.20 08:59:09] ┇ INFO     ┇   18 | env.logging_file     | convert_wiki-1120.085908.out
+[11.20 08:59:09] ┇ INFO     ┇   19 | env.argument_file    |
+[11.20 08:59:09] ┇ INFO     ┇   20 | env.date_format      | [%m.%d %H:%M:%S]
+[11.20 08:59:09] ┇ INFO     ┇   21 | env.message_level    | 20
+[11.20 08:59:09] ┇ INFO     ┇   22 | env.message_format   | %(asctime)s ┇ %(levelname)-8s ┇ %(message)s
+[11.20 08:59:09] ┇ INFO     ┇   23 | time.started         | [11.20 08:59:09]
+[11.20 08:59:09] ┇ INFO     ┇   24 | time.settled         |
+[11.20 08:59:09] ┇ INFO     ┇   25 | time.elapsed         |
+[11.20 08:59:09] ┇ INFO     ┇   26 | input.start          | 0.0
+[11.20 08:59:09] ┇ INFO     ┇   27 | input.limit          | -1.0
+[11.20 08:59:09] ┇ INFO     ┇   28 | input.batch          | 1.0
+[11.20 08:59:09] ┇ INFO     ┇   29 | input.inter          | 1000.0
+[11.20 08:59:09] ┇ INFO     ┇   30 | input.data           | nan
+[11.20 08:59:09] ┇ INFO     ┇   31 | input.file.name      | wiki_passage_from_zero-train.jsonl
+[11.20 08:59:09] ┇ INFO     ┇   32 | input.file.home      | output/GNER
+[11.20 08:59:09] ┇ INFO     ┇   33 | input.file.user      |
+[11.20 08:59:09] ┇ INFO     ┇   34 | input.file.pswd      |
+[11.20 08:59:09] ┇ INFO     ┇   35 | input.file.reset     | False
+[11.20 08:59:09] ┇ INFO     ┇   36 | input.file.required  | True
+[11.20 08:59:09] ┇ INFO     ┇   37 | input.file.mode      | rb
+[11.20 08:59:09] ┇ INFO     ┇   38 | input.file.encoding  | utf-8
+[11.20 08:59:09] ┇ INFO     ┇   39 | output.file.name     | linked-entity-zero-train-1120.085908.jsonl
+[11.20 08:59:09] ┇ INFO     ┇   40 | output.file.home     | GNER/data
+[11.20 08:59:09] ┇ INFO     ┇   41 | output.file.user     |
+[11.20 08:59:09] ┇ INFO     ┇   42 | output.file.pswd     |
+[11.20 08:59:09] ┇ INFO     ┇   43 | output.file.reset    | False
+[11.20 08:59:09] ┇ INFO     ┇   44 | output.file.required | False
+[11.20 08:59:09] ┇ INFO     ┇   45 | output.file.mode     | w
+[11.20 08:59:09] ┇ INFO     ┇   46 | output.file.encoding | utf-8
+[11.20 08:59:09] ┇ INFO     ┇ -----+----------------------+------------------------------------------------------------------------------------------------------------------------------------------------
+[11.20 08:59:09] ┇ INFO     ┇ split_name: train
+[11.20 08:59:09] ┇ INFO     ┇ label_name: LinkedEntity
+[11.20 08:59:09] ┇ INFO     ┇ Number of passages in all_passages: 7314
+[11.20 08:59:16] ┇ INFO     ┇ => converting:  14%|██████▊                                           | 1000/7314 [00:06<00:41, 152.61item/s]
+[11.20 08:59:22] ┇ INFO     ┇ => converting:  27%|█████████████▋                                    | 2000/7314 [00:13<00:34, 152.47item/s]
+[11.20 08:59:29] ┇ INFO     ┇ => converting:  41%|████████████████████▌                             | 3000/7314 [00:19<00:28, 153.08item/s]
+[11.20 08:59:35] ┇ INFO     ┇ => converting:  55%|███████████████████████████▎                      | 4000/7314 [00:26<00:21, 155.10item/s]
+[11.20 08:59:42] ┇ INFO     ┇ => converting:  68%|██████████████████████████████████▏               | 5000/7314 [00:32<00:15, 153.60item/s]
+[11.20 08:59:48] ┇ INFO     ┇ => converting:  82%|█████████████████████████████████████████         | 6000/7314 [00:39<00:08, 155.48item/s]
+[11.20 08:59:55] ┇ INFO     ┇ => converting:  96%|███████████████████████████████████████████████▊  | 7000/7314 [00:45<00:02, 155.06item/s]
+[11.20 08:59:57] ┇ INFO     ┇ => converting: 100%|██████████████████████████████████████████████████| 7314/7314 [00:47<00:00, 154.78item/s]
+[11.20 08:59:57] ┇ INFO     ┇ Number of samples in output_file: 7314
+[11.20 08:59:57] ┇ INFO     ┇ =========================================================================================================================================
+[11.20 08:59:57] ┇ INFO     ┇ [EXIT] python /mnt/dat/proj/chrisdata2/src/chrisdata/cli.py ner convert_wiki output/GNER/wiki_passage_from_zero-train.jsonl GNER/data/linked-entity-zero-train.jsonl --split-name train ($=00:00:47.732)
+[11.20 08:59:57] ┇ INFO     ┇ =========================================================================================================================================

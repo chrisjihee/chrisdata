@@ -1,0 +1,66 @@
+[11.20 09:00:49] ┇ INFO     ┇ =========================================================================================================================================
+[11.20 09:00:49] ┇ INFO     ┇ [INIT] python /mnt/dat/proj/chrisdata2/src/chrisdata/cli.py ner convert_wiki output/GNER/wiki_passage_from_zero-dev.jsonl GNER/data/linked-entity-zero-dev.jsonl --split-name validation
+[11.20 09:00:49] ┇ INFO     ┇ =========================================================================================================================================
+[11.20 09:00:50] ┇ INFO     ┇ -----+----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------
+[11.20 09:00:50] ┇ INFO     ┇    # | IOArguments          | value
+[11.20 09:00:50] ┇ INFO     ┇ -----+----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------
+[11.20 09:00:50] ┇ INFO     ┇    1 | tag                  |
+[11.20 09:00:50] ┇ INFO     ┇    2 | env.project          | chrisdata
+[11.20 09:00:50] ┇ INFO     ┇    3 | env.job_name         | convert_wiki_to_jsonl
+[11.20 09:00:50] ┇ INFO     ┇    4 | env.job_version      |
+[11.20 09:00:50] ┇ INFO     ┇    5 | env.hostname         | chris36
+[11.20 09:00:50] ┇ INFO     ┇    6 | env.hostaddr         | 129.254.181.36
+[11.20 09:00:50] ┇ INFO     ┇    7 | env.time_stamp       | 1120.090049
+[11.20 09:00:50] ┇ INFO     ┇    8 | env.python_path      | /home/chris/miniforge3/envs/chrisdata/bin/python
+[11.20 09:00:50] ┇ INFO     ┇    9 | env.current_dir      | /mnt/dat/proj/chrisdata2/scripts
+[11.20 09:00:50] ┇ INFO     ┇   10 | env.current_file     | /mnt/dat/proj/chrisdata2/src/chrisdata/cli.py
+[11.20 09:00:50] ┇ INFO     ┇   11 | env.working_dir      | /mnt/dat/proj/chrisdata2
+[11.20 09:00:50] ┇ INFO     ┇   12 | env.command_args     | ['ner', 'convert_wiki', 'output/GNER/wiki_passage_from_zero-dev.jsonl', 'GNER/data/linked-entity-zero-dev.jsonl', '--split-name', 'validation']
+[11.20 09:00:50] ┇ INFO     ┇   13 | env.max_workers      | 1
+[11.20 09:00:50] ┇ INFO     ┇   14 | env.calling_sec      | 0.001
+[11.20 09:00:50] ┇ INFO     ┇   15 | env.waiting_sec      | 300.0
+[11.20 09:00:50] ┇ INFO     ┇   16 | env.debugging        | False
+[11.20 09:00:50] ┇ INFO     ┇   17 | env.logging_home     | /mnt/dat/proj/chrisdata2/output/GNER
+[11.20 09:00:50] ┇ INFO     ┇   18 | env.logging_file     | convert_wiki-1120.090049.out
+[11.20 09:00:50] ┇ INFO     ┇   19 | env.argument_file    |
+[11.20 09:00:50] ┇ INFO     ┇   20 | env.date_format      | [%m.%d %H:%M:%S]
+[11.20 09:00:50] ┇ INFO     ┇   21 | env.message_level    | 20
+[11.20 09:00:50] ┇ INFO     ┇   22 | env.message_format   | %(asctime)s ┇ %(levelname)-8s ┇ %(message)s
+[11.20 09:00:50] ┇ INFO     ┇   23 | time.started         | [11.20 09:00:50]
+[11.20 09:00:50] ┇ INFO     ┇   24 | time.settled         |
+[11.20 09:00:50] ┇ INFO     ┇   25 | time.elapsed         |
+[11.20 09:00:50] ┇ INFO     ┇   26 | input.start          | 0.0
+[11.20 09:00:50] ┇ INFO     ┇   27 | input.limit          | -1.0
+[11.20 09:00:50] ┇ INFO     ┇   28 | input.batch          | 1.0
+[11.20 09:00:50] ┇ INFO     ┇   29 | input.inter          | 1000.0
+[11.20 09:00:50] ┇ INFO     ┇   30 | input.data           | nan
+[11.20 09:00:50] ┇ INFO     ┇   31 | input.file.name      | wiki_passage_from_zero-dev.jsonl
+[11.20 09:00:50] ┇ INFO     ┇   32 | input.file.home      | output/GNER
+[11.20 09:00:50] ┇ INFO     ┇   33 | input.file.user      |
+[11.20 09:00:50] ┇ INFO     ┇   34 | input.file.pswd      |
+[11.20 09:00:50] ┇ INFO     ┇   35 | input.file.reset     | False
+[11.20 09:00:50] ┇ INFO     ┇   36 | input.file.required  | True
+[11.20 09:00:50] ┇ INFO     ┇   37 | input.file.mode      | rb
+[11.20 09:00:50] ┇ INFO     ┇   38 | input.file.encoding  | utf-8
+[11.20 09:00:50] ┇ INFO     ┇   39 | output.file.name     | linked-entity-zero-dev-1120.090049.jsonl
+[11.20 09:00:50] ┇ INFO     ┇   40 | output.file.home     | GNER/data
+[11.20 09:00:50] ┇ INFO     ┇   41 | output.file.user     |
+[11.20 09:00:50] ┇ INFO     ┇   42 | output.file.pswd     |
+[11.20 09:00:50] ┇ INFO     ┇   43 | output.file.reset    | False
+[11.20 09:00:50] ┇ INFO     ┇   44 | output.file.required | False
+[11.20 09:00:50] ┇ INFO     ┇   45 | output.file.mode     | w
+[11.20 09:00:50] ┇ INFO     ┇   46 | output.file.encoding | utf-8
+[11.20 09:00:50] ┇ INFO     ┇ -----+----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------
+[11.20 09:00:50] ┇ INFO     ┇ split_name: validation
+[11.20 09:00:50] ┇ INFO     ┇ label_name: LinkedEntity
+[11.20 09:00:50] ┇ INFO     ┇ Number of passages in all_passages: 5897
+[11.20 09:00:56] ┇ INFO     ┇ => converting:  17%|████████▍                                         | 1000/5897 [00:06<00:31, 156.06item/s]
+[11.20 09:01:03] ┇ INFO     ┇ => converting:  34%|████████████████▉                                 | 2000/5897 [00:12<00:24, 161.98item/s]
+[11.20 09:01:09] ┇ INFO     ┇ => converting:  51%|█████████████████████████▍                        | 3000/5897 [00:19<00:17, 162.65item/s]
+[11.20 09:01:15] ┇ INFO     ┇ => converting:  68%|█████████████████████████████████▉                | 4000/5897 [00:25<00:11, 162.60item/s]
+[11.20 09:01:21] ┇ INFO     ┇ => converting:  85%|██████████████████████████████████████████▍       | 5000/5897 [00:31<00:05, 160.66item/s]
+[11.20 09:01:27] ┇ INFO     ┇ => converting: 100%|██████████████████████████████████████████████████| 5897/5897 [00:37<00:00, 156.37item/s]
+[11.20 09:01:27] ┇ INFO     ┇ Number of samples in output_file: 5897
+[11.20 09:01:27] ┇ INFO     ┇ =========================================================================================================================================
+[11.20 09:01:27] ┇ INFO     ┇ [EXIT] python /mnt/dat/proj/chrisdata2/src/chrisdata/cli.py ner convert_wiki output/GNER/wiki_passage_from_zero-dev.jsonl GNER/data/linked-entity-zero-dev.jsonl --split-name validation ($=00:00:37.178)
+[11.20 09:01:27] ┇ INFO     ┇ =========================================================================================================================================
