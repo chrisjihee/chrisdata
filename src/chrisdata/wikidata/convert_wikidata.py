@@ -292,6 +292,12 @@ def convert(
             }))
         logger.info(f"Make relation_dict for Wikidata {len(relation_dict)} properties using {input_table.opt}")
 
+        output_relation_dict_path = output_file.path.with_name('relation_dict.xlsx')
+        relation_df = pd.DataFrame.from_dict({k: v.model_dump() for k, v in relation_dict.items()}, orient='index')
+        relation_df.to_excel('output/wikidata/relation_dict.xlsx', index=False)
+        logger.info(f"Save relation_dict to {output_relation_dict_path}")
+        exit(1)
+
         # convert time-sensitive triples
         input_data = args.input.ready_inputs(input_file, total=len(input_file))
         logger.info(f"Convert from [{input_file.opt}, {input_table.opt}]")
