@@ -118,5 +118,6 @@ Data processing tools for data analysis
 
 ## Reference
 
+* https://pypi.org/project/chrisdata/
 * https://github.com/chrisjihee/chrisdata/
 * https://github.com/chrisjihee/chrisbase/
