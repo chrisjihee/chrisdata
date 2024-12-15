@@ -13,14 +13,14 @@ app = AppTyper()
 logger = logging.getLogger(__name__)
 
 # NER patterns
-bio_tag_pattern = re.compile("([^ ]+)\(([BIO](-[A-Za-z ]+)?)\)")
+bio_tag_pattern = re.compile(r"([^ ]+)\(([BIO](-[A-Za-z ]+)?)\)")
 entity_text_pattern = re.compile(r'[A-Za-z ]+')
 
 # Wiki patterns
-file_pattern = re.compile("\[\[File:([^]]+)]]")
-space_pattern = re.compile("  +")
-link2_pattern = re.compile("\[\[([^|\]]+)\|([^]]+)]]")
-link1_pattern = re.compile("\[\[([^]]+)]]")
+file_pattern = re.compile(r"\[\[File:([^]]+)]]")
+space_pattern = re.compile(r"  +")
+link2_pattern = re.compile(r"\[\[([^|\]]+)\|([^]]+)]]")
+link1_pattern = re.compile(r"\[\[([^]]+)]]")
 bold3_pattern = re.compile("'''([^']+)'''")
 bold2_pattern = re.compile("''([^']+)''")
 special_pattern1 = re.compile("{{.+?}}")
