@@ -62,6 +62,17 @@ def ner_samples(input_file: FileStreamer) -> Iterable[GenNERSampleWrapper]:
         raise ValueError(f"Unsupported suffix: {suffix}")
 
 
+def kg_generation_messages(input_file: FileStreamer) -> Iterable[KGGenerationMessage]:
+    for sample in input_file:
+        sample = KGGenerationMessage.model_validate_json(sample)
+        print(sample)
+        for generation_message in sample.generation_messages:
+            print("-" * 50)
+            print(generation_message.content)
+        exit(1)
+        yield sample
+
+
 def valid_words_labels(input_file: FileStreamer):
     for sample in ner_samples(input_file):
         if len(sample.instance.words) == len(sample.instance.labels):
@@ -392,6 +403,67 @@ def convert_wiki_to_jsonl(
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
         logger.info("Number of samples in output_file: %d", prog.n)
+
+
+@app.command("convert_message")
+def convert_message_to_jsonl(
+        # env
+        project: str = typer.Option(default="chrisdata"),
+        job_name: str = typer.Option(default="convert_message_to_jsonl"),
+        logging_home: str = typer.Option(default="output/GNER"),
+        logging_file: str = typer.Option(default="convert_message.out"),
+        max_workers: int = typer.Option(default=1),
+        debugging: bool = typer.Option(default=False),
+        # input
+        input_inter: int = typer.Option(default=1000),
+        input_total: int = typer.Option(default=53220),
+        # input_file: str = typer.Argument(default=...),
+        input_file: str = typer.Argument(default="LLM-based/generation/YAGO3-10/edges_as_text_all-messages-53220@1.jsonl"),
+        # output
+        # output_file: str = typer.Argument(default=...),
+        output_file: str = typer.Argument(default="GNER/data/KG-generation-YAGO3-53220@1.jsonl"),
+):
+    env = ProjectEnv(
+        project=project,
+        job_name=job_name,
+        debugging=debugging,
+        logging_home=logging_home,
+        logging_file=logging_file,
+        message_level=logging.INFO,
+        message_format=LoggingFormat.CHECK_00,  # if not debugging else LoggingFormat.DEBUG_36,
+        max_workers=1 if debugging else max(max_workers, 1),
+    )
+    input_opt = InputOption(
+        inter=input_inter if not debugging else 1,
+        file=FileOption.from_path(
+            path=input_file,
+            required=True,
+        ),
+    )
+    output_opt = OutputOption(
+        file=FileOption.from_path(
+            path=output_file,
+            name=new_path(output_file, post=env.time_stamp).name,
+            mode="w",
+        ),
+    )
+    args = IOArguments(
+        env=env,
+        input=input_opt,
+        output=output_opt,
+    )
+    tqdm = mute_tqdm_cls()
+    assert args.input.file, "input.file is required"
+    assert args.output.file, "output.file is required"
+
+    with (
+        JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+        FileStreamer(args.input.file) as input_file,
+        FileStreamer(args.output.file) as output_file,
+    ):
+        with tqdm(total=input_total, unit="item", pre="=>", desc="converting", unit_divisor=args.input.inter) as prog:
+            for sample in kg_generation_messages(input_file):
+                pass
 
 
 @app.command("convert_conll")

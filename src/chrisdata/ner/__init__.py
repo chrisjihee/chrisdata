@@ -2,7 +2,7 @@ import logging
 import random
 import re
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 from pydantic import BaseModel, Field
 
@@ -119,6 +119,19 @@ class GenNERSampleWrapper(BaseModel):
         if self.dataset == "unknown" and path:
             self.dataset = Path(path).stem
         return self
+
+
+class Message(BaseModel):
+    role: str
+    content: str
+
+
+class KGGenerationMessage(BaseModel):
+    dataset_name: str
+    entity: str
+    triples_by_human: List[Tuple[str, str, str]]
+    generation_level: int
+    generation_messages: List[Message]
 
 
 class GenNERMetrics(BaseModel):
