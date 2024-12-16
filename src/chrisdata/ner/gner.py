@@ -407,11 +407,11 @@ def convert_message_to_jsonl(
         input_inter: int = typer.Option(default=1000),
         input_total: int = typer.Option(default=53220),
         # input_file: str = typer.Argument(default=...),
-        input_file: str = typer.Argument(default="LLM-based/generation/YAGO3-10/edges_as_text_all-messages-53220@1.jsonl"),
+        input_file: str = typer.Argument(default="LLM-based/generation/YAGO3-10/edges_as_text_all-messages-53220@3.jsonl"),
         instruction_file: str = typer.Argument(default="LLM-based/template/generation-KG.txt"),
         # output
         # output_file: str = typer.Argument(default=...),
-        output_file: str = typer.Argument(default="GNER/data/KG-generation-YAGO3-53220@1.jsonl"),
+        output_file: str = typer.Argument(default="GNER/data/KG-generation-YAGO3-53220@3.jsonl"),
 ):
     env = ProjectEnv(
         project=project,
