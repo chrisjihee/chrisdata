@@ -478,9 +478,11 @@ def convert_conll_to_jsonl(
         # input
         input_inter: int = typer.Option(default=1000),
         input_dirs: str = typer.Argument(default=...),
+        # input_dirs: str = "GNER/data/*",
         instruction_file: str = typer.Option(default="GNER/configs/instruction_configs/instruction.json"),
         # output
         output_file: str = typer.Argument(default=...),
+        # output_file: str = "GNER/data/zero-shot-train.jsonl"
         # option
         split_name: str = typer.Option(default="train"),  # "train", "dev", "test"
 ):
