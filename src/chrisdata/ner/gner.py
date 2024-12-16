@@ -4,7 +4,7 @@ import time
 from concurrent.futures import ProcessPoolExecutor
 from enum import Enum
 from itertools import groupby, islice
-from typing import Optional, Iterable, Tuple
+from typing import Optional, Iterable
 from urllib.parse import urljoin
 
 import httpx
@@ -454,9 +454,8 @@ def convert_message_to_jsonl(
         FileStreamer(args.output.file) as output_file,
     ):
         with tqdm(total=input_total, unit="item", pre="=>", desc="converting", unit_divisor=args.input.inter) as prog:
-            for sample in input_file:
+            for sample_idx, sample in enumerate(input_file):
                 sample = KGGenerationMessage.model_validate_json(sample)
-                # print(sample)
                 # instruction = [x.content for x in sample.generation_messages][-1]
                 instruction = "\n".join([x.content for x in sample.generation_messages])
                 prompt_labels = response_template.format(
@@ -468,10 +467,22 @@ def convert_message_to_jsonl(
                         }, indent=2, ensure_ascii=False,
                     ))
                 )
-                new_sample = GenSeq2SeqSample(instruction_inputs=instruction, prompt_labels=prompt_labels)
-                print("-" * 80)
-                print(new_sample)
-                exit(1)
+                instance_id = f"new_{sample_idx}"
+                wrapped = GenSeq2SeqSampleWrapper(
+                    id=instance_id,
+                    dataset=sample.dataset_name,
+                    split="train",
+                    instance=GenSeq2SeqSample(
+                        id=instance_id,
+                        instruction_inputs=instruction,
+                        prompt_labels=prompt_labels
+                    )
+                )
+                output_file.fp.write(wrapped.model_dump_json() + "\n")
+                prog.update()
+                if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
+                    logger.info(prog)
+        logger.info("Number of samples in output_file: %d", prog.n)
 
 
 @app.command("convert_conll")
