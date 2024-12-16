@@ -13,7 +13,7 @@ import typer
 from bs4 import BeautifulSoup
 
 from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, CommonArguments
-from chrisbase.io import LoggingFormat, new_path, merge_dicts, key_lines, glob_dirs
+from chrisbase.io import LoggingFormat, new_path, merge_dicts, key_lines, glob_dirs, normalize_simple_list_in_json
 from chrisbase.util import mute_tqdm_cls, shuffled
 from . import *
 
@@ -60,17 +60,6 @@ def ner_samples(input_file: FileStreamer) -> Iterable[GenNERSampleWrapper]:
         return ner_samples_from_jsonl(input_file)
     else:
         raise ValueError(f"Unsupported suffix: {suffix}")
-
-
-def kg_generation_messages(input_file: FileStreamer) -> Iterable[KGGenerationMessage]:
-    for sample in input_file:
-        sample = KGGenerationMessage.model_validate_json(sample)
-        print(sample)
-        for generation_message in sample.generation_messages:
-            print("-" * 50)
-            print(generation_message.content)
-        exit(1)
-        yield sample
 
 
 def valid_words_labels(input_file: FileStreamer):
@@ -419,6 +408,7 @@ def convert_message_to_jsonl(
         input_total: int = typer.Option(default=53220),
         # input_file: str = typer.Argument(default=...),
         input_file: str = typer.Argument(default="LLM-based/generation/YAGO3-10/edges_as_text_all-messages-53220@1.jsonl"),
+        instruction_file: str = typer.Argument(default="LLM-based/template/generation-KG.txt"),
         # output
         # output_file: str = typer.Argument(default=...),
         output_file: str = typer.Argument(default="GNER/data/KG-generation-YAGO3-53220@1.jsonl"),
@@ -455,6 +445,8 @@ def convert_message_to_jsonl(
     tqdm = mute_tqdm_cls()
     assert args.input.file, "input.file is required"
     assert args.output.file, "output.file is required"
+    instruction_template = Path(instruction_file).read_text()
+    response_template = "<generation>" + instruction_template.split("<generation>")[-1]
 
     with (
         JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
@@ -462,8 +454,24 @@ def convert_message_to_jsonl(
         FileStreamer(args.output.file) as output_file,
     ):
         with tqdm(total=input_total, unit="item", pre="=>", desc="converting", unit_divisor=args.input.inter) as prog:
-            for sample in kg_generation_messages(input_file):
-                pass
+            for sample in input_file:
+                sample = KGGenerationMessage.model_validate_json(sample)
+                # print(sample)
+                # instruction = [x.content for x in sample.generation_messages][-1]
+                instruction = "\n".join([x.content for x in sample.generation_messages])
+                prompt_labels = response_template.format(
+                    generation_form=normalize_simple_list_in_json(json.dumps(
+                        {
+                            "target_entity": sample.entity,
+                            "triples_by_model": sample.triples_by_human,
+                            "number_of_triples": len(sample.triples_by_human),
+                        }, indent=2, ensure_ascii=False,
+                    ))
+                )
+                new_sample = GenSeq2SeqSample(instruction_inputs=instruction, prompt_labels=prompt_labels)
+                print("-" * 80)
+                print(new_sample)
+                exit(1)
 
 
 @app.command("convert_conll")

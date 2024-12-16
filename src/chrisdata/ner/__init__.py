@@ -59,12 +59,19 @@ class EntityRelatedPassages(BaseModel):
     source_url: str
 
 
-class GenNERSample(BaseModel):
+class GenSeq2SeqSample(BaseModel):
+    id: str = None
+    instruction_inputs: str = None
+    prompt_labels: str = None
+
+
+class GenNERSample(GenSeq2SeqSample):
     id: str = None
     words: list[str] = None
     labels: list[str] = None
-    instruction_inputs: str = None
-    prompt_labels: str = None
+
+    # instruction_inputs: str = None
+    # prompt_labels: str = None
 
     @staticmethod
     def from_wiki_passage(wiki_passage: str, label: str, id: str = None) -> "GenNERSample":
@@ -94,7 +101,14 @@ class GenNERSample(BaseModel):
         return self
 
 
-class GenNERSampleWrapper(BaseModel):
+class GenSeq2SeqSampleWrapper(BaseModel):
+    id: str = None
+    dataset: str = "unknown"
+    split: str = "unknown"
+    instance: GenSeq2SeqSample
+
+
+class GenNERSampleWrapper(GenSeq2SeqSampleWrapper):
     id: str = None
     dataset: str = "unknown"
     split: str = "unknown"
