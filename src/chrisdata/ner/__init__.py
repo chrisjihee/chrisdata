@@ -109,9 +109,9 @@ class GenSeq2SeqSampleWrapper(BaseModel):
 
 
 class GenNERSampleWrapper(GenSeq2SeqSampleWrapper):
-    id: str = None
-    dataset: str = "unknown"
-    split: str = "unknown"
+    # id: str = None
+    # dataset: str = "unknown"
+    # split: str = "unknown"
     label_list: list[str] = None
     instance: GenNERSample
 

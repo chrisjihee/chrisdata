@@ -695,7 +695,32 @@ def convert_to_entity_query_samples(
         logger.warning(f"output_file.path={output_file.path}")
         with ProgIter(verbose=2, stream=LoggerWriter(logger), total=len(input_file), desc=f"Convert dataset:") as prog:
             for sample in ner_samples(input_file):
-                output_file.fp.write(sample.model_dump_json() + "\n")
-                # time.sleep(0.001)
+                print(sample.id)
+                print(sample.dataset)
+                print(sample.split)
+                print(sample.label_list)
+                print(sample.instance.id)
+                print(sample.instance.words)
+                print(sample.instance.labels)
+                print("-" * 80)
+                print(sample.instance.instruction_inputs)
+                print("-" * 80)
+                print(sample.instance.prompt_labels)
+                exit(0)
                 prog.step()
         logger.info(f"Number of samples in {output_file.path}: {prog._iter_idx}")
+
+
+sample_X = {
+    "id": "0",
+    "dataset": "crossner_ai",
+    "split": "dev",
+    "label_list": ["metric", "field", "person", "researcher", "programming language", "product", "country", "algorithm", "organization", "task", "location", "university", "conference"],
+    "instance": {
+        "id": "0",
+        "words": ["Here", ",", "accuracy", "is", "measured", "by", "error", "rate", ",", "which", "is", "defined", "as", ":"],
+        "labels": ["O", "O", "B-metric", "O", "O", "O", "B-metric", "I-metric", "O", "O", "O", "O", "O", "O"],
+        "instruction_inputs": "Please analyze the sentence provided, identifying the type of entity for each word on a token-by-token basis.\nOutput format is: word_1(label_1), word_2(label_2), ...\nWe'll use the BIO-format to label the entities, where:\n1. B- (Begin) indicates the start of a named entity.\n2. I- (Inside) is used for words within a named entity but are not the first word.\n3. O (Outside) denotes words that are not part of a named entity.\n\nUse the specific entity tags: metric, field, person, researcher, programming language, product, country, algorithm, organization, task, location, university, conference and O.\nSentence: Here , accuracy is measured by error rate , which is defined as :",
+        "prompt_labels": "Here(O) ,(O) accuracy(B-metric) is(O) measured(O) by(O) error(B-metric) rate(I-metric) ,(O) which(O) is(O) defined(O) as(O) :(O)"
+    }
+}
