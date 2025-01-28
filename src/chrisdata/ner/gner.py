@@ -13,8 +13,9 @@ from bs4 import BeautifulSoup
 from typing_extensions import Annotated
 
 from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, NewProjectEnv, NewIOArguments
-from chrisbase.io import LoggingFormat, new_path, merge_dicts, glob_dirs, normalize_simple_list_in_json
+from chrisbase.io import LoggingFormat, new_path, merge_dicts, glob_dirs, normalize_simple_list_in_json, LoggerWriter
 from chrisbase.util import mute_tqdm_cls, shuffled
+from progiter import ProgIter
 from . import *
 
 logger = logging.getLogger(__name__)
@@ -691,6 +692,10 @@ def convert_to_entity_query_samples(
         FileStreamer(args.input.file) as input_file,
         FileStreamer(args.output.file) as output_file,
     ):
-        logger.warning("convert_to_entity_query_samples")
-        logger.warning(f"input_file.path={input_file.path}")
         logger.warning(f"output_file.path={output_file.path}")
+        with ProgIter(verbose=2, stream=LoggerWriter(logger), total=len(input_file), desc=f"Convert dataset:") as prog:
+            for sample in ner_samples(input_file):
+                output_file.fp.write(sample.model_dump_json() + "\n")
+                # time.sleep(0.001)
+                prog.step()
+        logger.info(f"Number of samples in {output_file.path}: {prog._iter_idx}")
