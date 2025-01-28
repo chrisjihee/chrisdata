@@ -8,12 +8,12 @@ from typing import Optional, Iterable
 from urllib.parse import urljoin
 
 import httpx
-import pandas as pd
 import typer
 from bs4 import BeautifulSoup
+from typing_extensions import Annotated
 
-from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, CommonArguments
-from chrisbase.io import LoggingFormat, new_path, merge_dicts, key_lines, glob_dirs, normalize_simple_list_in_json
+from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, NewProjectEnv, NewIOArguments
+from chrisbase.io import LoggingFormat, new_path, merge_dicts, glob_dirs, normalize_simple_list_in_json
 from chrisbase.util import mute_tqdm_cls, shuffled
 from . import *
 
@@ -637,3 +637,60 @@ def convert_json_to_jsonl(
                 if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
                     logger.info(prog)
         logger.info("Number of samples in output_file: %d", prog.n)
+
+
+@app.command("convert_to_EQ")
+def convert_to_entity_query_samples(
+        # env
+        output_home: Annotated[str, typer.Option("--output_home")] = "output",
+        output_name: Annotated[str, typer.Option("--output_name")] = "GNER",
+        logging_file: Annotated[str, typer.Option("--logging_file")] = "convert_to_eq.out",
+        logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
+        max_workers: Annotated[int, typer.Option("--max_workers")] = 1,
+        debugging: Annotated[bool, typer.Option("--debugging/--no-debugging")] = False,
+        # input
+        input_file: Annotated[str, typer.Argument] = "data/gner/zero-shot-dev.jsonl",
+        # output
+        output_file: Annotated[str, typer.Argument] = "data/gner/entity_query/zero-shot-dev-eq.jsonl",
+):
+    env = NewProjectEnv(
+        output_home=output_home,
+        output_name=output_name,
+        logging_level=logging_level,
+        logging_format=LoggingFormat.CHECK_20,
+        logging_file=logging_file,
+        max_workers=1 if debugging else max(max_workers, 1),
+        debugging=debugging,
+    )
+    input_opt = InputOption(
+        file=FileOption.from_path(
+            path=input_file,
+            required=True,
+        ),
+    )
+    output_opt = OutputOption(
+        file=FileOption.from_path(
+            path=output_file,
+            name=new_path(output_file, post=env.time_stamp).name,
+            mode="w",
+        ),
+    )
+    args = NewIOArguments(
+        env=env,
+        input=input_opt,
+        output=output_opt,
+    )
+    assert args.input.file, "input.file is required"
+    assert args.output.file, "output.file is required"
+
+    with (
+        JobTimer(
+            name=f"python {args.env.current_file} {' '.join(args.env.command_args)}",
+            rt=1, rb=1, rc='=', verbose=True, args=args,
+        ),
+        FileStreamer(args.input.file) as input_file,
+        FileStreamer(args.output.file) as output_file,
+    ):
+        logger.warning("convert_to_entity_query_samples")
+        logger.warning(f"input_file.path={input_file.path}")
+        logger.warning(f"output_file.path={output_file.path}")
