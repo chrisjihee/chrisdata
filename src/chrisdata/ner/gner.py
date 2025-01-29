@@ -649,8 +649,14 @@ def convert_to_entity_query_samples(
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
         max_workers: Annotated[int, typer.Option("--max_workers")] = 1,
         debugging: Annotated[bool, typer.Option("--debugging/--no-debugging")] = False,
-        # input
-        input_file: Annotated[str, typer.Argument] = "data/gner/zero-shot-dev.jsonl",
+        # file paths
+        # input_file: Annotated[str, typer.Argument] = "data/gner/zero-shot-dev.jsonl",
+        # output_file: Annotated[str, typer.Argument] = "data/gner/entity_query/zero-shot-dev-eq.jsonl",
+        # input_file: Annotated[str, typer.Argument] = "data/gner/zero-shot-test.jsonl",
+        # output_file: Annotated[str, typer.Argument] = "data/gner/entity_query/zero-shot-test-eq.jsonl",
+        input_file: Annotated[str, typer.Argument] = "data/gner/zero-shot-train.jsonl",
+        output_file: Annotated[str, typer.Argument] = "data/gner/entity_query/zero-shot-train-eq.jsonl",
+        # other options
         instruction_header: Annotated[str, typer.Option] = strip_lines("""
             Given a sentence, your task is to identify entities for a specific type. Each query asks about one entity type, and the output is a JSON list of entities with their spans (indices in the text).
         """).strip(),
@@ -664,8 +670,6 @@ def convert_to_entity_query_samples(
             {query}
             * output:
         """).lstrip(),
-        # output
-        output_file: Annotated[str, typer.Argument] = "data/gner/entity_query/zero-shot-dev-eq.jsonl",
 ):
     env = NewProjectEnv(
         output_home=output_home,
