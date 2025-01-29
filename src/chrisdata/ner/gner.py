@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 from typing_extensions import Annotated
 
 from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, NewProjectEnv, NewIOArguments
-from chrisbase.io import LoggingFormat, new_path, merge_dicts, glob_dirs, normalize_simple_list_in_json, LoggerWriter
+from chrisbase.io import LoggingFormat, new_path, merge_dicts, glob_dirs, normalize_simple_list_in_json, LoggerWriter, strip_lines
 from chrisbase.util import mute_tqdm_cls, shuffled
 from progiter import ProgIter
 from . import *
@@ -651,6 +651,19 @@ def convert_to_entity_query_samples(
         debugging: Annotated[bool, typer.Option("--debugging/--no-debugging")] = False,
         # input
         input_file: Annotated[str, typer.Argument] = "data/gner/zero-shot-dev.jsonl",
+        instruction_header: Annotated[str, typer.Option] = strip_lines("""
+            Given a sentence, your task is to identify entities for a specific type. Each query asks about one entity type, and the output is a JSON list of entities with their spans (indices in the text).
+        """).strip(),
+        instruction_template: Annotated[str, typer.Option] = strip_lines("""
+            {header}
+            * label list:
+            {label_list}
+            * sentence:
+            {sentence}
+            * query:
+            {query}
+            * output:
+        """).lstrip(),
         # output
         output_file: Annotated[str, typer.Argument] = "data/gner/entity_query/zero-shot-dev-eq.jsonl",
 ):
@@ -693,23 +706,69 @@ def convert_to_entity_query_samples(
         FileStreamer(args.output.file) as output_file,
     ):
         logger.warning(f"output_file.path={output_file.path}")
+        num_new_samples = 0
         with ProgIter(verbose=2, stream=LoggerWriter(logger), total=len(input_file), desc=f"Convert dataset:") as prog:
             for sample in ner_samples(input_file):
-                print(sample.id)
-                print(sample.dataset)
-                print(sample.split)
-                print(sample.label_list)
-                print(sample.instance.id)
-                print(sample.instance.words)
-                print(sample.instance.labels)
-                print("-" * 80)
-                print(sample.instance.instruction_inputs)
-                print("-" * 80)
-                print(sample.instance.prompt_labels)
-                exit(0)
+                queries = []
+                for entity_type in sample.label_list:
+                    entities = []
+                    current_span = []
+                    current_entity = []
+                    for i, (word, label) in enumerate(zip(sample.instance.words, sample.instance.labels)):
+                        if label == 'B-' + entity_type:
+                            if current_entity:
+                                entities.append({"entity": " ".join(current_entity), "span": current_span})
+                            current_entity = [word]
+                            current_span = [i]
+                        elif label == 'I-' + entity_type:
+                            current_entity.append(word)
+                            current_span.append(i)
+                        else:
+                            if current_entity:
+                                entities.append({"entity": " ".join(current_entity), "span": current_span})
+                            current_entity = []
+                            current_span = []
+                    if current_entity:
+                        entities.append({"entity": " ".join(current_entity), "span": current_span})
+                        current_entity = []
+                        current_span = []
+                    queries.append({
+                        "label_list": sample.label_list,
+                        "sentence": " ".join(sample.instance.words),
+                        "query": f"Identify '{entity_type}' entities in the sentence in a JSON list format.",
+                        "entities": entities,
+                    })
+                # print(f"sample.id={sample.id}")
+                # print(f"sample.dataset={sample.dataset}")
+                # print(f"sample.split={sample.split}")
+                # print(f"sample.label_list={sample.label_list}")
+                # print(f"sample.instance.id={sample.instance.id}")
+                # print(f"sample.instance.words={sample.instance.words}")
+                # print(f"sample.instance.labels={sample.instance.labels}")
+                # print(f"sample.instance.instruction_inputs=\n{'-' * 80}\n{sample.instance.instruction_inputs}\n{'-' * 80}")
+                # print(f"sample.instance.prompt_labels=\n{sample.instance.prompt_labels}")
+                for i, query in enumerate(queries):
+                    instruction_inputs = instruction_template.format(header=instruction_header, **query)
+                    prompt_labels = json.dumps(query["entities"], ensure_ascii=False)
+                    # print(f"new_instruction_inputs=\n{'-' * 80}\n{instruction_inputs}\n{'-' * 80}")
+                    # print(f"new_prompt_labels=\n{prompt_labels}")
+                    new_sample = GenNERSampleWrapper(
+                        id=f"{sample.id}.{i}",
+                        dataset=sample.dataset,
+                        split=sample.split,
+                        label_list=sample.label_list,
+                        instance=GenNERSample(
+                            id=f"{sample.instance.id}.{i}",
+                            words=sample.instance.words,
+                            labels=sample.instance.labels,
+                            instruction_inputs=instruction_inputs,
+                            prompt_labels=prompt_labels,
+                        )
+                    )
+                    num_new_samples += 1
+                    output_file.fp.write(new_sample.model_dump_json() + "\n")
                 prog.step()
-        logger.info(f"Number of samples in {output_file.path}: {prog._iter_idx}")
-
+        logger.info(f"Number of new samples in {output_file.path}: {num_new_samples}")
 
 sample_X = {
     "id": "0",
@@ -723,4 +782,18 @@ sample_X = {
         "instruction_inputs": "Please analyze the sentence provided, identifying the type of entity for each word on a token-by-token basis.\nOutput format is: word_1(label_1), word_2(label_2), ...\nWe'll use the BIO-format to label the entities, where:\n1. B- (Begin) indicates the start of a named entity.\n2. I- (Inside) is used for words within a named entity but are not the first word.\n3. O (Outside) denotes words that are not part of a named entity.\n\nUse the specific entity tags: metric, field, person, researcher, programming language, product, country, algorithm, organization, task, location, university, conference and O.\nSentence: Here , accuracy is measured by error rate , which is defined as :",
         "prompt_labels": "Here(O) ,(O) accuracy(B-metric) is(O) measured(O) by(O) error(B-metric) rate(I-metric) ,(O) which(O) is(O) defined(O) as(O) :(O)"
     }
+}
+
+sample_Y = {
+    "id": "1520.7",
+    "dataset": "mit-restaurant",
+    "split": "dev",
+    "instance": {
+        "id": "1520.7",
+        "instruction_inputs": "Given a sentence, your task is to identify entities for a specific type. Each query asks about one entity type, and the output is a JSON list of entities with their spans (indices in the text).\n* label list:\n['Price', 'Location', 'Dish', 'Cuisine', 'Amenity', 'Hours', 'Restaurant Name', 'Rating']\n* sentence:\nyou can help me with some onion rings\n* query:\nIdentify 'Rating' entities in the sentence in a JSON list format.\n* output:\n",
+        "prompt_labels": "[]",
+        "words": ["you", "can", "help", "me", "with", "some", "onion", "rings"],
+        "labels": ["O", "O", "O", "O", "O", "O", "B-Dish", "I-Dish"]
+    },
+    "label_list": ["Price", "Location", "Dish", "Cuisine", "Amenity", "Hours", "Restaurant Name", "Rating"]
 }
