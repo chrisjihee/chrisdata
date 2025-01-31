@@ -633,6 +633,33 @@ def convert_conll_to_jsonl(
         logger.info(f"Number of samples in {output_file.path}: %d", num_outputs)
 
 
+@app.command("sample_jsonl")
+def sample_jsonl_by_dataset(
+        input_file: Annotated[str, typer.Argument()] = "data/gner/each/crossner_ai-dev.jsonl",
+        output_file: Annotated[str, typer.Option("--output_file")] = "",
+        num_samples: Annotated[int, typer.Option("--num_samples")] = 100,
+        verbose: Annotated[int, typer.Option("--verbose")] = 2,
+):
+    env = NewProjectEnv()
+    if not output_file:
+        output_file = new_path(input_file, post=num_samples, sep='=')
+
+    with (
+        JobTimer(name=f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=verbose >= 1),
+        Path(input_file).open() as input_fp,
+        Path(output_file).open("w", encoding="utf-8") as output_fp,
+    ):
+        input_lines = [x.strip() for x in input_fp.readlines() if x.strip()]
+        if len(input_lines) > num_samples:
+            sampled_indices = sorted(random.sample(range(len(input_lines)), num_samples))
+            input_lines = [input_lines[i] for i in sampled_indices]
+        num_outputs = 0
+        for x in input_lines:
+            output_fp.write(x + "\n")
+            num_outputs += 1
+        logger.info(f"Number of samples in {output_file}: %d", num_outputs)
+
+
 @app.command("convert_to_EQ")
 def convert_to_entity_query_samples(
         # env
