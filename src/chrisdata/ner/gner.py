@@ -486,13 +486,76 @@ def convert_message_to_jsonl(
         logger.info("Number of samples in output_file: %d", prog.n)
 
 
+@app.command("convert_json")
+def convert_json_to_jsonl(
+        # env
+        project: str = typer.Option(default="chrisdata"),
+        job_name: str = typer.Option(default="convert_json_to_jsonl"),
+        logging_home: str = typer.Option(default="output/GNER"),
+        logging_file: str = typer.Option(default="convert_json.out"),
+        max_workers: int = typer.Option(default=1),
+        debugging: bool = typer.Option(default=False),
+        # input
+        input_inter: int = typer.Option(default=10000),
+        input_total: int = typer.Option(default=105659),
+        input_file: str = typer.Argument(default=...),
+        # input_file = "input/GNER/pile-ner.json"
+        # output
+        output_file: str = typer.Argument(default=...),
+        # output_file = "input/GNER/pile-ner.jsonl"
+):
+    env = ProjectEnv(
+        project=project,
+        job_name=job_name,
+        debugging=debugging,
+        logging_home=logging_home,
+        logging_file=logging_file,
+        message_level=logging.INFO,
+        message_format=LoggingFormat.CHECK_00,  # if not debugging else LoggingFormat.DEBUG_36,
+        max_workers=1 if debugging else max(max_workers, 1),
+    )
+    input_opt = InputOption(
+        inter=input_inter if not debugging else 1,
+        file=FileOption.from_path(
+            path=input_file,
+            required=True,
+        ),
+    )
+    output_opt = OutputOption(
+        file=FileOption.from_path(
+            path=output_file,
+            name=new_path(output_file, post=env.time_stamp).name,
+            mode="w",
+        ),
+    )
+    args = IOArguments(
+        env=env,
+        input=input_opt,
+        output=output_opt,
+    )
+    tqdm = mute_tqdm_cls()
+    assert args.input.file, "input.file is required"
+    assert args.output.file, "output.file is required"
+
+    with (
+        JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+        FileStreamer(args.input.file) as input_file,
+        FileStreamer(args.output.file) as output_file,
+    ):
+        with tqdm(total=input_total, unit="item", pre="=>", desc="converting", unit_divisor=args.input.inter) as prog:
+            for sample in ner_samples(input_file):
+                output_file.fp.write(sample.model_dump_json() + "\n")
+                prog.update()
+                if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
+                    logger.info(prog)
+        logger.info("Number of samples in output_file: %d", prog.n)
+
+
 @app.command("convert_conll")
 def convert_conll_to_jsonl(
         # argument
         input_dirs: Annotated[str, typer.Argument()] = ...,
         output_file: Annotated[str, typer.Argument()] = ...,
-        # input_dirs: Annotated[str, typer.Argument()] = "data/gner/each/crossner_ai",
-        # output_file: Annotated[str, typer.Argument()] = "data/gner/each/crossner_ai.jsonl",
         # option
         split_name: Annotated[str, typer.Option("--split_name")] = "train",  # "train", "dev", "test"
         instruction_file: Annotated[str, typer.Option("--instruction_file")] = "data/gner/instruction.json",
@@ -570,71 +633,6 @@ def convert_conll_to_jsonl(
         logger.info(f"Number of samples in {output_file.path}: %d", num_outputs)
 
 
-@app.command("convert_json")
-def convert_json_to_jsonl(
-        # env
-        project: str = typer.Option(default="chrisdata"),
-        job_name: str = typer.Option(default="convert_json_to_jsonl"),
-        logging_home: str = typer.Option(default="output/GNER"),
-        logging_file: str = typer.Option(default="convert_json.out"),
-        max_workers: int = typer.Option(default=1),
-        debugging: bool = typer.Option(default=False),
-        # input
-        input_inter: int = typer.Option(default=10000),
-        input_total: int = typer.Option(default=105659),
-        input_file: str = typer.Argument(default=...),
-        # input_file = "input/GNER/pile-ner.json"
-        # output
-        output_file: str = typer.Argument(default=...),
-        # output_file = "input/GNER/pile-ner.jsonl"
-):
-    env = ProjectEnv(
-        project=project,
-        job_name=job_name,
-        debugging=debugging,
-        logging_home=logging_home,
-        logging_file=logging_file,
-        message_level=logging.INFO,
-        message_format=LoggingFormat.CHECK_00,  # if not debugging else LoggingFormat.DEBUG_36,
-        max_workers=1 if debugging else max(max_workers, 1),
-    )
-    input_opt = InputOption(
-        inter=input_inter if not debugging else 1,
-        file=FileOption.from_path(
-            path=input_file,
-            required=True,
-        ),
-    )
-    output_opt = OutputOption(
-        file=FileOption.from_path(
-            path=output_file,
-            name=new_path(output_file, post=env.time_stamp).name,
-            mode="w",
-        ),
-    )
-    args = IOArguments(
-        env=env,
-        input=input_opt,
-        output=output_opt,
-    )
-    tqdm = mute_tqdm_cls()
-    assert args.input.file, "input.file is required"
-    assert args.output.file, "output.file is required"
-
-    with (
-        JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
-        FileStreamer(args.input.file) as input_file,
-        FileStreamer(args.output.file) as output_file,
-    ):
-        with tqdm(total=input_total, unit="item", pre="=>", desc="converting", unit_divisor=args.input.inter) as prog:
-            for sample in ner_samples(input_file):
-                output_file.fp.write(sample.model_dump_json() + "\n")
-                prog.update()
-                if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
-                    logger.info(prog)
-        logger.info("Number of samples in output_file: %d", prog.n)
-
-
 @app.command("convert_to_EQ")
 def convert_to_entity_query_samples(
         # env
@@ -645,10 +643,6 @@ def convert_to_entity_query_samples(
         max_workers: Annotated[int, typer.Option("--max_workers")] = 1,
         debugging: Annotated[bool, typer.Option("--debugging/--no-debugging")] = False,
         # file paths
-        # input_file: Annotated[str, typer.Argument] = "data/gner/zero-shot-dev.jsonl",
-        # output_file: Annotated[str, typer.Argument] = "data/gner/entity_query/zero-shot-dev-eq.jsonl",
-        # input_file: Annotated[str, typer.Argument] = "data/gner/zero-shot-test.jsonl",
-        # output_file: Annotated[str, typer.Argument] = "data/gner/entity_query/zero-shot-test-eq.jsonl",
         input_file: Annotated[str, typer.Argument] = "data/gner/zero-shot-train.jsonl",
         output_file: Annotated[str, typer.Argument] = "data/gner/entity_query/zero-shot-train-eq.jsonl",
         # other options
