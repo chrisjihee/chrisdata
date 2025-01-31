@@ -658,7 +658,7 @@ def convert_to_entity_query_version(
                 for i, (word, label) in enumerate(zip(sample.instance.words, sample.instance.labels)):
                     if label == 'B-' + entity_type:
                         if current_entity:
-                            entities.append({"entity": " ".join(current_entity), "span": current_span})
+                            entities.append(GenNERSampleEntitySpan(entity=" ".join(current_entity), span=current_span))
                         current_entity = [word]
                         current_span = [i]
                     elif label == 'I-' + entity_type:
@@ -666,11 +666,11 @@ def convert_to_entity_query_version(
                         current_span.append(i)
                     else:
                         if current_entity:
-                            entities.append({"entity": " ".join(current_entity), "span": current_span})
+                            entities.append(GenNERSampleEntitySpan(entity=" ".join(current_entity), span=current_span))
                         current_entity = []
                         current_span = []
                 if current_entity:
-                    entities.append({"entity": " ".join(current_entity), "span": current_span})
+                    entities.append(GenNERSampleEntitySpan(entity=" ".join(current_entity), span=current_span))
 
                 queries.append({
                     "label_list": sample.label_list,
@@ -685,7 +685,7 @@ def convert_to_entity_query_version(
             logger.debug(f">> old_prompt_labels={sample.instance.prompt_labels}")
             for i, query in enumerate(queries):
                 instruction_inputs = instruction_template.format(header=instruction_header, **query)
-                prompt_labels = json.dumps(query["entities"], ensure_ascii=False)
+                prompt_labels = json.dumps([x.model_dump() for x in query["entities"]], ensure_ascii=False)
                 logger.debug("\n" * 2)
                 logger.debug("=" * 80)
                 logger.debug(f">> new_instruction_inputs=\n{'-' * 80}\n{instruction_inputs}\n{'-' * 80}")
