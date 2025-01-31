@@ -2,7 +2,7 @@ import logging
 import random
 import re
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from pydantic import BaseModel, Field
 
@@ -67,11 +67,11 @@ class GenSeq2SeqSample(BaseModel):
 
 class GenNERSample(GenSeq2SeqSample):
     id: str = None
-    group: str = None
+    group: Optional[str] = None
     words: list[str] = None
     labels: list[str] = None
-    target_word: str = None
-    target_label: str = None
+    target_word: Optional[str] = None
+    target_label: Optional[str] = None
 
     @staticmethod
     def from_wiki_passage(wiki_passage: str, label: str, id: str = None) -> "GenNERSample":
