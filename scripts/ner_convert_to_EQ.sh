@@ -18,5 +18,6 @@ splits=("train" "test" "dev")
 for dataset in "${datasets[@]}"; do
   for split in "${splits[@]}"; do
     python -m chrisdata.cli ner convert_to_EQ "data/gner/each/$dataset-$split.jsonl"
+    python -m chrisdata.cli ner convert_to_EQ "data/gner/each-sampled/$dataset-$split=100.jsonl"
   done
 done
