@@ -488,6 +488,14 @@ def convert_message_to_jsonl(
 
 @app.command("convert_conll")
 def convert_conll_to_jsonl(
+        # argument
+        input_dirs: Annotated[str, typer.Argument()] = ...,
+        output_file: Annotated[str, typer.Argument()] = ...,
+        # input_dirs: Annotated[str, typer.Argument()] = "data/gner/each/crossner_ai",
+        # output_file: Annotated[str, typer.Argument()] = "data/gner/each/crossner_ai.jsonl",
+        # option
+        instruction_file: Annotated[str, typer.Option("--instruction_file")] = "data/gner/instruction.json",
+        split_name: Annotated[str, typer.Option("--split_name")] = "train",  # "train", "dev", "test"
         # env
         output_home: Annotated[str, typer.Option("--output_home")] = "output",
         output_name: Annotated[str, typer.Option("--output_name")] = "GNER",
@@ -495,12 +503,6 @@ def convert_conll_to_jsonl(
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
         max_workers: Annotated[int, typer.Option("--max_workers")] = 1,
         debugging: Annotated[bool, typer.Option("--debugging/--no-debugging")] = False,
-        # file paths
-        input_dirs: Annotated[str, typer.Argument] = "data/gner/each/crossner_ai",
-        output_file: Annotated[str, typer.Argument] = "data/gner/each/crossner_ai.jsonl",
-        instruction_file: Annotated[str, typer.Argument] = "data/gner/instruction.json",
-        # option
-        split_name: str = typer.Option(default="train"),  # "train", "dev", "test"
 ):
     env = NewProjectEnv(
         output_home=output_home,
