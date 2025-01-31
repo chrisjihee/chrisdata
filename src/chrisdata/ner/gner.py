@@ -596,7 +596,7 @@ def convert_conll_to_jsonl(
 
 
 @app.command("sample_jsonl")
-def sample_jsonl_by_dataset(
+def sample_jsonl_lines(
         input_file: Annotated[str, typer.Argument()] = ...,
         output_file: Annotated[str, typer.Option("--output_file")] = "",
         num_samples: Annotated[int, typer.Option("--num_samples")] = 100,
@@ -622,8 +622,8 @@ def sample_jsonl_by_dataset(
 
 @app.command("convert_to_EQ")
 def convert_to_entity_query_version(
-        input_file: Annotated[str, typer.Argument()] = ...,  # "data/gner/zero-shot-train.jsonl",
-        output_file: Annotated[str, typer.Option("--output_file")] = "",  # "data/gner/entity_query/zero-shot-train-eq.jsonl",
+        input_file: Annotated[str, typer.Argument()] = ...,  # "data/gner/each/crossner_ai-train.jsonl",
+        output_file: Annotated[str, typer.Option("--output_file")] = "",
         instruction_header: Annotated[str, typer.Option] = strip_lines("""
             Given a sentence, your task is to identify entities for a specific type. Each query asks about one entity type, and the output is a JSON list of entities with their spans (indices in the text).
         """).strip(),
@@ -680,6 +680,7 @@ def convert_to_entity_query_version(
                 })
             logger.debug("\n" * 5)
             logger.debug(f">> old_sample_id={sample.id}")
+            logger.debug(f">> old_instruction_inputs=\n{sample.instance.instruction_inputs}")
             logger.debug(f">> old_prompt_labels={sample.instance.prompt_labels}")
             for i, query in enumerate(queries):
                 instruction_inputs = instruction_template.format(header=instruction_header, **query)
