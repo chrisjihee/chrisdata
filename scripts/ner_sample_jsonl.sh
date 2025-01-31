@@ -17,6 +17,6 @@ splits=("train" "test" "dev")
 # Iterate over each dataset and split
 for dataset in "${datasets[@]}"; do
   for split in "${splits[@]}"; do
-    python -m chrisdata.cli ner sample_jsonl "data/gner/each/$dataset-$split.jsonl"
+    python -m chrisdata.cli ner sample_jsonl "data/gner/each/$dataset-$split.jsonl" --num_samples 100
   done
 done
