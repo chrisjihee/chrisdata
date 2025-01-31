@@ -489,69 +489,63 @@ def convert_message_to_jsonl(
 @app.command("convert_conll")
 def convert_conll_to_jsonl(
         # env
-        project: str = typer.Option(default="chrisdata"),
-        job_name: str = typer.Option(default="convert_conll_to_jsonl"),
-        logging_home: str = typer.Option(default="output/GNER"),
-        logging_file: str = typer.Option(default="convert_conll.out"),
-        max_workers: int = typer.Option(default=1),
-        debugging: bool = typer.Option(default=False),
-        # input
-        input_inter: int = typer.Option(default=1000),
-        input_dirs: str = typer.Argument(default=...),
-        # input_dirs: str = "GNER/data/*",
-        instruction_file: str = typer.Option(default="GNER/configs/instruction_configs/instruction.json"),
-        # output
-        output_file: str = typer.Argument(default=...),
-        # output_file: str = "GNER/data/zero-shot-train.jsonl"
+        output_home: Annotated[str, typer.Option("--output_home")] = "output",
+        output_name: Annotated[str, typer.Option("--output_name")] = "GNER",
+        logging_file: Annotated[str, typer.Option("--logging_file")] = "convert_conll_to_jsonl.out",
+        logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
+        max_workers: Annotated[int, typer.Option("--max_workers")] = 1,
+        debugging: Annotated[bool, typer.Option("--debugging/--no-debugging")] = False,
+        # file paths
+        input_dirs: Annotated[str, typer.Argument] = "data/gner/each/crossner_ai",
+        output_file: Annotated[str, typer.Argument] = "data/gner/each/crossner_ai.jsonl",
+        instruction_file: Annotated[str, typer.Argument] = "data/gner/instruction.json",
         # option
         split_name: str = typer.Option(default="train"),  # "train", "dev", "test"
 ):
-    env = ProjectEnv(
-        project=project,
-        job_name=job_name,
-        debugging=debugging,
-        logging_home=logging_home,
+    env = NewProjectEnv(
+        output_home=output_home,
+        output_name=output_name,
+        logging_level=logging_level,
+        logging_format=LoggingFormat.CHECK_20,
         logging_file=logging_file,
-        message_level=logging.INFO,
-        message_format=LoggingFormat.CHECK_00,  # if not debugging else LoggingFormat.DEBUG_36,
         max_workers=1 if debugging else max(max_workers, 1),
+        debugging=debugging,
     )
     input_opt = InputOption(
-        inter=input_inter if not debugging else 1,
         file=FileOption.from_path(
             path=input_dirs,
         ),
     )
     output_opt = OutputOption(
         file=FileOption.from_path(
-            path=output_file,
-            name=new_path(output_file, post=env.time_stamp).name,
+            path=new_path(output_file, post=split_name),
             mode="w",
         ),
     )
-    args = IOArguments(
+    args = NewIOArguments(
         env=env,
         input=input_opt,
         output=output_opt,
     )
-    tqdm = mute_tqdm_cls(desc_size=25)
     assert args.input.file, "input.file is required"
     assert args.output.file, "output.file is required"
 
     with (
-        JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='),
+        JobTimer(
+            name=f"python {args.env.current_file} {' '.join(args.env.command_args)}",
+            rt=1, rb=1, rc='=', verbose=True, args=args,
+        ),
         FileStreamer(args.input.file) as input_dirs,
         FileStreamer(args.output.file) as output_file,
     ):
-        logger.info("split_name: %s", split_name)
         num_outputs = 0
         dataset_builder = GNERDataset()
         for dataset_dir in glob_dirs(input_dirs.path.parent, input_dirs.path.name):
-            dataset_path = dataset_dir / Path(split_name).with_suffix(".txt")
-            labels_path = dataset_dir / Path("label").with_suffix(".txt")
+            dataset_path = dataset_dir / f"{split_name}.txt"
+            labels_path = dataset_dir / "label.txt"
             if dataset_path.exists() and labels_path.exists():
                 instances, label_list = dataset_builder._load_dataset(dataset_path, labels_path)
-                with tqdm(total=len(instances), unit="item", pre="=>", desc=dataset_dir.stem, unit_divisor=args.input.inter) as prog:
+                with ProgIter(total=len(instances), desc=f"Convert dataset:", stream=LoggerWriter(logger), verbose=2) as prog:
                     for instance in instances:
                         instance_id = f"{instance.pop('id')}"
                         instance = GenNERSample.model_validate(
@@ -569,9 +563,7 @@ def convert_conll_to_jsonl(
                         )
                         output_file.fp.write(wrapped.model_dump_json() + "\n")
                         num_outputs += 1
-                        prog.update()
-                        if prog.n == prog.total or prog.n % prog.unit_divisor == 0:
-                            logger.info(prog)
+                        prog.step()
         logger.info(f"Number of samples in {output_file.path}: %d", num_outputs)
 
 
@@ -689,7 +681,6 @@ def convert_to_entity_query_samples(
     output_opt = OutputOption(
         file=FileOption.from_path(
             path=output_file,
-            name=new_path(output_file, post=env.time_stamp).name,
             mode="w",
         ),
     )
@@ -711,7 +702,7 @@ def convert_to_entity_query_samples(
     ):
         logger.warning(f"output_file.path={output_file.path}")
         num_new_samples = 0
-        with ProgIter(verbose=2, stream=LoggerWriter(logger), total=len(input_file), desc=f"Convert dataset:") as prog:
+        with ProgIter(total=len(input_file), desc=f"Convert dataset:", stream=LoggerWriter(logger), verbose=2) as prog:
             for sample in ner_samples(input_file):
                 queries = []
                 for entity_type in sample.label_list:
@@ -773,6 +764,7 @@ def convert_to_entity_query_samples(
                     output_file.fp.write(new_sample.model_dump_json() + "\n")
                 prog.step()
         logger.info(f"Number of new samples in {output_file.path}: {num_new_samples}")
+
 
 sample_X = {
     "id": "0",
