@@ -635,28 +635,30 @@ def convert_conll_to_jsonl(
 
 @app.command("sample_jsonl")
 def sample_jsonl_by_dataset(
-        input_file: Annotated[str, typer.Argument()] = "data/gner/each/crossner_ai-dev.jsonl",
+        input_file: Annotated[str, typer.Argument()] = ...,
         output_file: Annotated[str, typer.Option("--output_file")] = "",
         num_samples: Annotated[int, typer.Option("--num_samples")] = 100,
         verbose: Annotated[int, typer.Option("--verbose")] = 2,
 ):
     env = NewProjectEnv()
-    if not output_file:
-        output_file = new_path(input_file, post=num_samples, sep='=')
 
     with (
         JobTimer(name=f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=verbose >= 1),
-        Path(input_file).open() as input_fp,
-        Path(output_file).open("w", encoding="utf-8") as output_fp,
+
     ):
-        input_lines = [x.strip() for x in input_fp.readlines() if x.strip()]
-        if len(input_lines) > num_samples:
-            sampled_indices = sorted(random.sample(range(len(input_lines)), num_samples))
-            input_lines = [input_lines[i] for i in sampled_indices]
-        num_outputs = 0
-        for x in input_lines:
-            output_fp.write(x + "\n")
-            num_outputs += 1
+        with Path(input_file).open() as input_fp:
+            input_lines = [x.strip() for x in input_fp.readlines() if x.strip()]
+            if len(input_lines) > num_samples:
+                sampled_indices = sorted(random.sample(range(len(input_lines)), num_samples))
+                input_lines = [input_lines[i] for i in sampled_indices]
+        num_samples = len(input_lines)
+        if not output_file:
+            output_file = new_path(input_file, post=num_samples, sep='=')
+        with Path(output_file).open("w", encoding="utf-8") as output_fp:
+            num_outputs = 0
+            for x in input_lines:
+                output_fp.write(x + "\n")
+                num_outputs += 1
         logger.info(f"Number of samples in {output_file}: %d", num_outputs)
 
 
