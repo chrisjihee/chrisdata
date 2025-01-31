@@ -641,11 +641,7 @@ def sample_jsonl_by_dataset(
         verbose: Annotated[int, typer.Option("--verbose")] = 2,
 ):
     env = NewProjectEnv()
-
-    with (
-        JobTimer(name=f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=verbose >= 1),
-
-    ):
+    with JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=verbose >= 1):
         with Path(input_file).open() as input_fp:
             input_lines = [x.strip() for x in input_fp.readlines() if x.strip()]
             if len(input_lines) > num_samples:
@@ -663,18 +659,9 @@ def sample_jsonl_by_dataset(
 
 
 @app.command("convert_to_EQ")
-def convert_to_entity_query_samples(
-        # env
-        output_home: Annotated[str, typer.Option("--output_home")] = "output",
-        output_name: Annotated[str, typer.Option("--output_name")] = "GNER",
-        logging_file: Annotated[str, typer.Option("--logging_file")] = "convert_to_eq.out",
-        logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
-        max_workers: Annotated[int, typer.Option("--max_workers")] = 1,
-        debugging: Annotated[bool, typer.Option("--debugging/--no-debugging")] = False,
-        # file paths
-        input_file: Annotated[str, typer.Argument] = "data/gner/zero-shot-train.jsonl",
-        output_file: Annotated[str, typer.Argument] = "data/gner/entity_query/zero-shot-train-eq.jsonl",
-        # other options
+def convert_to_entity_query_version(
+        input_file: Annotated[str, typer.Argument()] = ...,  # "data/gner/zero-shot-train.jsonl",
+        output_file: Annotated[str, typer.Option("--output_file")] = "",  # "data/gner/entity_query/zero-shot-train-eq.jsonl",
         instruction_header: Annotated[str, typer.Option] = strip_lines("""
             Given a sentence, your task is to identify entities for a specific type. Each query asks about one entity type, and the output is a JSON list of entities with their spans (indices in the text).
         """).strip(),
@@ -688,108 +675,73 @@ def convert_to_entity_query_samples(
             {query}
             * output:
         """).lstrip(),
+        logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
-    env = NewProjectEnv(
-        output_home=output_home,
-        output_name=output_name,
-        logging_level=logging_level,
-        logging_format=LoggingFormat.CHECK_20,
-        logging_file=logging_file,
-        max_workers=1 if debugging else max(max_workers, 1),
-        debugging=debugging,
-    )
-    input_opt = InputOption(
-        file=FileOption.from_path(
-            path=input_file,
-            required=True,
-        ),
-    )
-    output_opt = OutputOption(
-        file=FileOption.from_path(
-            path=output_file,
-            mode="w",
-        ),
-    )
-    args = NewIOArguments(
-        env=env,
-        input=input_opt,
-        output=output_opt,
-    )
-    assert args.input.file, "input.file is required"
-    assert args.output.file, "output.file is required"
-
+    env = NewProjectEnv(logging_level=logging_level)
+    if not output_file:
+        output_file = new_path(input_file, post="EQ")
     with (
-        JobTimer(
-            name=f"python {args.env.current_file} {' '.join(args.env.command_args)}",
-            rt=1, rb=1, rc='=', verbose=True, args=args,
-        ),
-        FileStreamer(args.input.file) as input_file,
-        FileStreamer(args.output.file) as output_file,
+        JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
+        FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_streamer,
+        FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_streamer,
     ):
-        logger.warning(f"output_file.path={output_file.path}")
         num_new_samples = 0
-        with ProgIter(total=len(input_file), desc=f"Convert dataset:", stream=LoggerWriter(logger), verbose=2) as prog:
-            for sample in ner_samples(input_file):
-                queries = []
-                for entity_type in sample.label_list:
-                    entities = []
-                    current_span = []
-                    current_entity = []
-                    for i, (word, label) in enumerate(zip(sample.instance.words, sample.instance.labels)):
-                        if label == 'B-' + entity_type:
-                            if current_entity:
-                                entities.append({"entity": " ".join(current_entity), "span": current_span})
-                            current_entity = [word]
-                            current_span = [i]
-                        elif label == 'I-' + entity_type:
-                            current_entity.append(word)
-                            current_span.append(i)
-                        else:
-                            if current_entity:
-                                entities.append({"entity": " ".join(current_entity), "span": current_span})
-                            current_entity = []
-                            current_span = []
-                    if current_entity:
-                        entities.append({"entity": " ".join(current_entity), "span": current_span})
+        for sample in ProgIter(ner_samples(input_streamer), total=len(input_streamer), desc=f"Converting {input_streamer.path}:",
+                               stream=LoggerWriter(logger, level=logging_level), verbose=3):
+            queries = []
+            for entity_type in sample.label_list:
+                entities = []
+                current_span = []
+                current_entity = []
+                for i, (word, label) in enumerate(zip(sample.instance.words, sample.instance.labels)):
+                    if label == 'B-' + entity_type:
+                        if current_entity:
+                            entities.append({"entity": " ".join(current_entity), "span": current_span})
+                        current_entity = [word]
+                        current_span = [i]
+                    elif label == 'I-' + entity_type:
+                        current_entity.append(word)
+                        current_span.append(i)
+                    else:
+                        if current_entity:
+                            entities.append({"entity": " ".join(current_entity), "span": current_span})
                         current_entity = []
                         current_span = []
-                    queries.append({
-                        "label_list": sample.label_list,
-                        "sentence": " ".join(sample.instance.words),
-                        "query": f"Identify '{entity_type}' entities in the sentence in a JSON list format.",
-                        "entities": entities,
-                    })
-                # print(f"sample.id={sample.id}")
-                # print(f"sample.dataset={sample.dataset}")
-                # print(f"sample.split={sample.split}")
-                # print(f"sample.label_list={sample.label_list}")
-                # print(f"sample.instance.id={sample.instance.id}")
-                # print(f"sample.instance.words={sample.instance.words}")
-                # print(f"sample.instance.labels={sample.instance.labels}")
-                # print(f"sample.instance.instruction_inputs=\n{'-' * 80}\n{sample.instance.instruction_inputs}\n{'-' * 80}")
-                # print(f"sample.instance.prompt_labels=\n{sample.instance.prompt_labels}")
-                for i, query in enumerate(queries):
-                    instruction_inputs = instruction_template.format(header=instruction_header, **query)
-                    prompt_labels = json.dumps(query["entities"], ensure_ascii=False)
-                    # print(f"new_instruction_inputs=\n{'-' * 80}\n{instruction_inputs}\n{'-' * 80}")
-                    # print(f"new_prompt_labels=\n{prompt_labels}")
-                    new_sample = GenNERSampleWrapper(
-                        id=f"{sample.id}.{i}",
-                        dataset=sample.dataset,
-                        split=sample.split,
-                        label_list=sample.label_list,
-                        instance=GenNERSample(
-                            id=f"{sample.instance.id}.{i}",
-                            words=sample.instance.words,
-                            labels=sample.instance.labels,
-                            instruction_inputs=instruction_inputs,
-                            prompt_labels=prompt_labels,
-                        )
+                if current_entity:
+                    entities.append({"entity": " ".join(current_entity), "span": current_span})
+
+                queries.append({
+                    "label_list": sample.label_list,
+                    "sentence": " ".join(sample.instance.words),
+                    "query": f"Identify '{entity_type}' entities in the sentence in a JSON list format.",
+                    "entities": entities,
+                })
+            logger.debug("\n" * 5)
+            logger.debug(f">> old_sample_id={sample.id}")
+            logger.debug(f">> old_prompt_labels={sample.instance.prompt_labels}")
+            for i, query in enumerate(queries):
+                instruction_inputs = instruction_template.format(header=instruction_header, **query)
+                prompt_labels = json.dumps(query["entities"], ensure_ascii=False)
+                logger.debug("\n" * 2)
+                logger.debug("=" * 80)
+                logger.debug(f">> new_instruction_inputs=\n{'-' * 80}\n{instruction_inputs}\n{'-' * 80}")
+                logger.debug(f">> new_prompt_labels={prompt_labels}")
+                new_sample = GenNERSampleWrapper(
+                    id=f"{sample.id}.{i}",
+                    dataset=sample.dataset,
+                    split=sample.split,
+                    label_list=sample.label_list,
+                    instance=GenNERSample(
+                        id=f"{sample.instance.id}.{i}",
+                        words=sample.instance.words,
+                        labels=sample.instance.labels,
+                        instruction_inputs=instruction_inputs,
+                        prompt_labels=prompt_labels,
                     )
-                    num_new_samples += 1
-                    output_file.fp.write(new_sample.model_dump_json() + "\n")
-                prog.step()
-        logger.info(f"Number of new samples in {output_file.path}: {num_new_samples}")
+                )
+                num_new_samples += 1
+                output_streamer.fp.write(new_sample.model_dump_json() + "\n")
+        logger.warning(f">> Number of new samples in {output_streamer.path} = {num_new_samples}")
 
 
 sample_X = {
