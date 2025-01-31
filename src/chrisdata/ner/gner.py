@@ -494,8 +494,8 @@ def convert_conll_to_jsonl(
         # input_dirs: Annotated[str, typer.Argument()] = "data/gner/each/crossner_ai",
         # output_file: Annotated[str, typer.Argument()] = "data/gner/each/crossner_ai.jsonl",
         # option
-        instruction_file: Annotated[str, typer.Option("--instruction_file")] = "data/gner/instruction.json",
         split_name: Annotated[str, typer.Option("--split_name")] = "train",  # "train", "dev", "test"
+        instruction_file: Annotated[str, typer.Option("--instruction_file")] = "data/gner/instruction.json",
         # env
         output_home: Annotated[str, typer.Option("--output_home")] = "output",
         output_name: Annotated[str, typer.Option("--output_name")] = "GNER",
@@ -503,6 +503,7 @@ def convert_conll_to_jsonl(
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
         max_workers: Annotated[int, typer.Option("--max_workers")] = 1,
         debugging: Annotated[bool, typer.Option("--debugging/--no-debugging")] = False,
+        verbose: Annotated[int, typer.Option("--verbose")] = 2,
 ):
     env = NewProjectEnv(
         output_home=output_home,
@@ -535,7 +536,7 @@ def convert_conll_to_jsonl(
     with (
         JobTimer(
             name=f"python {args.env.current_file} {' '.join(args.env.command_args)}",
-            rt=1, rb=1, rc='=', verbose=True, args=args,
+            rt=1, rb=1, rc='=', verbose=verbose >= 1, args=args if verbose >= 2 else None,
         ),
         FileStreamer(args.input.file) as input_dirs,
         FileStreamer(args.output.file) as output_file,
