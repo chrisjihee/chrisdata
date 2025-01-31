@@ -67,11 +67,11 @@ class GenSeq2SeqSample(BaseModel):
 
 class GenNERSample(GenSeq2SeqSample):
     id: str = None
+    group: str = None
     words: list[str] = None
     labels: list[str] = None
-
-    # instruction_inputs: str = None
-    # prompt_labels: str = None
+    target_word: str = None
+    target_label: str = None
 
     @staticmethod
     def from_wiki_passage(wiki_passage: str, label: str, id: str = None) -> "GenNERSample":
@@ -114,9 +114,6 @@ class GenSeq2SeqSampleWrapper(BaseModel):
 
 
 class GenNERSampleWrapper(GenSeq2SeqSampleWrapper):
-    # id: str = None
-    # dataset: str = "unknown"
-    # split: str = "unknown"
     label_list: list[str] = None
     instance: GenNERSample
 
