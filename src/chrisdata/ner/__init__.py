@@ -63,6 +63,7 @@ class GenSeq2SeqSample(BaseModel):
     id: str = None
     prompt_labels: str = None
     instruction_inputs: str = None
+    prediction_output: Optional[str] = None
 
 
 class GenNERSample(GenSeq2SeqSample):
@@ -83,6 +84,11 @@ class GenNERSample(GenSeq2SeqSample):
         words_labels.extend([(w, 'O') for w in wiki_passage[prev_end:].split()])
         words, labels = list(zip(*words_labels))
         return GenNERSample(words=words, labels=labels, id=id)
+
+    @staticmethod
+    def get_prompt_labels(words: list[str], labels: list[str]) -> str:
+        dataset = GNERDataset()
+        return dataset._generate_labeled_string(words, labels)
 
     def set_prompt_labels(self):
         words = self.words
@@ -142,6 +148,11 @@ class GenNERSampleWrapper(GenSeq2SeqSampleWrapper):
         if self.dataset == "unknown" and path:
             self.dataset = Path(path).stem
         return self
+
+
+class GenNERSampleEntitySpan(BaseModel):
+    entity: str
+    span: list[int]
 
 
 class Message(BaseModel):
