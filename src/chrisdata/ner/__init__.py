@@ -89,7 +89,12 @@ class GenNERSample(GenSeq2SeqSample):
         labels = self.labels
 
         dataset = GNERDataset()
-        dataset.config = GNERConfig(instruction_file=instruction_file)
+        instruction_file = Path(instruction_file)
+        if instruction_file.suffix == ".json":
+            dataset.config = GNERConfig(instruction_file=instruction_file)
+        else:
+            dataset.config = GNERConfig()
+            dataset.config.instructions = [instruction_file.read_text()]
 
         instruction = dataset._get_instruction()
         random.shuffle(label_list)
