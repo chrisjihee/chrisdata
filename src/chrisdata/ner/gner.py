@@ -677,6 +677,7 @@ def convert_to_entity_query_version(
                     "sentence": " ".join(sample.instance.words),
                     "query": f"Identify '{entity_type}' entities in the sentence in a JSON list format.",
                     "entities": entities,
+                    "target_label": entity_type,
                 })
             logger.debug("\n" * 5)
             logger.debug(f">> old_sample_id={sample.id}")
@@ -696,10 +697,12 @@ def convert_to_entity_query_version(
                     label_list=sample.label_list,
                     instance=GenNERSample(
                         id=f"{sample.instance.id}.{i}",
+                        group=sample.instance.id,
                         words=sample.instance.words,
                         labels=sample.instance.labels,
-                        instruction_inputs=instruction_inputs,
+                        target_label=query["target_label"],
                         prompt_labels=prompt_labels,
+                        instruction_inputs=instruction_inputs,
                     )
                 )
                 num_new_samples += 1
@@ -722,15 +725,20 @@ sample_X = {
 }
 
 sample_Y = {
-    "id": "1520.7",
-    "dataset": "mit-restaurant",
-    "split": "dev",
+    "id": "0.0",
+    "dataset": "crossner_ai",
+    "split": "train",
     "instance": {
-        "id": "1520.7",
-        "instruction_inputs": "Given a sentence, your task is to identify entities for a specific type. Each query asks about one entity type, and the output is a JSON list of entities with their spans (indices in the text).\n* label list:\n['Price', 'Location', 'Dish', 'Cuisine', 'Amenity', 'Hours', 'Restaurant Name', 'Rating']\n* sentence:\nyou can help me with some onion rings\n* query:\nIdentify 'Rating' entities in the sentence in a JSON list format.\n* output:\n",
+        "id": "0.0",
         "prompt_labels": "[]",
-        "words": ["you", "can", "help", "me", "with", "some", "onion", "rings"],
-        "labels": ["O", "O", "O", "O", "O", "O", "B-Dish", "I-Dish"]
+        "instruction_inputs": "Given a sentence, your task is to identify entities for a specific type. Each query asks about one entity type, and the output is a JSON list of entities with their spans (indices in the text).\n* label list:\n['conference', 'metric', 'algorithm', 'country', 'university', 'location', 'programming language', 'organization', 'product', 'researcher', 'task', 'field', 'person']\n* sentence:\nPopular approaches of opinion-based recommender system utilize various techniques including text mining , information retrieval , sentiment analysis ( see also Multimodal sentiment analysis ) and deep learning X.Y. Feng , H. Zhang , Y.J. Ren , P.H. Shang , Y. Zhu , Y.C. Liang , R.C. Guan , D. Xu , ( 2019 ) , , 21 ( 5 ) : e12957 .\n* query:\nIdentify 'conference' entities in the sentence in a JSON list format.\n* output:\n",
+        "group": "0",
+        "words": ["Popular", "approaches", "of", "opinion-based", "recommender", "system", "utilize", "various", "techniques", "including", "text", "mining", ",", "information", "retrieval", ",", "sentiment", "analysis", "(", "see", "also", "Multimodal", "sentiment", "analysis", ")", "and", "deep", "learning", "X.Y.", "Feng", ",", "H.", "Zhang", ",", "Y.J.", "Ren", ",", "P.H.", "Shang", ",", "Y.", "Zhu", ",", "Y.C.",
+                  "Liang", ",", "R.C.", "Guan", ",", "D.", "Xu", ",", "(", "2019", ")", ",", ",", "21", "(", "5", ")", ":", "e12957", "."],
+        "labels": ["O", "O", "O", "B-product", "I-product", "I-product", "O", "O", "O", "O", "B-field", "I-field", "O", "B-task", "I-task", "O", "B-task", "I-task", "O", "O", "O", "B-task", "I-task", "I-task", "O", "O", "B-field", "I-field", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O",
+                   "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"],
+        "target_word": None,
+        "target_label": "conference"
     },
-    "label_list": ["Price", "Location", "Dish", "Cuisine", "Amenity", "Hours", "Restaurant Name", "Rating"]
+    "label_list": ["conference", "metric", "algorithm", "country", "university", "location", "programming language", "organization", "product", "researcher", "task", "field", "person"]
 }

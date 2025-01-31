@@ -61,8 +61,8 @@ class EntityRelatedPassages(BaseModel):
 
 class GenSeq2SeqSample(BaseModel):
     id: str = None
-    instruction_inputs: str = None
     prompt_labels: str = None
+    instruction_inputs: str = None
 
 
 class GenNERSample(GenSeq2SeqSample):
@@ -114,8 +114,8 @@ class GenSeq2SeqSampleWrapper(BaseModel):
 
 
 class GenNERSampleWrapper(GenSeq2SeqSampleWrapper):
-    label_list: list[str] = None
     instance: GenNERSample
+    label_list: list[str] = None
 
     def set_missing_values_by_instruction_prompt(self, path: Path | str = None):
         instruction_lines = self.instance.instruction_inputs.splitlines()
