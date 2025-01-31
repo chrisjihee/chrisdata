@@ -84,6 +84,13 @@ class GenNERSample(GenSeq2SeqSample):
         words, labels = list(zip(*words_labels))
         return GenNERSample(words=words, labels=labels, id=id)
 
+    def set_prompt_labels(self):
+        words = self.words
+        labels = self.labels
+
+        dataset = GNERDataset()
+        self.prompt_labels = dataset._generate_labeled_string(words, labels)
+
     def set_instruction_prompt(self, instruction_file: Path | str, label_list: list[str]):
         words = self.words
         labels = self.labels
