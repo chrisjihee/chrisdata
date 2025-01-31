@@ -553,83 +553,45 @@ def convert_json_to_jsonl(
 
 @app.command("convert_conll")
 def convert_conll_to_jsonl(
-        # argument
-        input_dirs: Annotated[str, typer.Argument()] = ...,
-        output_file: Annotated[str, typer.Argument()] = ...,
-        # option
+        input_dir: Annotated[str, typer.Argument()] = ...,  # "data/gner/each/crossner_ai"
+        output_file: Annotated[str, typer.Option("--output_file")] = "",
+        instruction_file: Annotated[str, typer.Option("--instruction_file")] = "configs/instruction/GNER-paper.txt",
         split_name: Annotated[str, typer.Option("--split_name")] = "train",  # "train", "dev", "test"
-        instruction_file: Annotated[str, typer.Option("--instruction_file")] = "data/gner/instruction.json",
-        # env
-        output_home: Annotated[str, typer.Option("--output_home")] = "output",
-        output_name: Annotated[str, typer.Option("--output_name")] = "GNER",
-        logging_file: Annotated[str, typer.Option("--logging_file")] = "convert_conll_to_jsonl.out",
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
-        max_workers: Annotated[int, typer.Option("--max_workers")] = 1,
-        debugging: Annotated[bool, typer.Option("--debugging/--no-debugging")] = False,
-        verbose: Annotated[int, typer.Option("--verbose")] = 2,
 ):
-    env = NewProjectEnv(
-        output_home=output_home,
-        output_name=output_name,
-        logging_level=logging_level,
-        logging_format=LoggingFormat.CHECK_20,
-        logging_file=logging_file,
-        max_workers=1 if debugging else max(max_workers, 1),
-        debugging=debugging,
-    )
-    input_opt = InputOption(
-        file=FileOption.from_path(
-            path=input_dirs,
-        ),
-    )
-    output_opt = OutputOption(
-        file=FileOption.from_path(
-            path=new_path(output_file, post=split_name),
-            mode="w",
-        ),
-    )
-    args = NewIOArguments(
-        env=env,
-        input=input_opt,
-        output=output_opt,
-    )
-    assert args.input.file, "input.file is required"
-    assert args.output.file, "output.file is required"
-
+    env = NewProjectEnv(logging_level=logging_level)
+    input_dir = Path(input_dir)
+    if not output_file:
+        output_file = input_dir.with_suffix(".jsonl")
     with (
-        JobTimer(
-            name=f"python {args.env.current_file} {' '.join(args.env.command_args)}",
-            rt=1, rb=1, rc='=', verbose=verbose >= 1, args=args if verbose >= 2 else None,
-        ),
-        FileStreamer(args.input.file) as input_dirs,
-        FileStreamer(args.output.file) as output_file,
+        JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
+        FileStreamer(FileOption.from_path(path=new_path(output_file, post=split_name), mode="w")) as output_file,
+        FileStreamer(FileOption.from_path(path=input_dir)) as input_dir,
     ):
         num_outputs = 0
         dataset_builder = GNERDataset()
-        for dataset_dir in glob_dirs(input_dirs.path.parent, input_dirs.path.name):
-            dataset_path = dataset_dir / f"{split_name}.txt"
-            labels_path = dataset_dir / "label.txt"
-            if dataset_path.exists() and labels_path.exists():
-                instances, label_list = dataset_builder._load_dataset(dataset_path, labels_path)
-                with ProgIter(total=len(instances), desc=f"Convert dataset:", stream=LoggerWriter(logger), verbose=2) as prog:
-                    for instance in instances:
-                        instance_id = f"{instance.pop('id')}"
-                        instance = GenNERSample.model_validate(
-                            merge_dicts({"id": f"{instance_id}"}, instance)
-                        ).set_instruction_prompt(
-                            instruction_file=instruction_file,
-                            label_list=label_list,
-                        )
-                        wrapped = GenNERSampleWrapper(
-                            id=instance_id,
-                            dataset=dataset_dir.stem,
-                            split=split_name,
-                            label_list=label_list,
-                            instance=instance,
-                        )
-                        output_file.fp.write(wrapped.model_dump_json() + "\n")
-                        num_outputs += 1
-                        prog.step()
+        dataset_path = input_dir.path / f"{split_name}.txt"
+        labels_path = input_dir.path / "label.txt"
+        if dataset_path.exists() and labels_path.exists():
+            instances, label_list = dataset_builder._load_dataset(dataset_path, labels_path)
+            for instance in ProgIter(instances, total=len(instances), desc=f"Converting {input_dir.path}:",
+                                     stream=LoggerWriter(logger), verbose=2):
+                instance_id = f"{instance.pop('id')}"
+                instance = GenNERSample.model_validate(
+                    merge_dicts({"id": f"{instance_id}"}, instance)
+                ).set_instruction_prompt(
+                    instruction_file=instruction_file,
+                    label_list=label_list,
+                )
+                wrapped = GenNERSampleWrapper(
+                    id=instance_id,
+                    dataset=input_dir.path.stem,
+                    split=split_name,
+                    label_list=label_list,
+                    instance=instance,
+                )
+                output_file.fp.write(wrapped.model_dump_json() + "\n")
+                num_outputs += 1
         logger.info(f"Number of samples in {output_file.path}: %d", num_outputs)
 
 
@@ -682,11 +644,11 @@ def convert_to_entity_query_version(
         output_file = new_path(input_file, post="EQ")
     with (
         JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
-        FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_streamer,
-        FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_streamer,
+        FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
+        FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
     ):
         num_new_samples = 0
-        for sample in ProgIter(ner_samples(input_streamer), total=len(input_streamer), desc=f"Converting {input_streamer.path}:",
+        for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Converting {input_file.path}:",
                                stream=LoggerWriter(logger, level=logging_level), verbose=3):
             queries = []
             for entity_type in sample.label_list:
@@ -740,8 +702,8 @@ def convert_to_entity_query_version(
                     )
                 )
                 num_new_samples += 1
-                output_streamer.fp.write(new_sample.model_dump_json() + "\n")
-        logger.warning(f">> Number of new samples in {output_streamer.path} = {num_new_samples}")
+                output_file.fp.write(new_sample.model_dump_json() + "\n")
+        logger.warning(f">> Number of new samples in {output_file.path} = {num_new_samples}")
 
 
 sample_X = {
