@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 데이터셋 목록
+# List of datasets
 datasets=(
   "crossner_ai"
   "crossner_literature"
@@ -11,10 +11,10 @@ datasets=(
   "mit-restaurant"
 )
 
-# split 목록
+# List of splits
 splits=("train" "test" "dev")
 
-# 반복 실행
+# Iterate over each dataset and split
 for dataset in "${datasets[@]}"; do
   for split in "${splits[@]}"; do
     python -m chrisdata.cli ner convert_conll --split_name "$split" --verbose 1 "data/gner/each/$dataset" "data/gner/each/$dataset.jsonl"
