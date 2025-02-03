@@ -4,7 +4,7 @@ import time
 from concurrent.futures import ProcessPoolExecutor
 from enum import Enum
 from itertools import groupby, islice
-from typing import Optional, Iterable
+from typing import Iterable
 from urllib.parse import urljoin
 
 import httpx
@@ -12,8 +12,8 @@ import typer
 from bs4 import BeautifulSoup
 from typing_extensions import Annotated
 
-from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, NewProjectEnv, NewIOArguments
-from chrisbase.io import LoggingFormat, new_path, merge_dicts, glob_dirs, normalize_simple_list_in_json, LoggerWriter, strip_lines
+from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, NewProjectEnv
+from chrisbase.io import LoggingFormat, new_path, merge_dicts, normalize_simple_list_in_json, LoggerWriter, strip_lines
 from chrisbase.util import mute_tqdm_cls, shuffled
 from progiter import ProgIter
 from . import *
