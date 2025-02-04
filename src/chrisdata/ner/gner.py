@@ -628,7 +628,48 @@ def convert_to_word_query_version(
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     env = NewProjectEnv(logging_level=logging_level)
-    print(env)
+    output_file = Path(output_dir) / new_path(input_file, post="WQ").name
+    instruction_template = Path(instruction_file).read_text()
+    with (
+        JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
+        FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
+        FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
+    ):
+        num_new_samples = 0
+        for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Converting {input_file.path}:",
+                               stream=LoggerWriter(logger, level=logging_level), verbose=3):
+            assert len(sample.instance.words) == len(sample.instance.labels)
+            sentence = " ".join(sample.instance.words)
+            label_list = ", ".join(sample.label_list) + " and O."
+            logger.debug("\n" * 5)
+            logger.debug(f">> old_sample_id={sample.id}")
+            logger.debug(f">> old_instruction_inputs=\n{sample.instance.instruction_inputs}")
+            logger.debug(f">> old_prompt_labels={sample.instance.prompt_labels}")
+            for i, (word, label) in enumerate(zip(sample.instance.words, sample.instance.labels)):
+                instruction_inputs = instruction_template.format(label_list=label_list, sentence=sentence, word=word, position=i)
+                prompt_labels = label
+                logger.debug("\n" * 2)
+                logger.debug("=" * 80)
+                logger.debug(f">> new_instruction_inputs=\n{'-' * 80}\n{instruction_inputs}\n{'-' * 80}")
+                logger.debug(f">> new_prompt_labels={prompt_labels}")
+                new_sample = GenNERSampleWrapper(
+                    id=f"{sample.id}.{i}",
+                    dataset=sample.dataset,
+                    split=sample.split,
+                    label_list=sample.label_list,
+                    instance=GenNERSample(
+                        id=f"{sample.instance.id}.{i}",
+                        group=sample.instance.id,
+                        words=sample.instance.words,
+                        labels=sample.instance.labels,
+                        target_index=i,
+                        prompt_labels=prompt_labels,
+                        instruction_inputs=instruction_inputs,
+                    )
+                )
+                num_new_samples += 1
+                output_file.fp.write(new_sample.model_dump_json() + "\n")
+        logger.warning(f">> Number of new samples in {output_file.path} = {num_new_samples}")
 
 
 @app.command("convert_to_EQ")
