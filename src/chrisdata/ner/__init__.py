@@ -71,7 +71,7 @@ class GenNERSample(GenSeq2SeqSample):
     group: Optional[str] = None
     words: list[str] = None
     labels: list[str] = None
-    target_word: Optional[str] = None
+    target_index: Optional[int] = None
     target_label: Optional[str] = None
 
     @staticmethod
