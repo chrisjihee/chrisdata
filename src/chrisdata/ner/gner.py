@@ -620,9 +620,19 @@ def sample_jsonl_lines(
         logger.info(f"Number of samples in {output_file}: %d", num_outputs)
 
 
+@app.command("convert_to_WQ")
+def convert_to_word_query_version(
+        input_file: Annotated[str, typer.Argument()] = ...,  # "data/gner/each/crossner_ai-train.jsonl"
+        output_dir: Annotated[str, typer.Argument()] = ...,  # "data/gner/each-WQ"
+        instruction_file: Annotated[str, typer.Option("--instruction_file")] = "configs/instruction/GNER-WQ.txt",
+        logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
+):
+    env = NewProjectEnv(logging_level=logging_level)
+
+
 @app.command("convert_to_EQ")
 def convert_to_entity_query_version(
-        input_file: Annotated[str, typer.Argument()] = ...,  # "data/gner/each/crossner_ai-train.jsonl",
+        input_file: Annotated[str, typer.Argument()] = ...,  # "data/gner/each/crossner_ai-train.jsonl"
         output_file: Annotated[str, typer.Option("--output_file")] = "",
         instruction_header: Annotated[str, typer.Option] = strip_lines("""
             Given a sentence, your task is to identify entities for a specific type. Each query asks about one entity type, and the output is a JSON list of entities with their spans (indices in the text).
