@@ -628,6 +628,7 @@ def convert_to_word_query_version(
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     env = NewProjectEnv(logging_level=logging_level)
+    print(env)
 
 
 @app.command("convert_to_EQ")
