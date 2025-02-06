@@ -620,32 +620,51 @@ def sample_jsonl_lines(
         logger.info(f"Number of samples in {output_file}: %d", num_outputs)
 
 
-def make_prompt_label(sample: GenNERSampleWrapper, word_id: int, level: float):
-    level_main = int(level)
-    level_sub = int(10 * (level - level_main))
+def make_prompt_label(sample: GenNERSampleWrapper, word_id: int, level_main: int, level_sub: int):
     if level_main == 1:
-        pass
+        prompt_label = sample.instance.labels[word_id]
     elif level_main == 2:
-        pass
+        prompt_label = GenNERSample.get_prompt_labels([sample.instance.words[word_id]], [sample.instance.labels[word_id]])
     elif level_main == 3:
-        pass
+        total_labels = len(sample.instance.labels)
+        start_idx = max(0, word_id)
+        end_idx = min(total_labels, word_id + 1)
+        labels = (
+                ["?"] * start_idx +
+                sample.instance.labels[start_idx: end_idx] +
+                ["?"] * (total_labels - end_idx)
+        )
+        assert len(labels) == len(sample.instance.labels)
+        prompt_label = GenNERSample.get_prompt_labels(sample.instance.words, labels)
     elif level_main == 4:
-        pass
+        total_labels = len(sample.instance.labels)
+        start_idx = max(0, word_id - level_sub)
+        end_idx = min(total_labels, word_id + level_sub + 1)
+        labels = (
+                ["?"] * start_idx +
+                sample.instance.labels[start_idx: end_idx] +
+                ["?"] * (total_labels - end_idx)
+        )
+        assert len(labels) == len(sample.instance.labels)
+        prompt_label = GenNERSample.get_prompt_labels(sample.instance.words, labels)
     elif level_main == 5:
-        pass
-    return ""
+        prompt_label = GenNERSample.get_prompt_labels(sample.instance.words, sample.instance.labels)
+    else:
+        raise ValueError(f"Unsupported level_main: {level_main}")
+    return prompt_label
 
 
 @app.command("convert_to_WQ")
 def convert_to_word_query_version(
         input_file: Annotated[str, typer.Argument()] = ...,  # "data/gner/each/crossner_ai-train.jsonl"
         output_dir: Annotated[str, typer.Argument()] = ...,  # "data/gner/each-WQ"
+        label_level_main: Annotated[int, typer.Option("--label_level_main")] = ...,
+        label_level_sub: Annotated[int, typer.Option("--label_level_sub")] = 0,
         instruction_file: Annotated[str, typer.Option("--instruction_file")] = "configs/instruction/GNER-WQ.txt",
-        label_level: Annotated[float, typer.Option("--label_level")] = 1,
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     env = NewProjectEnv(logging_level=logging_level)
-    output_file = Path(output_dir) / new_path(input_file, post="WQ").name
+    output_file = Path(output_dir) / new_path(input_file, post=f"WQ={label_level_main}{f'.{label_level_sub}' if label_level_sub > 0 else ''}").name
     instruction_template = Path(instruction_file).read_text()
     with (
         JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
@@ -662,10 +681,9 @@ def convert_to_word_query_version(
             logger.debug(f">> old_sample_id={sample.id}")
             logger.debug(f">> old_instruction_inputs=\n{sample.instance.instruction_inputs}")
             logger.debug(f">> old_prompt_labels={sample.instance.prompt_labels}")
-            for i, (word, label) in enumerate(zip(sample.instance.words, sample.instance.labels)):
+            for i, word in enumerate(sample.instance.words):
                 instruction_inputs = instruction_template.format(label_list=label_list, sentence=sentence, word=word, position=i)
-                prompt_labels = make_prompt_label(sample, i, label_level)
-                # prompt_labels = label
+                prompt_labels = make_prompt_label(sample, i, label_level_main, label_level_sub)
                 logger.debug("\n" * 2)
                 logger.debug("=" * 80)
                 logger.debug(f">> new_instruction_inputs=\n{'-' * 80}\n{instruction_inputs}\n{'-' * 80}")
