@@ -664,7 +664,7 @@ def convert_to_word_query_version(
 ):
     env = NewProjectEnv(logging_level=logging_level)
     input_dir = Path(input_file).parent
-    output_post = f"WQ={label_level_main}{f'.{label_level_sub}' if label_level_sub > 0 else ''}"
+    output_post = f"WQ={label_level_main}{f',{label_level_sub}' if label_level_sub > 0 else ''}"
     output_file = new_path(input_dir, post=output_post) / new_path(input_file, post=output_post).name
     instruction_template = Path(instruction_file).read_text()
     with (
