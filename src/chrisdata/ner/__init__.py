@@ -85,6 +85,20 @@ class GenNERSample(GenSeq2SeqSample):
         words, labels = list(zip(*words_labels))
         return GenNERSample(words=words, labels=labels, id=id)
 
+    # extract words and corresponding labels in the generation texts
+    @staticmethod
+    def extract(preds_text):
+        pattern = r'\(B-.*?\)|\(I-.*?\)|\(O\)'
+        words, labels, pre_bound = [], [], 0
+        for label_span in re.finditer(pattern, preds_text):
+            l, r = label_span.span()
+            word, label = preds_text[pre_bound: l], preds_text[l + 1: r - 1]
+            if word.strip() != '':
+                words.append(word.strip())
+                labels.append(label.strip())
+            pre_bound = r
+        return words, labels
+
     @staticmethod
     def get_prompt_labels(words: list[str], labels: list[str]) -> str:
         return GNERDataset._generate_labeled_string(words, labels)
