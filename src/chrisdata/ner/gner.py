@@ -675,8 +675,8 @@ def convert_to_word_query_version(
         num_new_samples = 0
         for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Converting {input_file.path}:",
                                stream=LoggerWriter(logger, level=logging_level), verbose=3):
+            sample.label_list = [x.replace(" ", "_") for x in sample.label_list]
             sample.instance.labels = [x.replace(" ", "_") for x in sample.instance.labels]
-            sample.label_list = [x.replace(" ", "_") for x in sample.instance.labels]
             assert len(sample.instance.words) == len(sample.instance.labels)
             sentence = " ".join(sample.instance.words)
             label_list = ", ".join(sample.label_list) + " and O."
