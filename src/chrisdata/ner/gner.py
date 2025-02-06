@@ -620,11 +620,28 @@ def sample_jsonl_lines(
         logger.info(f"Number of samples in {output_file}: %d", num_outputs)
 
 
+def make_prompt_label(sample: GenNERSampleWrapper, word_id: int, level: float):
+    level_main = int(level)
+    level_sub = int(10 * (level - level_main))
+    if level_main == 1:
+        pass
+    elif level_main == 2:
+        pass
+    elif level_main == 3:
+        pass
+    elif level_main == 4:
+        pass
+    elif level_main == 5:
+        pass
+    return ""
+
+
 @app.command("convert_to_WQ")
 def convert_to_word_query_version(
         input_file: Annotated[str, typer.Argument()] = ...,  # "data/gner/each/crossner_ai-train.jsonl"
         output_dir: Annotated[str, typer.Argument()] = ...,  # "data/gner/each-WQ"
         instruction_file: Annotated[str, typer.Option("--instruction_file")] = "configs/instruction/GNER-WQ.txt",
+        label_level: Annotated[float, typer.Option("--label_level")] = 1,
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     env = NewProjectEnv(logging_level=logging_level)
@@ -647,7 +664,8 @@ def convert_to_word_query_version(
             logger.debug(f">> old_prompt_labels={sample.instance.prompt_labels}")
             for i, (word, label) in enumerate(zip(sample.instance.words, sample.instance.labels)):
                 instruction_inputs = instruction_template.format(label_list=label_list, sentence=sentence, word=word, position=i)
-                prompt_labels = label
+                prompt_labels = make_prompt_label(sample, i, label_level)
+                # prompt_labels = label
                 logger.debug("\n" * 2)
                 logger.debug("=" * 80)
                 logger.debug(f">> new_instruction_inputs=\n{'-' * 80}\n{instruction_inputs}\n{'-' * 80}")
