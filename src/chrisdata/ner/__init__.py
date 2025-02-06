@@ -87,15 +87,13 @@ class GenNERSample(GenSeq2SeqSample):
 
     @staticmethod
     def get_prompt_labels(words: list[str], labels: list[str]) -> str:
-        dataset = GNERDataset()
-        return dataset._generate_labeled_string(words, labels)
+        return GNERDataset._generate_labeled_string(words, labels)
 
     def set_prompt_labels(self):
         words = self.words
         labels = self.labels
 
-        dataset = GNERDataset()
-        self.prompt_labels = dataset._generate_labeled_string(words, labels)
+        self.prompt_labels = GNERDataset._generate_labeled_string(words, labels)
 
     def set_instruction_prompt(self, instruction_file: Path | str, label_list: list[str]):
         words = self.words
@@ -114,7 +112,7 @@ class GenNERSample(GenSeq2SeqSample):
         instruction += f"\nUse the specific entity tags: {', '.join(label_list)} and O.\n"
         instruction += "Sentence: " + " ".join(words)
         self.instruction_inputs = instruction
-        self.prompt_labels = dataset._generate_labeled_string(words, labels)
+        self.prompt_labels = GNERDataset._generate_labeled_string(words, labels)
 
         return self
 
