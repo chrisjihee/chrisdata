@@ -657,14 +657,15 @@ def make_prompt_label(sample: GenNERSampleWrapper, word_id: int, level_main: int
 @app.command("convert_to_WQ")
 def convert_to_word_query_version(
         input_file: Annotated[str, typer.Argument()] = ...,  # "data/gner/each/crossner_ai-train.jsonl"
-        output_dir: Annotated[str, typer.Argument()] = ...,  # "data/gner/each-WQ"
         label_level_main: Annotated[int, typer.Option("--label_level_main")] = ...,
         label_level_sub: Annotated[int, typer.Option("--label_level_sub")] = 0,
         instruction_file: Annotated[str, typer.Option("--instruction_file")] = "configs/instruction/GNER-WQ.txt",
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     env = NewProjectEnv(logging_level=logging_level)
-    output_file = Path(output_dir) / new_path(input_file, post=f"WQ={label_level_main}{f'.{label_level_sub}' if label_level_sub > 0 else ''}").name
+    input_dir = Path(input_file).parent
+    output_post = f"WQ={label_level_main}{f'.{label_level_sub}' if label_level_sub > 0 else ''}"
+    output_file = new_path(input_dir, post=output_post) / new_path(input_file, post=output_post).name
     instruction_template = Path(instruction_file).read_text()
     with (
         JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),

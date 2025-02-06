@@ -11,28 +11,22 @@ datasets = [
     "mit-restaurant",
 ]
 
-# List of splits
-splits = ["train", "test", "dev"]
-
 # Iterate over each dataset and split
 for dataset in datasets:
-    for split in splits:
+    for split in ["train", "test", "dev"]:
         input_path_1 = f"data/gner/each/{dataset}-{split}.jsonl"
-        output_path_1 = "data/gner/each-WQ"
-
         input_path_2 = f"data/gner/each-sampled/{dataset}-{split}=100.jsonl"
-        output_path_2 = "data/gner/each-sampled-WQ"
 
         # Run the conversion commands
         for label_level_main in [1, 2, 3, 4, 5]:
             if label_level_main != 4:
-                subprocess.run((f"python -m chrisdata.cli ner convert_to_WQ {input_path_1} {output_path_1}"
+                subprocess.run((f"python -m chrisdata.cli ner convert_to_WQ {input_path_1}"
                                 f" --label_level_main {label_level_main}").split())
-                subprocess.run((f"python -m chrisdata.cli ner convert_to_WQ {input_path_2} {output_path_2}"
+                subprocess.run((f"python -m chrisdata.cli ner convert_to_WQ {input_path_2}"
                                 f" --label_level_main {label_level_main}").split())
             else:
                 for label_level_sub in [1, 2, 3]:
-                    subprocess.run((f"python -m chrisdata.cli ner convert_to_WQ {input_path_1} {output_path_1}"
+                    subprocess.run((f"python -m chrisdata.cli ner convert_to_WQ {input_path_1}"
                                     f" --label_level_main {label_level_main} --label_level_sub {label_level_sub}").split())
-                    subprocess.run((f"python -m chrisdata.cli ner convert_to_WQ {input_path_2} {output_path_2}"
+                    subprocess.run((f"python -m chrisdata.cli ner convert_to_WQ {input_path_2}"
                                     f" --label_level_main {label_level_main} --label_level_sub {label_level_sub}").split())
