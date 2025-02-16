@@ -620,6 +620,43 @@ def sample_jsonl_lines(
         logger.info(f"Number of samples in {output_file}: %d", num_outputs)
 
 
+@app.command("stratified_sample_jsonl")
+def stratified_sample_jsonl_lines(
+        input_file: Annotated[str, typer.Argument()] = "data/gner/united/pile-ner.jsonl",
+        num_samples: Annotated[int, typer.Option("--num_samples")] = 100,
+        logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
+):
+    env = NewProjectEnv()
+    output_file = new_path(input_file, post=num_samples, sep='=')
+    with (
+        JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
+        FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
+        FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
+    ):
+        num_new_samples = 0
+        data_label_lists = dict()
+        for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Converting {input_file.path}:",
+                               stream=LoggerWriter(logger, level=logging_level), verbose=3):
+            sample.label_list = [str(x).replace(' ', '_').lower() for x in sample.label_list]
+            data_label_list = '{:04d} '.format(len(set(sample.label_list))) + ' '.join(sorted(set(sample.label_list)))
+            data_label_lists.setdefault(data_label_list, []).append(sample)
+        aa = sorted(sorted(data_label_lists.keys()), key=lambda x: len(data_label_lists[x]))
+        for a in aa:
+            print("%s\t%d" % (a, len(data_label_lists[a])))
+        # with Path(input_file).open() as input_fp:
+        #     input_lines = [x.strip() for x in input_fp.readlines() if x.strip()]
+        #     if len(input_lines) > num_samples:
+        #         sampled_indices = sorted(random.sample(range(len(input_lines)), num_samples))
+        #         input_lines = [input_lines[i] for i in sampled_indices]
+        # num_samples = len(input_lines)
+        # with Path(output_file).open("w", encoding="utf-8") as output_fp:
+        #     num_outputs = 0
+        #     for x in input_lines:
+        #         output_fp.write(x + "\n")
+        #         num_outputs += 1
+        # logger.info(f"Number of samples in {output_file}: %d", num_outputs)
+
+
 def make_prompt_label(sample: GenNERSampleWrapper, word_id: int, level_main: int, level_sub: int):
     if level_main == 1:
         prompt_label = sample.instance.labels[word_id]
@@ -677,7 +714,9 @@ def convert_to_word_query_version(
                                stream=LoggerWriter(logger, level=logging_level), verbose=3):
             sample.label_list = [x.replace(" ", "_") for x in sample.label_list]
             sample.instance.labels = [x.replace(" ", "_") for x in sample.instance.labels]
-            assert len(sample.instance.words) == len(sample.instance.labels)
+            # assert len(sample.instance.words) == len(sample.instance.labels)
+            if len(sample.instance.words) != len(sample.instance.labels):
+                continue
             sentence = " ".join(sample.instance.words)
             label_list = ", ".join(sample.label_list) + " and O."
             logger.debug("\n" * 5)
