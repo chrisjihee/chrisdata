@@ -623,7 +623,7 @@ def sample_jsonl_lines(
 @app.command("stratified_sample_jsonl")
 def stratified_sample_jsonl_lines(
         input_file: Annotated[str, typer.Argument()] = "data/gner/united/pile-ner.jsonl",
-        num_samples: Annotated[int, typer.Option("--num_samples")] = 100,
+        num_samples: Annotated[int, typer.Option("--num_samples")] = 30,
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     env = NewProjectEnv()
@@ -633,28 +633,28 @@ def stratified_sample_jsonl_lines(
         FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
         FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
     ):
-        num_new_samples = 0
         data_label_lists = dict()
         for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Converting {input_file.path}:",
                                stream=LoggerWriter(logger, level=logging_level), verbose=3):
             sample.label_list = [str(x).replace(' ', '_').lower() for x in sample.label_list]
-            data_label_list = '{:04d} '.format(len(set(sample.label_list))) + ' '.join(sorted(set(sample.label_list)))
-            data_label_lists.setdefault(data_label_list, []).append(sample)
-        aa = sorted(sorted(data_label_lists.keys()), key=lambda x: len(data_label_lists[x]))
-        for a in aa:
-            print("%s\t%d" % (a, len(data_label_lists[a])))
-        # with Path(input_file).open() as input_fp:
-        #     input_lines = [x.strip() for x in input_fp.readlines() if x.strip()]
-        #     if len(input_lines) > num_samples:
-        #         sampled_indices = sorted(random.sample(range(len(input_lines)), num_samples))
-        #         input_lines = [input_lines[i] for i in sampled_indices]
-        # num_samples = len(input_lines)
-        # with Path(output_file).open("w", encoding="utf-8") as output_fp:
-        #     num_outputs = 0
-        #     for x in input_lines:
-        #         output_fp.write(x + "\n")
-        #         num_outputs += 1
-        # logger.info(f"Number of samples in {output_file}: %d", num_outputs)
+            if 5 <= len(sample.instance.words) == len(sample.instance.labels):
+                label_list = sorted(set(sample.label_list))
+                if 3 <= len(label_list) < 12:
+                    data_label_list = f'{len(label_list):04d} {" ".join(label_list)}'
+                    data_label_lists.setdefault(data_label_list, []).append(sample)
+        for data_label_list in sorted(data_label_lists.keys()):
+            if 3 <= len(data_label_lists[data_label_list]):
+                if num_samples < len(data_label_lists[data_label_list]):
+                    sampled_indices = sorted(random.sample(range(len(data_label_lists[data_label_list])), num_samples))
+                    data_label_lists[data_label_list] = [data_label_lists[data_label_list][i] for i in sampled_indices]
+            else:
+                del data_label_lists[data_label_list]
+        num_outputs = 0
+        for samples in data_label_lists.values():
+            for sample in samples:
+                output_file.fp.write(sample.model_dump_json() + "\n")
+                num_outputs += 1
+        logger.info(f"Number of samples in {output_file.path}: %d", num_outputs)
 
 
 def make_prompt_label(sample: GenNERSampleWrapper, word_id: int, level_main: int, level_sub: int):
