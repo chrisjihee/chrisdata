@@ -10,24 +10,28 @@ datasets = [
     "mit-movie",
     "mit-restaurant",
 ]
+target_label_levels = ["1", "3", "5"]
 
 # Iterate over each dataset and split
 for dataset in datasets:
-    for label_levels in ["1", "2", "3", "4,1", "4,2", "4,3", "5"]:
+    for label_levels in target_label_levels:
         for split in ["train", "test", "dev"]:
-            input_path_1 = f"data/gner/each/{dataset}-{split}.jsonl"
-            input_path_2 = f"data/gner/each-sampled/{dataset}-{split}=100.jsonl"
+            input_path_1 = f"data/gner/each-BL/{dataset}-{split}.jsonl"
+            input_path_2 = f"data/gner/each-sampled-BL/{dataset}-{split}=100.jsonl"
+            subprocess.run((f"python -m chrisdata.cli ner convert_to_WQ {input_path_1}"
+                            f" --label_level_main {label_levels}").split())
+            subprocess.run((f"python -m chrisdata.cli ner convert_to_WQ {input_path_2}"
+                            f" --label_level_main {label_levels}").split())
 
-            # Run the conversion commands
-            if len(label_levels.split(",")) == 1:
-                label_level_main = label_levels
-                subprocess.run((f"python -m chrisdata.cli ner convert_to_WQ {input_path_1}"
-                                f" --label_level_main {label_level_main}").split())
-                subprocess.run((f"python -m chrisdata.cli ner convert_to_WQ {input_path_2}"
-                                f" --label_level_main {label_level_main}").split())
-            elif len(label_levels.split(",")) == 2:
-                label_level_main, label_level_sub = label_levels.split(",")
-                subprocess.run((f"python -m chrisdata.cli ner convert_to_WQ {input_path_1}"
-                                f" --label_level_main {label_level_main} --label_level_sub {label_level_sub}").split())
-                subprocess.run((f"python -m chrisdata.cli ner convert_to_WQ {input_path_2}"
-                                f" --label_level_main {label_level_main} --label_level_sub {label_level_sub}").split())
+for label_levels in target_label_levels:
+    for input_path in [
+        "data/gner/united/pile-ner.jsonl",
+        "data/gner/united/zero-shot-dev.jsonl",
+        "data/gner/united/zero-shot-dev-100.jsonl",
+        "data/gner/united/zero-shot-dev-200.jsonl",
+        "data/gner/united/zero-shot-test.jsonl",
+        "data/gner/united/zero-shot-test-100.jsonl",
+        "data/gner/united/zero-shot-test-200.jsonl",
+    ]:
+        subprocess.run((f"python -m chrisdata.cli ner convert_to_WQ {input_path}"
+                        f" --label_level_main {label_levels}").split())
