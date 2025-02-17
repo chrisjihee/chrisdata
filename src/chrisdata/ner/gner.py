@@ -623,11 +623,16 @@ def sample_jsonl_lines(
 @app.command("stratified_sample_jsonl")
 def stratified_sample_jsonl_lines(
         input_file: Annotated[str, typer.Argument()] = "data/gner/united/pile-ner.jsonl",
-        num_samples: Annotated[int, typer.Option("--num_samples")] = 30,
+        min_num_word: Annotated[int, typer.Option("--min_num_word")] = 5,
+        max_num_word: Annotated[int, typer.Option("--max_num_word")] = 120,
+        min_num_label: Annotated[int, typer.Option("--min_num_label")] = 3,
+        max_num_label: Annotated[int, typer.Option("--max_num_label")] = 12,
+        min_num_samples: Annotated[int, typer.Option("--min_num_samples")] = 3,
+        max_num_samples: Annotated[int, typer.Option("--max_num_samples")] = 40,
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     env = NewProjectEnv()
-    output_file = new_path(input_file, post=num_samples, sep='=')
+    output_file = new_path(input_file, post=f"{min_num_word}-{max_num_word},{min_num_label}-{max_num_label},{min_num_samples}-{max_num_samples}", sep='=')
     with (
         JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
         FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
@@ -637,15 +642,15 @@ def stratified_sample_jsonl_lines(
         for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Converting {input_file.path}:",
                                stream=LoggerWriter(logger, level=logging_level), verbose=3):
             sample.label_list = [str(x).replace(' ', '_').lower() for x in sample.label_list]
-            if 5 <= len(sample.instance.words) == len(sample.instance.labels):
+            if min_num_word <= len(sample.instance.words) == len(sample.instance.labels) <= max_num_word:
                 label_list = sorted(set(sample.label_list))
-                if 3 <= len(label_list) < 12:
+                if min_num_label <= len(label_list) <= max_num_label:
                     data_label_list = f'{len(label_list):04d} {" ".join(label_list)}'
                     data_label_lists.setdefault(data_label_list, []).append(sample)
         for data_label_list in sorted(data_label_lists.keys()):
-            if 3 <= len(data_label_lists[data_label_list]):
-                if num_samples < len(data_label_lists[data_label_list]):
-                    sampled_indices = sorted(random.sample(range(len(data_label_lists[data_label_list])), num_samples))
+            if min_num_samples <= len(data_label_lists[data_label_list]):
+                if max_num_samples < len(data_label_lists[data_label_list]):
+                    sampled_indices = sorted(random.sample(range(len(data_label_lists[data_label_list])), max_num_samples))
                     data_label_lists[data_label_list] = [data_label_lists[data_label_list][i] for i in sampled_indices]
             else:
                 del data_label_lists[data_label_list]
