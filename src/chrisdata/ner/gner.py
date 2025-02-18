@@ -853,12 +853,12 @@ sample_X = {
         "id": "ner_0",
         "prompt_labels": "Q:(O) Position(O) character(O) based(O) on(O) enemy(O) coordinates(O) in(O) lua(B-programming language) I(O) have(O) written(O) a(O) function(B-programming concept) here(O) which(O) should(O) turn(O) my(O) character(O) based(O) on(O) enemy(O) coordinates(O) but(O) it's(O) not(O) perfect(O) because(O) it(O) does(O) not(O) always(O) turn(O) where(O) I(O) want(O) it(O) to(O) and(O) perhaps(O) there(O) is(O) a(O) better(O) way(O) of(O) writing(O) it(O) local(O) myPosition(B-variable) =(O) {x(O) =(O) 350,(O) y(O) =(O) 355}(O) local(O) enemyPosition(B-variable) =(O) {x(O) =(O) 352,(O) y(O) =(O) 354}(O) local(O) xValue,(B-variable) yValue,(B-variable) xDir,(B-variable) yDir,(B-variable) dir(B-variable) if(O) myPosition.x(B-variable) >(O) enemyPosition.x(B-variable) then(O) xValue(B-variable) =(O) myPosition.x(B-variable) -(O)",
         "instruction_inputs": "Please analyze the sentence provided, identifying the type of entity for each word on a token-by-token basis.\nOutput format is: word_1(label_1), word_2(label_2), ...\nWe'll use the BIO-format to label the entities, where:\n1. B- (Begin) indicates the start of a named entity.\n2. I- (Inside) is used for words within a named entity but are not the first word.\n3. O (Outside) denotes words that are not part of a named entity.\n\nUse the specific entity tags: programming concept, programming language, database, variable, Date and O.\nSentence: Q: Position character based on enemy coordinates in lua I have written a function here which should turn my character based on enemy coordinates but it's not perfect because it does not always turn where I want it to and perhaps there is a better way of writing it local myPosition = {x = 350, y = 355} local enemyPosition = {x = 352, y = 354} local xValue, yValue, xDir, yDir, dir if myPosition.x > enemyPosition.x then xValue = myPosition.x -",
-        "prediction_output": null,
-        "group": null,
+        "prediction_output": None,
+        "group": None,
         "words": ["Q:", "Position", "character", "based", "on", "enemy", "coordinates", "in", "lua", "I", "have", "written", "a", "function", "here", "which", "should", "turn", "my", "character", "based", "on", "enemy", "coordinates", "but", "it's", "not", "perfect", "because", "it", "does", "not", "always", "turn", "where", "I", "want", "it", "to", "and", "perhaps", "there", "is", "a", "better", "way", "of", "writing", "it", "local", "myPosition", "=", "{x", "=", "350,", "y", "=", "355}", "local", "enemyPosition", "=", "{x", "=", "352,", "y", "=", "354}", "local", "xValue,", "yValue,", "xDir,", "yDir,", "dir", "if", "myPosition.x", ">", "enemyPosition.x", "then", "xValue", "=", "myPosition.x", "-"],
         "labels": ["O", "O", "O", "O", "O", "O", "O", "O", "B-programming language", "O", "O", "O", "O", "B-programming concept", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "B-variable", "O", "O", "O", "O", "O", "O", "O", "O", "B-variable", "O", "O", "O", "O", "O", "O", "O", "O", "B-variable", "B-variable", "B-variable", "B-variable", "B-variable", "O", "B-variable", "O", "B-variable", "O", "B-variable", "O", "B-variable", "O"],
-        "target_index": null,
-        "target_label": null
+        "target_index": None,
+        "target_label": None,
     },
     "label_list": ["date", "database", "programming_concept", "programming_language", "variable"]
 }
@@ -877,7 +877,7 @@ sample_Y = {
         "labels": ["O", "O", "O", "B-product", "I-product", "I-product", "O", "O", "O", "O", "B-field", "I-field", "O", "B-task", "I-task", "O", "B-task", "I-task", "O", "O", "O", "B-task", "I-task", "I-task", "O", "O", "B-field", "I-field", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O",
                    "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"],
         "target_word": None,
-        "target_label": "conference"
+        "target_label": "conference",
     },
     "label_list": ["conference", "metric", "algorithm", "country", "university", "location", "programming language", "organization", "product", "researcher", "task", "field", "person"]
 }
