@@ -698,7 +698,7 @@ def make_prompt_label(sample: GenNERSampleWrapper, word_id: int, level_main: int
 
 @app.command("convert_to_WQ")
 def convert_to_word_query_version(
-        input_file: Annotated[str, typer.Argument()] = ...,  # "data/gner/each/crossner_ai-train.jsonl"
+        input_file: Annotated[str, typer.Argument()] = ...,  # "data/gner/united/pile-ner=5-120,3-12,3-40.jsonl"
         label_level_main: Annotated[int, typer.Option("--label_level_main")] = ...,
         label_level_sub: Annotated[int, typer.Option("--label_level_sub")] = 0,
         instruction_file: Annotated[str, typer.Option("--instruction_file")] = "configs/instruction/GNER-WQ.txt",
@@ -846,17 +846,21 @@ def convert_to_entity_query_version(
 
 
 sample_X = {
-    "id": "0",
-    "dataset": "crossner_ai",
-    "split": "dev",
-    "label_list": ["metric", "field", "person", "researcher", "programming language", "product", "country", "algorithm", "organization", "task", "location", "university", "conference"],
+    "id": "ner_0",
+    "dataset": "pile-ner",
+    "split": "train",
     "instance": {
-        "id": "0",
-        "words": ["Here", ",", "accuracy", "is", "measured", "by", "error", "rate", ",", "which", "is", "defined", "as", ":"],
-        "labels": ["O", "O", "B-metric", "O", "O", "O", "B-metric", "I-metric", "O", "O", "O", "O", "O", "O"],
-        "instruction_inputs": "Please analyze the sentence provided, identifying the type of entity for each word on a token-by-token basis.\nOutput format is: word_1(label_1), word_2(label_2), ...\nWe'll use the BIO-format to label the entities, where:\n1. B- (Begin) indicates the start of a named entity.\n2. I- (Inside) is used for words within a named entity but are not the first word.\n3. O (Outside) denotes words that are not part of a named entity.\n\nUse the specific entity tags: metric, field, person, researcher, programming language, product, country, algorithm, organization, task, location, university, conference and O.\nSentence: Here , accuracy is measured by error rate , which is defined as :",
-        "prompt_labels": "Here(O) ,(O) accuracy(B-metric) is(O) measured(O) by(O) error(B-metric) rate(I-metric) ,(O) which(O) is(O) defined(O) as(O) :(O)"
-    }
+        "id": "ner_0",
+        "prompt_labels": "Q:(O) Position(O) character(O) based(O) on(O) enemy(O) coordinates(O) in(O) lua(B-programming language) I(O) have(O) written(O) a(O) function(B-programming concept) here(O) which(O) should(O) turn(O) my(O) character(O) based(O) on(O) enemy(O) coordinates(O) but(O) it's(O) not(O) perfect(O) because(O) it(O) does(O) not(O) always(O) turn(O) where(O) I(O) want(O) it(O) to(O) and(O) perhaps(O) there(O) is(O) a(O) better(O) way(O) of(O) writing(O) it(O) local(O) myPosition(B-variable) =(O) {x(O) =(O) 350,(O) y(O) =(O) 355}(O) local(O) enemyPosition(B-variable) =(O) {x(O) =(O) 352,(O) y(O) =(O) 354}(O) local(O) xValue,(B-variable) yValue,(B-variable) xDir,(B-variable) yDir,(B-variable) dir(B-variable) if(O) myPosition.x(B-variable) >(O) enemyPosition.x(B-variable) then(O) xValue(B-variable) =(O) myPosition.x(B-variable) -(O)",
+        "instruction_inputs": "Please analyze the sentence provided, identifying the type of entity for each word on a token-by-token basis.\nOutput format is: word_1(label_1), word_2(label_2), ...\nWe'll use the BIO-format to label the entities, where:\n1. B- (Begin) indicates the start of a named entity.\n2. I- (Inside) is used for words within a named entity but are not the first word.\n3. O (Outside) denotes words that are not part of a named entity.\n\nUse the specific entity tags: programming concept, programming language, database, variable, Date and O.\nSentence: Q: Position character based on enemy coordinates in lua I have written a function here which should turn my character based on enemy coordinates but it's not perfect because it does not always turn where I want it to and perhaps there is a better way of writing it local myPosition = {x = 350, y = 355} local enemyPosition = {x = 352, y = 354} local xValue, yValue, xDir, yDir, dir if myPosition.x > enemyPosition.x then xValue = myPosition.x -",
+        "prediction_output": null,
+        "group": null,
+        "words": ["Q:", "Position", "character", "based", "on", "enemy", "coordinates", "in", "lua", "I", "have", "written", "a", "function", "here", "which", "should", "turn", "my", "character", "based", "on", "enemy", "coordinates", "but", "it's", "not", "perfect", "because", "it", "does", "not", "always", "turn", "where", "I", "want", "it", "to", "and", "perhaps", "there", "is", "a", "better", "way", "of", "writing", "it", "local", "myPosition", "=", "{x", "=", "350,", "y", "=", "355}", "local", "enemyPosition", "=", "{x", "=", "352,", "y", "=", "354}", "local", "xValue,", "yValue,", "xDir,", "yDir,", "dir", "if", "myPosition.x", ">", "enemyPosition.x", "then", "xValue", "=", "myPosition.x", "-"],
+        "labels": ["O", "O", "O", "O", "O", "O", "O", "O", "B-programming language", "O", "O", "O", "O", "B-programming concept", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "B-variable", "O", "O", "O", "O", "O", "O", "O", "O", "B-variable", "O", "O", "O", "O", "O", "O", "O", "O", "B-variable", "B-variable", "B-variable", "B-variable", "B-variable", "O", "B-variable", "O", "B-variable", "O", "B-variable", "O", "B-variable", "O"],
+        "target_index": null,
+        "target_label": null
+    },
+    "label_list": ["date", "database", "programming_concept", "programming_language", "variable"]
 }
 
 sample_Y = {
