@@ -61,10 +61,10 @@ def save_conll_format(dataset_split, output_file, output_mode, label_names, data
 
 
 def download_hf_dataset(data_info: HfNerDatasetInfo, output_dir: str = "data", force_download: bool = False):
-    output_dir = Path(output_dir)
+    output_dir = Path(output_dir) / data_info.id
     output_dir.mkdir(parents=True, exist_ok=True)
     print("=" * 80)
-    print(f"[HF dataset] {data_info.source} => {output_dir / data_info.id}")
+    print(f"[HF dataset] {data_info.source} => {output_dir}")
     (output_dir / "source.txt").write_text(data_info.source)
     dataset = load_dataset(
         path=data_info.hf_name,
@@ -82,13 +82,13 @@ def download_hf_dataset(data_info: HfNerDatasetInfo, output_dir: str = "data", f
             assert dataset[split].features[data_info.label_column].feature.names or data_info.label_names, \
                 f"Missing label names for {data_info.label_column}: 1) {dataset[split].features[data_info.label_column]}, 2) {data_info.label_names}"
             label_names = dataset[split].features[data_info.label_column].feature.names or data_info.label_names
-            print(f"  split: {split} -> 1) {dataset[split].features[data_info.label_column]}, 2) {data_info.label_names}")
+            print(f"  split: {split} -> 1) {dataset[split].features[data_info.label_column]}, 2) {data_info.label_names}")  # TODO: remove after checking
             num_output += save_conll_format(dataset[split], output_dir / f"{group}.txt", "w" if i == 0 else "a", label_names, data_info)
             for label_name in label_names:
                 if label_name not in all_label_names:
                     all_label_names.append(label_name)
         print(f"  # {group:5s} : {num_output:,}")
-    (output_dir / "label.txt").write_text("\n".join(all_label_names))
+    (output_dir / "label.txt").write_text("\n".join(all_label_names) + "\n")
     print(f"  # label : {len(all_label_names):,}")
     print("=" * 80)
 
@@ -182,10 +182,12 @@ tweetner7_label2id = {
 
 if __name__ == "__main__":
     dataset_infos = [
-        HfNerDatasetInfo(id="bc2gm", hf_name="spyysalo/bc2gm_corpus"),
+        HfNerDatasetInfo(id="bc2gm", hf_name="spyysalo/bc2gm_corpus"),  # https://huggingface.co/datasets/spyysalo/bc2gm_corpus
+
     ]
     for dataset_info in dataset_infos:
         download_hf_dataset(dataset_info)
+
     # download_hf_dataset("Babelscape/multinerd", "data/MultiNERD-2", label2id=multinerd_label2id)  # TODO: filter out the non-English samples
     # download_hf_dataset(
     #     "Babelscape/wikineural", "data/WikiNeural-en", label2id=wikineural_label2id,
