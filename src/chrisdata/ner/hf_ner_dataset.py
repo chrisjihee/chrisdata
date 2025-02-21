@@ -12,7 +12,8 @@ from progiter import ProgIter
 
 class HfNerDatasetInfo(BaseModel):
     id: str
-    hf_name: str
+    home: str
+    domain: str
     subset: Optional[str] = Field(default=None)
     lang: Optional[str] = Field(default=None)
     label2id: Optional[Dict[str, int]] = Field(default=None)
@@ -26,13 +27,6 @@ class HfNerDatasetInfo(BaseModel):
 
     @model_validator(mode='after')
     def after(self) -> Self:
-        if not self.subset:
-            if len(self.hf_name.split("::")) == 2:
-                self.hf_name, self.subset = self.hf_name.split("::")
-            elif len(self.hf_name.split("::")) == 1:
-                self.hf_name, self.subset = self.hf_name, None
-            else:
-                raise ValueError(f"Invalid hf_name: {self.hf_name}")
         if self.label2id and not self.label_names:
             self.label_names = [None] * len(self.label2id)
             for label, idx in self.label2id.items():
@@ -40,11 +34,8 @@ class HfNerDatasetInfo(BaseModel):
         return self
 
     @property
-    def source(self) -> str:
-        if not self.subset:
-            return f"https://huggingface.co/datasets/{self.hf_name}"
-        else:
-            return f"https://huggingface.co/datasets/{self.hf_name}/viewer/{self.subset}"
+    def path(self) -> str:
+        return self.home.split("https://huggingface.co/datasets/")[-1]
 
     @property
     def split_groups(self) -> Dict[str, List[str]]:
@@ -54,78 +45,75 @@ class HfNerDatasetInfo(BaseModel):
             "test": self.test_splits,
         }
 
-
-def save_conll_format(split, dataset, output_file, output_mode, label_names, data_info: HfNerDatasetInfo) -> int:
-    examples = dataset[split]
-    if len(examples) > 10000:
-        examples = ProgIter(examples, desc=f"    writing:", time_thresh=1.0)
-    num_output = 0
-    with Path(output_file).open(output_mode, encoding="utf-8") as f:
-        for example in examples:
-            if data_info.lang and data_info.lang_column in example:
-                if example[data_info.lang_column] != data_info.lang:
-                    continue
-            tokens = example[data_info.token_column]
-            tags = example[data_info.label_column]
-            if len(tokens) > 0 and len(tags) > 0:
-                for token, tag_id in zip(tokens, tags):
-                    label = label_names[tag_id]
-                    assert label is not None, f"Missing label for tag_id={tag_id}"
-                    f.write(f"{token}\t{label}\n")
-                f.write("\n")
-                num_output += 1
-    return num_output
-
-
-def download_hf_dataset(data_info: HfNerDatasetInfo, output_dir: str = "data", force_download: bool = False):
-    output_dir = Path(output_dir) / data_info.id
-    output_dir.mkdir(parents=True, exist_ok=True)
-    print("=" * 120)
-    print(f"[HF dataset] {data_info.source} => {output_dir}")
-    with patch("builtins.print", side_effect=lambda *xs: do_nothing()):
-        dataset = load_dataset(
-            path=data_info.hf_name,
-            name=data_info.subset,
-            trust_remote_code=True,
-            verification_mode="no_checks",
-            download_mode="force_redownload" if force_download else None,
-        )
-    all_label_names = []
-    num_group_samples = {}
-    for group in data_info.split_groups:
-        num_samples = 0
-        for i, split in enumerate(data_info.split_groups[group]):
-            assert data_info.token_column in dataset[split].features, f"{data_info.token_column} not in dataset[{split}].features: {dataset[split].features}"
-            assert data_info.label_column in dataset[split].features, f"{data_info.label_column} not in dataset[{split}].features: {dataset[split].features}"
-            label_names1, label_names2 = None, None
-            if isinstance(dataset[split].features[data_info.label_column].feature, ClassLabel):
-                label_names1 = dataset[split].features[data_info.label_column].feature.names
-            else:
-                label_names2 = data_info.label_names
-            assert label_names1 or label_names2, \
-                f"Missing label names for {data_info.label_column}: 1) {dataset[split].features[data_info.label_column].feature}, 2) {data_info.label_names}"
-            label_names = label_names1 or label_names2
-
-            print(f"  [split] {split} : 1) {dataset[split].features[data_info.label_column]}, 2) {data_info.label_names}")  # TODO: remove after checking
-            num_samples += save_conll_format(
-                split, dataset,
-                output_file=output_dir / f"{group}.txt",
-                output_mode="w" if i == 0 else "a",
-                label_names=label_names,
-                data_info=data_info,
+    def download_hf_dataset(self, output_dir: str = "data", force_download: bool = False):
+        output_dir = Path(output_dir) / self.id
+        output_dir.mkdir(parents=True, exist_ok=True)
+        print("=" * 120)
+        print(f"[HF dataset] {self.home} => {output_dir}")
+        with patch("builtins.print", side_effect=lambda *xs: do_nothing()):
+            dataset = load_dataset(
+                path=self.path,
+                name=self.subset,
+                trust_remote_code=True,
+                verification_mode="no_checks",
+                download_mode="force_redownload" if force_download else None,
             )
+        all_label_names = []
+        num_group_samples = {}
+        for group in self.split_groups:
+            num_samples = 0
+            for i, split in enumerate(self.split_groups[group]):
+                assert self.token_column in dataset[split].features, f"{self.token_column} not in dataset[{split}].features: {dataset[split].features}"
+                assert self.label_column in dataset[split].features, f"{self.label_column} not in dataset[{split}].features: {dataset[split].features}"
+                label_names1, label_names2 = None, None
+                if isinstance(dataset[split].features[self.label_column].feature, ClassLabel):
+                    label_names1 = dataset[split].features[self.label_column].feature.names
+                else:
+                    label_names2 = self.label_names
+                assert label_names1 or label_names2, \
+                    f"Missing label names for {self.label_column}: 1) {dataset[split].features[self.label_column].feature}, 2) {self.label_names}"
+                label_names = label_names1 or label_names2
 
-            for label_name in label_names:
-                if label_name not in all_label_names:
-                    all_label_names.append(label_name)
-        num_group_samples[group] = num_samples
+                print(f"  [split] {split} : 1) {dataset[split].features[self.label_column]}, 2) {self.label_names}")  # TODO: remove after checking
+                num_samples += self.save_conll_format(
+                    split, dataset,
+                    output_file=output_dir / f"{group}.txt",
+                    output_mode="w" if i == 0 else "a",
+                    label_names=label_names,
+                )
 
-    (output_dir / "label.txt").write_text("\n".join(all_label_names) + "\n")
-    (output_dir / "source.txt").write_text(data_info.source)
-    for group in num_group_samples:
-        print(f"  # {group:5s} : {num_group_samples[group]:,}")
-    print(f"  # label : {len(all_label_names):,}")
-    print("-" * 120)
+                for label_name in label_names:
+                    if label_name not in all_label_names:
+                        all_label_names.append(label_name)
+            num_group_samples[group] = num_samples
+
+        (output_dir / "label.txt").write_text("\n".join(all_label_names) + "\n")
+        (output_dir / "source.txt").write_text(self.home)
+        for group in num_group_samples:
+            print(f"  # {group:5s} : {num_group_samples[group]:,}")
+        print(f"  # label : {len(all_label_names):,}")
+        print("-" * 120)
+
+    def save_conll_format(self, split, dataset, output_file, output_mode, label_names) -> int:
+        examples = dataset[split]
+        if len(examples) > 10000:
+            examples = ProgIter(examples, desc=f"    writing:", time_thresh=1.0)
+        num_output = 0
+        with Path(output_file).open(output_mode, encoding="utf-8") as f:
+            for example in examples:
+                if self.lang and self.lang_column in example:
+                    if example[self.lang_column] != self.lang:
+                        continue
+                tokens = example[self.token_column]
+                tags = example[self.label_column]
+                if len(tokens) > 0 and len(tags) > 0:
+                    for token, tag_id in zip(tokens, tags):
+                        label = label_names[tag_id]
+                        assert label is not None, f"Missing label for tag_id={tag_id}"
+                        f.write(f"{token}\t{label}\n")
+                    f.write("\n")
+                    num_output += 1
+        return num_output
 
 
 multinerd_label2id = {  # https://huggingface.co/datasets/Babelscape/multinerd
@@ -149,15 +137,7 @@ multinerd_label2id = {  # https://huggingface.co/datasets/Babelscape/multinerd
     "B-PHY": 33, "I-PHY": 34,
 }
 
-wikineural_label2id = {  # https://huggingface.co/datasets/Babelscape/wikineural
-    'O': 0,
-    'B-PER': 1, 'I-PER': 2,
-    'B-ORG': 3, 'I-ORG': 4,
-    'B-LOC': 5, 'I-LOC': 6,
-    'B-MISC': 7, 'I-MISC': 8,
-}
-
-ontonotes5_label2id = {
+ontonotes5_label2id = {  # https://huggingface.co/datasets/tner/ontonotes5
     "O": 0,
     "B-CARDINAL": 1,
     "B-DATE": 2,
@@ -197,80 +177,34 @@ ontonotes5_label2id = {
     "I-LANGUAGE": 36
 }
 
-tweetner7_label2id = {
-    "B-corporation": 0,
-    "B-creative_work": 1,
-    "B-event": 2,
-    "B-group": 3,
-    "B-location": 4,
-    "B-person": 5,
-    "B-product": 6,
-    "I-corporation": 7,
-    "I-creative_work": 8,
-    "I-event": 9,
-    "I-group": 10,
-    "I-location": 11,
-    "I-person": 12,
-    "I-product": 13,
-    "O": 14
+wikineural_label2id = {  # https://huggingface.co/datasets/Babelscape/wikineural
+    'O': 0,
+    'B-PER': 1, 'I-PER': 2,
+    'B-ORG': 3, 'I-ORG': 4,
+    'B-LOC': 5, 'I-LOC': 6,
+    'B-MISC': 7, 'I-MISC': 8,
 }
 
 if __name__ == "__main__":
     dataset_infos = [
-        # https://huggingface.co/datasets/spyysalo/bc2gm_corpus
-        # HfNerDatasetInfo(id="bc2gm", hf_name="spyysalo/bc2gm_corpus"),
+        HfNerDatasetInfo(domain="general", id="conll2003", home="https://huggingface.co/datasets/eriktks/conll2003"),
+        HfNerDatasetInfo(domain="general", id="multinerd-en", home="https://huggingface.co/datasets/Babelscape/multinerd", lang="en", label2id=multinerd_label2id),
+        HfNerDatasetInfo(domain="general", id="ontonotes5", home="https://huggingface.co/datasets/tner/ontonotes5", label_column="tags", label2id=ontonotes5_label2id),
+        # HfNerDatasetInfo(domain="general", id="polyglot_ner", home="https://huggingface.co/datasets/rmyeid/polyglot_ner"),  # FileNotFoundError: http://cs.stonybrook.edu/~polyglot/ner2/emnlp_datasets.tgz
+        HfNerDatasetInfo(domain="general", id="wikiann-en", home="https://huggingface.co/datasets/unimelb-nlp/wikiann", subset="en"),
+        HfNerDatasetInfo(domain="general", id="wikineural-en", home="https://huggingface.co/datasets/Babelscape/wikineural", label2id=wikineural_label2id,
+                         train_splits=["train_en"], dev_splits=["val_en"], test_splits=["test_en"]),
 
-        # https://huggingface.co/datasets/chintagunta85/bc4chemd
-        # HfNerDatasetInfo(id="bc4chemd", hf_name="chintagunta85/bc4chemd"),
+        HfNerDatasetInfo(domain="biomed", id="bc2gm", home="https://huggingface.co/datasets/spyysalo/bc2gm_corpus"),
+        HfNerDatasetInfo(domain="biomed", id="bc4chemd", home="https://huggingface.co/datasets/chintagunta85/bc4chemd"),
+        HfNerDatasetInfo(domain="biomed", id="bc5cdr", home="https://huggingface.co/datasets/ghadeermobasher/BC5CDR-Chemical-Disease"),
+        HfNerDatasetInfo(domain="biomed", id="ncbi_disease", home="https://huggingface.co/datasets/ncbi/ncbi_disease"),
 
-        # https://huggingface.co/datasets/ghadeermobasher/BC5CDR-Chemical-Disease or https://huggingface.co/datasets/cvlt-mao/bc5cdr
-        # HfNerDatasetInfo(id="bc5cdr", hf_name="ghadeermobasher/BC5CDR-Chemical-Disease") or HfNerDatasetInfo(id="bc5cdr", hf_name="cvlt-mao/bc5cdr", label_column="tags"),
+        HfNerDatasetInfo(domain="social media", id="broad_twitter_corpus", home="https://huggingface.co/datasets/strombergnlp/broad_twitter_corpus"),
+        HfNerDatasetInfo(domain="social media", id="tweetner7", home="https://huggingface.co/datasets/tner/tweetner7", label_column="tags",
+                         train_splits=["train_2020", "train_2021"], dev_splits=["validation_2020", "validation_2021"], test_splits=["test_2020"]),
 
-        # https://huggingface.co/datasets/strombergnlp/broad_twitter_corpus or https://huggingface.co/datasets/GateNLP/broad_twitter_corpus
-        # HfNerDatasetInfo(id="broad_twitter_corpus", hf_name="strombergnlp/broad_twitter_corpus") or HfNerDatasetInfo(id="broad_twitter_corpus", hf_name="GateNLP/broad_twitter_corpus"),
-
-        # https://huggingface.co/datasets/eriktks/conll2003
-        # HfNerDatasetInfo(id="conll2003", hf_name="eriktks/conll2003"),
-
-        # https://huggingface.co/datasets/DFKI-SLT/fabner
-        # HfNerDatasetInfo(id="FabNER", hf_name="DFKI-SLT/fabner"),
-
-        # https://huggingface.co/datasets/Babelscape/multinerd
-        # HfNerDatasetInfo(id="MultiNERD-en", hf_name="Babelscape/multinerd", lang="en", label2id=multinerd_label2id),
-
-        # https://huggingface.co/datasets/ncbi/ncbi_disease
-        # HfNerDatasetInfo(id="ncbi", hf_name="ncbi/ncbi_disease"),
-
-        # https://huggingface.co/datasets/tner/ontonotes5
-        # HfNerDatasetInfo(id="ontonotes5", hf_name="tner/ontonotes5", label_column="tags", label2id=ontonotes5_label2id),
-
-        # https://huggingface.co/datasets/rmyeid/polyglot_ner
-        # HfNerDatasetInfo(id="polyglot_ner", hf_name="rmyeid/polyglot_ner"),  # FileNotFoundError: http://cs.stonybrook.edu/~polyglot/ner2/emnlp_datasets.tgz
-
-        # https://huggingface.co/datasets/tner/tweetner7
-        # HfNerDatasetInfo(id="tweetner7", hf_name="tner/tweetner7", label_column="tags",
-        #                  train_splits=["train_2020", "train_2021"],
-        #                  dev_splits=["validation_2020", "validation_2021"],
-        #                  test_splits=["test_2020"]),
-
-        # https://huggingface.co/datasets/unimelb-nlp/wikiann
-        # HfNerDatasetInfo(id="wikiann-en", hf_name="unimelb-nlp/wikiann", subset="en"),
-
-        # https://huggingface.co/datasets/Babelscape/wikineural
-        HfNerDatasetInfo(id="wikineural-en", hf_name="Babelscape/wikineural", label2id=wikineural_label2id,
-                         train_splits=["train_en"], dev_splits=["val_en"], test_splits=["test_en"])
+        HfNerDatasetInfo(domain="stem", id="fabner", home="https://huggingface.co/datasets/DFKI-SLT/fabner"),
     ]
     for dataset_info in dataset_infos:
-        download_hf_dataset(dataset_info)
-
-    # download_hf_dataset(
-    #     "Babelscape/wikineural", "data/WikiNeural-en", label2id=wikineural_label2id,
-    #     train_split="train_en", dev_splits=("val_en",), test_splits=("test_en",),
-    # )
-
-    # for dataset_dir in sorted([x for x in Path("data").glob("*") if x.is_dir()]):
-    #     if not Path(dataset_dir / "label.txt").exists():
-    #         generate_label_file_from_train(dataset_dir)
-
-    # for dataset_dir in sorted([x for x in Path("data").glob("*") if x.is_dir()]):
-    #     print_dataset_stats(dataset_dir)
+        dataset_info.download_hf_dataset()
