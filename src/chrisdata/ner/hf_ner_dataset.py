@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import Optional, Dict, List
 from unittest.mock import patch
@@ -85,13 +86,24 @@ class HfNerDatasetInfo(BaseModel):
                 for label_name in label_names:
                     if label_name not in all_label_names:
                         all_label_names.append(label_name)
+
             num_group_samples[group] = num_samples
 
-        (output_dir / "label.txt").write_text("\n".join(all_label_names) + "\n")
+        all_class_names = []
+        for label_name in all_label_names:
+            class_name1 = label_name.split("-")[-1]
+            class_name2 = re.sub(r"^[BIES]-", "", label_name)
+            assert class_name1 == class_name2, f"class_name1({class_name1}) != class_name2({class_name2})"
+            class_name = class_name1
+            if class_name != "O" and class_name not in all_class_names:
+                all_class_names.append(class_name)
+        (output_dir / "label.txt").write_text("\n".join(all_class_names) + "\n")
         (output_dir / "source.txt").write_text(self.home)
+
         for group in num_group_samples:
             print(f"  # {group:5s} : {num_group_samples[group]:,}")
         print(f"  # label : {len(all_label_names):,}")
+        print(f"  # class : {len(all_class_names):,} => {' | '.join(all_class_names)}")
         print("-" * 120)
 
     def save_conll_format(self, split, dataset, output_file, output_mode, label_names) -> int:
