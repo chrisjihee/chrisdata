@@ -119,15 +119,23 @@ def print_dataset_stats(dataset_folder):
 
 
 def download_hf_dataset(
-        dataset_name, output_dir, sub_name=None, label2id=None,
+        dataset_path, output_dir, label2id=None,
         train_split="train", dev_splits=("validation",), test_splits=("test",)
 ):
+    if len(dataset_path.split("::")) == 2:
+        dataset_name, sub_name = dataset_path.split("::")
+    elif len(dataset_path.split("::")) == 1:
+        dataset_name = dataset_path
+        sub_name = None
+    else:
+        raise ValueError(f"Invalid dataset_path: {dataset_path}")
+
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     if sub_name:
-        source = f"https://huggingface.co/datasets/{dataset_name}/{sub_name}"
+        source = f"https://huggingface.co/datasets/{dataset_name}/viewer/{sub_name}"
     else:
-        source = f"https://huggingface.co/datasets/{dataset_name}"
+        source = f"https://huggingface.co/datasets/{dataset_name}/viewer"
     print("=" * 80)
     print(f"[HF dataset] {source} => {output_dir}")
 
@@ -263,9 +271,13 @@ tweetner7_label2id = {
 if __name__ == "__main__":
     pass
     # download_hf_dataset("Babelscape/multinerd", "data/MultiNERD-2", label2id=multinerd_label2id)  # TODO: filter out the non-English samples
+    # download_hf_dataset(
+    #     "Babelscape/wikineural", "data/WikiNeural-en", label2id=wikineural_label2id,
+    #     train_split="train_en", dev_splits=("val_en",), test_splits=("test_en",),
+    # )
     download_hf_dataset(
-        "Babelscape/wikineural", "data/WikiNeural-en", label2id=wikineural_label2id,
-        train_split="train_en", dev_splits=("val_en",), test_splits=("test_en",),
+        dataset_path="unimelb-nlp/wikiann::en",
+        output_dir="data/WikiANN-en",
     )
     # download_hf_dataset("ghadeermobasher/BC5CDR-Chemical-Disease", "data/bc5cdr")
     # download_hf_dataset("chintagunta85/bc4chemd", "data/bc4chemd")
