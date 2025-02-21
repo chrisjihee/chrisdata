@@ -242,7 +242,7 @@ if __name__ == "__main__":
         # HfNerDatasetInfo(id="ncbi", hf_name="ncbi/ncbi_disease"),
 
         # https://huggingface.co/datasets/tner/ontonotes5
-        HfNerDatasetInfo(id="Ontonotes", hf_name="tner/ontonotes5", label_column="tags", label2id=ontonotes5_label2id),
+        HfNerDatasetInfo(id="ontonotes", hf_name="tner/ontonotes5", label_column="tags", label2id=ontonotes5_label2id),
     ]
     for dataset_info in dataset_infos:
         download_hf_dataset(dataset_info)
