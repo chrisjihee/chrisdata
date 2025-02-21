@@ -248,6 +248,7 @@ tweetner7_label2id = {
 }
 
 if __name__ == "__main__":
+    pass
     # main("ghadeermobasher/BC5CDR-Chemical-Disease", "data/bc5cdr")
     # main("chintagunta85/bc4chemd", "data/bc4chemd")
     # main("strombergnlp/broad_twitter_corpus", "data/broad_twitter_corpus")
@@ -263,5 +264,5 @@ if __name__ == "__main__":
     #     if not Path(dataset_dir / "label.txt").exists():
     #         generate_label_file_from_train(dataset_dir)
 
-    for dataset_dir in sorted([x for x in Path("data").glob("*") if x.is_dir()]):
-        print_dataset_stats(dataset_dir)
+    # for dataset_dir in sorted([x for x in Path("data").glob("*") if x.is_dir()]):
+    #     print_dataset_stats(dataset_dir)
