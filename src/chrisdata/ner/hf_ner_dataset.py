@@ -1,9 +1,12 @@
 from pathlib import Path
 from typing import Optional, Dict, List
+from unittest.mock import patch
 
-from datasets import load_dataset
+from datasets import load_dataset, ClassLabel
 from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Self
+
+from chrisbase.io import do_nothing
 
 
 class HfNerDatasetInfo(BaseModel):
@@ -27,7 +30,7 @@ class HfNerDatasetInfo(BaseModel):
                 self.hf_name, self.subset = self.hf_name, None
             else:
                 raise ValueError(f"Invalid hf_name: {self.hf_name}")
-        if self.label2id and not self.label2id:
+        if self.label2id and not self.label_names:
             self.label_names = [None] * len(self.label2id)
             for label, idx in self.label2id.items():
                 self.label_names[idx] = label
@@ -67,24 +70,36 @@ def download_hf_dataset(data_info: HfNerDatasetInfo, output_dir: str = "data", f
     print("=" * 120)
     print(f"[HF dataset] {data_info.source} => {output_dir}")
     (output_dir / "source.txt").write_text(data_info.source)
-    dataset = load_dataset(
-        path=data_info.hf_name,
-        name=data_info.subset,
-        trust_remote_code=True,
-        verification_mode="no_checks",
-        download_mode="force_redownload" if force_download else None,
-    )
+    with patch("builtins.print", side_effect=lambda *xs: do_nothing()):
+        dataset = load_dataset(
+            path=data_info.hf_name,
+            name=data_info.subset,
+            trust_remote_code=True,
+            verification_mode="no_checks",
+            download_mode="force_redownload" if force_download else None,
+        )
     all_label_names = []
     for group in data_info.split_groups:
         num_output = 0
         for i, split in enumerate(data_info.split_groups[group]):
             assert data_info.token_column in dataset[split].features, f"{data_info.token_column} not in dataset[{split}].features: {dataset[split].features}"
             assert data_info.label_column in dataset[split].features, f"{data_info.label_column} not in dataset[{split}].features: {dataset[split].features}"
-            assert dataset[split].features[data_info.label_column].feature.names or data_info.label_names, \
-                f"Missing label names for {data_info.label_column}: 1) {dataset[split].features[data_info.label_column]}, 2) {data_info.label_names}"
-            label_names = dataset[split].features[data_info.label_column].feature.names or data_info.label_names
+            label_names1, label_names2 = None, None
+            if isinstance(dataset[split].features[data_info.label_column].feature, ClassLabel):
+                label_names1 = dataset[split].features[data_info.label_column].feature.names
+            else:
+                label_names2 = data_info.label_names
+            assert label_names1 or label_names2, \
+                f"Missing label names for {data_info.label_column}: 1) {dataset[split].features[data_info.label_column].feature}, 2) {data_info.label_names}"
+            label_names = label_names1 or label_names2
             print(f"  split: {split} -> 1) {dataset[split].features[data_info.label_column]}, 2) {data_info.label_names}")  # TODO: remove after checking
-            num_output += save_conll_format(dataset[split], output_dir / f"{group}.txt", "w" if i == 0 else "a", label_names, data_info)
+            num_output += save_conll_format(
+                dataset[split],
+                output_file=output_dir / f"{group}.txt",
+                output_mode="w" if i == 0 else "a",
+                label_names=label_names,
+                data_info=data_info,
+            )
             for label_name in label_names:
                 if label_name not in all_label_names:
                     all_label_names.append(label_name)
@@ -183,8 +198,17 @@ tweetner7_label2id = {
 
 if __name__ == "__main__":
     dataset_infos = [
-        HfNerDatasetInfo(id="bc2gm", hf_name="spyysalo/bc2gm_corpus"),  # https://huggingface.co/datasets/spyysalo/bc2gm_corpus
-        HfNerDatasetInfo(id="bc4chemd", hf_name="chintagunta85/bc4chemd"),  # https://huggingface.co/datasets/chintagunta85/bc4chemd
+        # https://huggingface.co/datasets/spyysalo/bc2gm_corpus
+        # HfNerDatasetInfo(id="bc2gm", hf_name="spyysalo/bc2gm_corpus"),
+
+        # https://huggingface.co/datasets/chintagunta85/bc4chemd
+        # HfNerDatasetInfo(id="bc4chemd", hf_name="chintagunta85/bc4chemd"),
+
+        # https://huggingface.co/datasets/ghadeermobasher/BC5CDR-Chemical-Disease or https://huggingface.co/datasets/cvlt-mao/bc5cdr
+        # HfNerDatasetInfo(id="bc5cdr", hf_name="ghadeermobasher/BC5CDR-Chemical-Disease") or HfNerDatasetInfo(id="bc5cdr-2", hf_name="cvlt-mao/bc5cdr", label_column="tags"),
+
+        # https://huggingface.co/datasets/strombergnlp/broad_twitter_corpus or https://huggingface.co/datasets/GateNLP/broad_twitter_corpus
+        # HfNerDatasetInfo(id="broad_twitter_corpus", hf_name="strombergnlp/broad_twitter_corpus") or HfNerDatasetInfo(id="broad_twitter_corpus-2", hf_name="GateNLP/broad_twitter_corpus"),
     ]
     for dataset_info in dataset_infos:
         download_hf_dataset(dataset_info)
@@ -199,7 +223,6 @@ if __name__ == "__main__":
     #     output_dir="data/WikiANN-en",
     # )
     # download_hf_dataset("ghadeermobasher/BC5CDR-Chemical-Disease", "data/bc5cdr")
-    # download_hf_dataset("strombe  rgnlp/broad_twitter_corpus", "data/broad_twitter_corpus")
     # download_hf_dataset("eriktks/conll2003", "data/conll2003")
     # download_hf_dataset("DFKI-SLT/fabner", "data/FabNER")
     # download_hf_dataset("ncbi/ncbi_disease", "data/ncbi")
