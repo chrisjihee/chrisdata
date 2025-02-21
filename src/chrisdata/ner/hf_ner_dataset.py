@@ -82,7 +82,6 @@ def download_hf_dataset(data_info: HfNerDatasetInfo, output_dir: str = "data", f
     output_dir.mkdir(parents=True, exist_ok=True)
     print("=" * 120)
     print(f"[HF dataset] {data_info.source} => {output_dir}")
-    (output_dir / "source.txt").write_text(data_info.source)
     with patch("builtins.print", side_effect=lambda *xs: do_nothing()):
         dataset = load_dataset(
             path=data_info.hf_name,
@@ -120,7 +119,9 @@ def download_hf_dataset(data_info: HfNerDatasetInfo, output_dir: str = "data", f
                 if label_name not in all_label_names:
                     all_label_names.append(label_name)
         num_group_samples[group] = num_samples
+
     (output_dir / "label.txt").write_text("\n".join(all_label_names) + "\n")
+    (output_dir / "source.txt").write_text(data_info.source)
     for group in num_group_samples:
         print(f"  # {group:5s} : {num_group_samples[group]:,}")
     print(f"  # label : {len(all_label_names):,}")
