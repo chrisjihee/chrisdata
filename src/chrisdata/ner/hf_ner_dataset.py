@@ -211,8 +211,10 @@ if __name__ == "__main__":
         # HfNerDatasetInfo(id="broad_twitter_corpus", hf_name="strombergnlp/broad_twitter_corpus") or HfNerDatasetInfo(id="broad_twitter_corpus-2", hf_name="GateNLP/broad_twitter_corpus"),
 
         # https://huggingface.co/datasets/eriktks/conll2003
-        HfNerDatasetInfo(id="conll2003", hf_name="eriktks/conll2003"),
+        # HfNerDatasetInfo(id="conll2003", hf_name="eriktks/conll2003"),
 
+        # https://huggingface.co/datasets/DFKI-SLT/fabner
+        HfNerDatasetInfo(id="FabNER", hf_name="DFKI-SLT/fabner"),
 
     ]
     for dataset_info in dataset_infos:
