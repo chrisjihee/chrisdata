@@ -242,7 +242,13 @@ if __name__ == "__main__":
         # HfNerDatasetInfo(id="ncbi", hf_name="ncbi/ncbi_disease"),
 
         # https://huggingface.co/datasets/tner/ontonotes5
-        HfNerDatasetInfo(id="ontonotes", hf_name="tner/ontonotes5", label_column="tags", label2id=ontonotes5_label2id),
+        # HfNerDatasetInfo(id="ontonotes5", hf_name="tner/ontonotes5", label_column="tags", label2id=ontonotes5_label2id),
+
+        # https://huggingface.co/datasets/tner/tweetner7
+        # HfNerDatasetInfo(id="tweetner7", hf_name="tner/tweetner7", label_column="tags",
+        #                  train_splits=["train_2020", "train_2021"],
+        #                  dev_splits=["validation_2020", "validation_2021"],
+        #                  test_splits=["test_2020"]),
     ]
     for dataset_info in dataset_infos:
         download_hf_dataset(dataset_info)
@@ -256,8 +262,6 @@ if __name__ == "__main__":
     #     output_dir="data/WikiANN-en",
     # )
     # download_hf_dataset("rmyeid/polyglot_ner", "data/PolyglotNER")
-    # download_hf_dataset("tner/tweetner7", "data/TweetNER7", label2id=tweetner7_label2id,
-    #                     train_split="train_all", dev_splits=["validation_2020", "validation_2021"], test_splits=["test_2020"])
 
     # for dataset_dir in sorted([x for x in Path("data").glob("*") if x.is_dir()]):
     #     if not Path(dataset_dir / "label.txt").exists():
