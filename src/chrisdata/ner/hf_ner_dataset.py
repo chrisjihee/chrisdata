@@ -239,7 +239,10 @@ if __name__ == "__main__":
         # HfNerDatasetInfo(id="MultiNERD-en", hf_name="Babelscape/multinerd", lang="en", label2id=multinerd_label2id),
 
         # https://huggingface.co/datasets/ncbi/ncbi_disease
-        HfNerDatasetInfo(id="ncbi", hf_name="ncbi/ncbi_disease"),
+        # HfNerDatasetInfo(id="ncbi", hf_name="ncbi/ncbi_disease"),
+
+        # https://huggingface.co/datasets/tner/ontonotes5
+        HfNerDatasetInfo(id="Ontonotes", hf_name="tner/ontonotes5", label_column="tags", label2id=ontonotes5_label2id),
     ]
     for dataset_info in dataset_infos:
         download_hf_dataset(dataset_info)
@@ -252,8 +255,6 @@ if __name__ == "__main__":
     #     dataset_path="unimelb-nlp/wikiann::en",
     #     output_dir="data/WikiANN-en",
     # )
-    # download_hf_dataset("ncbi/ncbi_disease", "data/ncbi")
-    # download_hf_dataset("tner/ontonotes5", "data/Ontonotes", label2id=ontonotes5_label2id)
     # download_hf_dataset("rmyeid/polyglot_ner", "data/PolyglotNER")
     # download_hf_dataset("tner/tweetner7", "data/TweetNER7", label2id=tweetner7_label2id,
     #                     train_split="train_all", dev_splits=["validation_2020", "validation_2021"], test_splits=["test_2020"])
