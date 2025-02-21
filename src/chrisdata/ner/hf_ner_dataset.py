@@ -91,11 +91,8 @@ class HfNerDatasetInfo(BaseModel):
 
         all_class_names = []
         for label_name in all_label_names:
-            class_name1 = label_name.split("-")[-1]
-            class_name2 = re.sub(r"^[BIES]-", "", label_name)
-            assert class_name1 == class_name2, f"class_name1({class_name1}) != class_name2({class_name2})"
-            class_name = class_name1
-            if class_name != "O" and class_name not in all_class_names:
+            class_name = re.sub(r"^[BIES]-|^O$", "", label_name)
+            if class_name and class_name not in all_class_names:
                 all_class_names.append(class_name)
         (output_dir / "label.txt").write_text("\n".join(all_class_names) + "\n")
         (output_dir / "source.txt").write_text(self.home)
