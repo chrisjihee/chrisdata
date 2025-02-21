@@ -7,16 +7,19 @@ from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Self
 
 from chrisbase.io import do_nothing
+from progiter import ProgIter
 
 
 class HfNerDatasetInfo(BaseModel):
     id: str
     hf_name: str
     subset: Optional[str] = Field(default=None)
+    lang: Optional[str] = Field(default=None)
     label2id: Optional[Dict[str, int]] = Field(default=None)
     label_names: Optional[List[Optional[str]]] = Field(default=None)
     token_column: str = Field(default="tokens")
     label_column: str = Field(default="ner_tags")
+    lang_column: str = Field(default="lang")
     train_splits: list[str] = Field(default=["train"])
     dev_splits: list[str] = Field(default=["validation"])
     test_splits: list[str] = Field(default=["test"])
@@ -45,13 +48,23 @@ class HfNerDatasetInfo(BaseModel):
 
     @property
     def split_groups(self) -> Dict[str, List[str]]:
-        return {"train": self.train_splits, "dev": self.dev_splits, "test": self.test_splits}
+        return {
+            "train": self.train_splits,
+            "dev": self.dev_splits,
+            "test": self.test_splits,
+        }
 
 
-def save_conll_format(dataset_split, output_file, output_mode, label_names, data_info: HfNerDatasetInfo) -> int:
+def save_conll_format(split, dataset, output_file, output_mode, label_names, data_info: HfNerDatasetInfo) -> int:
+    examples = dataset[split]
+    if len(examples) > 10000:
+        examples = ProgIter(examples, desc=f"    writing:", time_thresh=1.0)
     num_output = 0
     with Path(output_file).open(output_mode, encoding="utf-8") as f:
-        for example in dataset_split:
+        for example in examples:
+            if data_info.lang and data_info.lang_column in example:
+                if example[data_info.lang_column] != data_info.lang:
+                    continue
             tokens = example[data_info.token_column]
             tags = example[data_info.label_column]
             if len(tokens) > 0 and len(tags) > 0:
@@ -79,8 +92,9 @@ def download_hf_dataset(data_info: HfNerDatasetInfo, output_dir: str = "data", f
             download_mode="force_redownload" if force_download else None,
         )
     all_label_names = []
+    num_group_samples = {}
     for group in data_info.split_groups:
-        num_output = 0
+        num_samples = 0
         for i, split in enumerate(data_info.split_groups[group]):
             assert data_info.token_column in dataset[split].features, f"{data_info.token_column} not in dataset[{split}].features: {dataset[split].features}"
             assert data_info.label_column in dataset[split].features, f"{data_info.label_column} not in dataset[{split}].features: {dataset[split].features}"
@@ -92,19 +106,23 @@ def download_hf_dataset(data_info: HfNerDatasetInfo, output_dir: str = "data", f
             assert label_names1 or label_names2, \
                 f"Missing label names for {data_info.label_column}: 1) {dataset[split].features[data_info.label_column].feature}, 2) {data_info.label_names}"
             label_names = label_names1 or label_names2
-            print(f"  split: {split} -> 1) {dataset[split].features[data_info.label_column]}, 2) {data_info.label_names}")  # TODO: remove after checking
-            num_output += save_conll_format(
-                dataset[split],
+
+            print(f"  [split] {split} : 1) {dataset[split].features[data_info.label_column]}, 2) {data_info.label_names}")  # TODO: remove after checking
+            num_samples += save_conll_format(
+                split, dataset,
                 output_file=output_dir / f"{group}.txt",
                 output_mode="w" if i == 0 else "a",
                 label_names=label_names,
                 data_info=data_info,
             )
+
             for label_name in label_names:
                 if label_name not in all_label_names:
                     all_label_names.append(label_name)
-        print(f"  # {group:5s} : {num_output:,}")
+        num_group_samples[group] = num_samples
     (output_dir / "label.txt").write_text("\n".join(all_label_names) + "\n")
+    for group in num_group_samples:
+        print(f"  # {group:5s} : {num_group_samples[group]:,}")
     print(f"  # label : {len(all_label_names):,}")
     print("-" * 120)
 
@@ -205,17 +223,19 @@ if __name__ == "__main__":
         # HfNerDatasetInfo(id="bc4chemd", hf_name="chintagunta85/bc4chemd"),
 
         # https://huggingface.co/datasets/ghadeermobasher/BC5CDR-Chemical-Disease or https://huggingface.co/datasets/cvlt-mao/bc5cdr
-        # HfNerDatasetInfo(id="bc5cdr", hf_name="ghadeermobasher/BC5CDR-Chemical-Disease") or HfNerDatasetInfo(id="bc5cdr-2", hf_name="cvlt-mao/bc5cdr", label_column="tags"),
+        # HfNerDatasetInfo(id="bc5cdr", hf_name="ghadeermobasher/BC5CDR-Chemical-Disease") or HfNerDatasetInfo(id="bc5cdr", hf_name="cvlt-mao/bc5cdr", label_column="tags"),
 
         # https://huggingface.co/datasets/strombergnlp/broad_twitter_corpus or https://huggingface.co/datasets/GateNLP/broad_twitter_corpus
-        # HfNerDatasetInfo(id="broad_twitter_corpus", hf_name="strombergnlp/broad_twitter_corpus") or HfNerDatasetInfo(id="broad_twitter_corpus-2", hf_name="GateNLP/broad_twitter_corpus"),
+        # HfNerDatasetInfo(id="broad_twitter_corpus", hf_name="strombergnlp/broad_twitter_corpus") or HfNerDatasetInfo(id="broad_twitter_corpus", hf_name="GateNLP/broad_twitter_corpus"),
 
         # https://huggingface.co/datasets/eriktks/conll2003
         # HfNerDatasetInfo(id="conll2003", hf_name="eriktks/conll2003"),
 
         # https://huggingface.co/datasets/DFKI-SLT/fabner
-        HfNerDatasetInfo(id="FabNER", hf_name="DFKI-SLT/fabner"),
+        # HfNerDatasetInfo(id="FabNER", hf_name="DFKI-SLT/fabner"),
 
+        # https://huggingface.co/datasets/Babelscape/multinerd
+        HfNerDatasetInfo(id="MultiNERD-en", hf_name="Babelscape/multinerd", lang="en", label2id=multinerd_label2id),
     ]
     for dataset_info in dataset_infos:
         download_hf_dataset(dataset_info)
