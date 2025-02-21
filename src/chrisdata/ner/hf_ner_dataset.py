@@ -254,8 +254,11 @@ if __name__ == "__main__":
         #                  test_splits=["test_2020"]),
 
         # https://huggingface.co/datasets/unimelb-nlp/wikiann
-        HfNerDatasetInfo(id="wikiann-en", hf_name="unimelb-nlp/wikiann", subset="en"),
+        # HfNerDatasetInfo(id="wikiann-en", hf_name="unimelb-nlp/wikiann", subset="en"),
 
+        # https://huggingface.co/datasets/Babelscape/wikineural
+        HfNerDatasetInfo(id="wikineural-en", hf_name="Babelscape/wikineural", label2id=wikineural_label2id,
+                         train_splits=["train_en"], dev_splits=["val_en"], test_splits=["test_en"])
     ]
     for dataset_info in dataset_infos:
         download_hf_dataset(dataset_info)
