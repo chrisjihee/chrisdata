@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 from typing_extensions import Annotated
 
 from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, NewProjectEnv
-from chrisbase.io import LoggingFormat, new_path, merge_dicts, normalize_simple_list_in_json, LoggerWriter, strip_lines, dirs, text_blocks
+from chrisbase.io import LoggingFormat, new_path, merge_dicts, normalize_simple_list_in_json, LoggerWriter, strip_lines, dirs, text_blocks, all_line_list
 from chrisbase.util import mute_tqdm_cls, shuffled
 from progiter import ProgIter
 from . import *
@@ -551,29 +551,47 @@ def convert_json_to_jsonl(
         logger.info("Number of samples in output_file: %d", prog.n)
 
 
+conll_label = re.compile("[ \t](O|[BIES]-[^\n]+)$")
+
+
+def normalize_conll(input_file, temp_file="temp.txt"):
+    with Path(temp_file).open("w") as f:
+        for text_block in text_blocks(input_file):
+            for line in text_block:
+                m = conll_label.search(line)
+                assert m, f"Invalid line: {line}"
+                word = line[:m.start()]
+                label = m.group(1)
+                f.write(f"{word}\t{label}\n")
+            f.write("\n")
+    with Path(temp_file).open() as f:
+        with Path(input_file).open("w") as g:
+            for line in f:
+                g.write(line)
+
+
+def read_class_names(input_file):
+    all_label_names = []
+    for text_block in text_blocks(input_file):
+        for line in text_block:
+            label = conll_label.search(line).group(1)
+            if label not in all_label_names:
+                all_label_names.append(label)
+    all_class_names = []
+    for label_name in all_label_names:
+        class_name = re.sub(r"^[BIES]-|^O$", "", label_name)
+        if class_name and class_name not in all_class_names:
+            all_class_names.append(class_name)
+    return all_class_names
+
+
 @app.command("convert_conll")
 def convert_conll_to_jsonl(
         input_dirs: Annotated[str, typer.Argument()] = "data/*",  # "data"
-        temp_file: Annotated[str, typer.Option("--temp_file")] = "temp.txt",
         instruction_file: Annotated[str, typer.Option("--instruction_file")] = "configs/instruction/GNER-paper.txt",
         split_names: Annotated[List[str], typer.Option("--split_names")] = ("train", "dev", "test"),
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
-    def normalize_conll(input_file, conll_label=re.compile("[ \t](O|[BIES]-[^\n]+)$")):
-        with Path(temp_file).open("w") as f:
-            for text_block in text_blocks(input_file):
-                for line in text_block:
-                    m = conll_label.search(line)
-                    assert m, f"Invalid line: {line}"
-                    word = line[:m.start()]
-                    label = m.group(1)
-                    f.write(f"{word}\t{label}\n")
-                f.write("\n")
-        with Path(temp_file).open() as f:
-            with Path(input_file).open("w") as g:
-                for line in f:
-                    g.write(line)
-
     env = NewProjectEnv(logging_level=logging_level)
     with (
         JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
@@ -586,20 +604,19 @@ def convert_conll_to_jsonl(
             eval_file = [x for x in [input_dir / "dev.txt"] if x.exists() and x.is_file()]
             test_file = [x for x in [input_dir / "test.txt"] if x.exists() and x.is_file()]
             label_file = label_file[0] if label_file else None
-            train_file = normalize_conll(train_file[0]) if train_file else None
-            eval_file = normalize_conll(eval_file[0]) if eval_file else None
-            test_file = normalize_conll(test_file[0]) if test_file else None
+            train_file = train_file[0] if train_file else None
+            eval_file = eval_file[0] if eval_file else None
+            test_file = test_file[0] if test_file else None
+            if not label_file:
+                class_names = read_class_names(train_file)
+                (input_dir / "label.txt").write_text("\n".join(class_names) + "\n")
+                label_file = [x for x in [input_dir / "label.txt"] if x.exists() and x.is_file()]
+            assert label_file, f"Missing label file: {input_dir}"
 
-            # exit(0)
-            # exit(0)
-            # if label_file:
-            #     classes = [x.strip() for x in all_line_list(label_file)]
-            #     labels = [f"B-{x}" for x in classes] + [f"I-{x}" for x in classes] + ["O"]
-            #     logger.info("  - class(%d): %s", len(classes), ', '.join(classes))
-            #     logger.info("  - label(%d): %s", len(labels), ', '.join(labels))
-            # else:
-            #     extraordinary.append(input_dir)
-            #
+            classes = [x.strip() for x in all_line_list(label_file)]
+            labels = [f"B-{x}" for x in classes] + [f"I-{x}" for x in classes] + ["O"]
+            logger.info("  - class(%d): %s", len(classes), ', '.join(classes))
+            logger.info("  - label(%d): %s", len(labels), ', '.join(labels))
         # logger.info(hr())
         # for x in extraordinary:
         #     logger.info("[extraordinary]: %s", x)
