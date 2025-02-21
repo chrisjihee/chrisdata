@@ -197,6 +197,7 @@ wikineural_label2id = {  # https://huggingface.co/datasets/Babelscape/wikineural
 if __name__ == "__main__":
     dataset_infos = [
         HfNerDatasetInfo(domain="general", id="conll2003", home="https://huggingface.co/datasets/eriktks/conll2003"),
+        HfNerDatasetInfo(domain="general", id="conllpp", home="https://huggingface.co/datasets/ZihanWangKi/conllpp"),
         HfNerDatasetInfo(domain="general", id="MultiNERD", home="https://huggingface.co/datasets/Babelscape/multinerd", lang="en", label2id=multinerd_label2id),
         HfNerDatasetInfo(domain="general", id="Ontonotes", home="https://huggingface.co/datasets/tner/ontonotes5", label_column="tags", label2id=ontonotes5_label2id),
         # HfNerDatasetInfo(domain="general", id="PolyglotNER", home="https://huggingface.co/datasets/rmyeid/polyglot_ner"),  # FileNotFoundError: http://cs.stonybrook.edu/~polyglot/ner2/emnlp_datasets.tgz
