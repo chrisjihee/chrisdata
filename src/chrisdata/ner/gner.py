@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 from typing_extensions import Annotated
 
 from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, NewProjectEnv
-from chrisbase.io import LoggingFormat, new_path, merge_dicts, normalize_simple_list_in_json, LoggerWriter, strip_lines, dirs, text_blocks, all_lines, all_line_list, hr
+from chrisbase.io import LoggingFormat, new_path, merge_dicts, normalize_simple_list_in_json, LoggerWriter, strip_lines, dirs, text_blocks
 from chrisbase.util import mute_tqdm_cls, shuffled
 from progiter import ProgIter
 from . import *
@@ -554,10 +554,26 @@ def convert_json_to_jsonl(
 @app.command("convert_conll")
 def convert_conll_to_jsonl(
         input_dirs: Annotated[str, typer.Argument()] = "data/*",  # "data"
+        temp_file: Annotated[str, typer.Option("--temp_file")] = "temp.txt",
         instruction_file: Annotated[str, typer.Option("--instruction_file")] = "configs/instruction/GNER-paper.txt",
         split_names: Annotated[List[str], typer.Option("--split_names")] = ("train", "dev", "test"),
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
+    def normalize_conll(input_file, conll_label=re.compile("[ \t](O|[BIES]-[^\n]+)$")):
+        with Path(temp_file).open("w") as f:
+            for text_block in text_blocks(input_file):
+                for line in text_block:
+                    m = conll_label.search(line)
+                    assert m, f"Invalid line: {line}"
+                    word = line[:m.start()]
+                    label = m.group(1)
+                    f.write(f"{word}\t{label}\n")
+                f.write("\n")
+        with Path(temp_file).open() as f:
+            with Path(input_file).open("w") as g:
+                for line in f:
+                    g.write(line)
+
     env = NewProjectEnv(logging_level=logging_level)
     with (
         JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
@@ -565,33 +581,28 @@ def convert_conll_to_jsonl(
         extraordinary = []
         for input_dir in sorted(dirs(input_dirs), key=lambda x: x.name.lower()):
             logger.info("[input_dir]: %s", input_dir)
-            label_file = [x for x in [input_dir / "label.txt", input_dir / "label.tsv"] if x.exists() and x.is_file()]
-            train_file = [x for x in [input_dir / "train.txt", input_dir / "train.tsv"] if x.exists() and x.is_file()]
-            eval_file = [x for x in [input_dir / "dev.txt", input_dir / "val.txt", input_dir / "dev.tsv", input_dir / "val.tsv"] if x.exists() and x.is_file()]
-            test_file = [x for x in [input_dir / "test.txt", input_dir / "test.tsv"] if x.exists() and x.is_file()]
+            label_file = [x for x in [input_dir / "label.txt"] if x.exists() and x.is_file()]
+            train_file = [x for x in [input_dir / "train.txt"] if x.exists() and x.is_file()]
+            eval_file = [x for x in [input_dir / "dev.txt"] if x.exists() and x.is_file()]
+            test_file = [x for x in [input_dir / "test.txt"] if x.exists() and x.is_file()]
             label_file = label_file[0] if label_file else None
-            train_file = train_file[0] if train_file else None
-            eval_file = eval_file[0] if eval_file else None
-            test_file = test_file[0] if test_file else None
-            if label_file:
-                classes = [x.strip() for x in all_line_list(label_file)]
-                classes = [x[2:] if x.upper().startswith("B-") else x if not x.upper().startswith("I-") else "" for x in classes]
-                classes = [x for x in classes if len(x) > 0 and x.upper() != "O"]
-                labels = [f"B-{x}" for x in classes] + [f"I-{x}" for x in classes] + ["O"]
-                logger.info("  - classes(%d): %s", len(classes), classes)
-                logger.info("  - labels(%d): %s", len(labels), labels)
-            else:
-                extraordinary.append(input_dir)
-            #
-            # for text_block in text_blocks(train_file):
-            #     aa = [line.split("\t") for line in text_block]
-            #     print(aa)
-            #     print("-" * 80)
-            #     exit(0)
+            train_file = normalize_conll(train_file[0]) if train_file else None
+            eval_file = normalize_conll(eval_file[0]) if eval_file else None
+            test_file = normalize_conll(test_file[0]) if test_file else None
+
             # exit(0)
-        logger.info(hr())
-        for x in extraordinary:
-            logger.info("[extraordinary]: %s", x)
+            # exit(0)
+            # if label_file:
+            #     classes = [x.strip() for x in all_line_list(label_file)]
+            #     labels = [f"B-{x}" for x in classes] + [f"I-{x}" for x in classes] + ["O"]
+            #     logger.info("  - class(%d): %s", len(classes), ', '.join(classes))
+            #     logger.info("  - label(%d): %s", len(labels), ', '.join(labels))
+            # else:
+            #     extraordinary.append(input_dir)
+            #
+        # logger.info(hr())
+        # for x in extraordinary:
+        #     logger.info("[extraordinary]: %s", x)
 
     # input_dir = Path(input_dir)
     # if not output_file:
