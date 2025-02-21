@@ -209,6 +209,11 @@ if __name__ == "__main__":
 
         # https://huggingface.co/datasets/strombergnlp/broad_twitter_corpus or https://huggingface.co/datasets/GateNLP/broad_twitter_corpus
         # HfNerDatasetInfo(id="broad_twitter_corpus", hf_name="strombergnlp/broad_twitter_corpus") or HfNerDatasetInfo(id="broad_twitter_corpus-2", hf_name="GateNLP/broad_twitter_corpus"),
+
+        # https://huggingface.co/datasets/eriktks/conll2003
+        HfNerDatasetInfo(id="conll2003", hf_name="eriktks/conll2003"),
+
+
     ]
     for dataset_info in dataset_infos:
         download_hf_dataset(dataset_info)
@@ -222,8 +227,6 @@ if __name__ == "__main__":
     #     dataset_path="unimelb-nlp/wikiann::en",
     #     output_dir="data/WikiANN-en",
     # )
-    # download_hf_dataset("ghadeermobasher/BC5CDR-Chemical-Disease", "data/bc5cdr")
-    # download_hf_dataset("eriktks/conll2003", "data/conll2003")
     # download_hf_dataset("DFKI-SLT/fabner", "data/FabNER")
     # download_hf_dataset("ncbi/ncbi_disease", "data/ncbi")
     # download_hf_dataset("tner/ontonotes5", "data/Ontonotes", label2id=ontonotes5_label2id)
