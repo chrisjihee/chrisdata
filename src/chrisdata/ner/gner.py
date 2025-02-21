@@ -596,7 +596,6 @@ def convert_conll_to_jsonl(
     with (
         JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
     ):
-        extraordinary = []
         for input_dir in sorted(dirs(input_dirs), key=lambda x: x.name.lower()):
             logger.info("[input_dir]: %s", input_dir)
             label_file = [x for x in [input_dir / "label.txt"] if x.exists() and x.is_file()]
@@ -611,15 +610,16 @@ def convert_conll_to_jsonl(
                 class_names = read_class_names(train_file)
                 (input_dir / "label.txt").write_text("\n".join(class_names) + "\n")
                 label_file = [x for x in [input_dir / "label.txt"] if x.exists() and x.is_file()]
+                label_file = label_file[0] if label_file else None
             assert label_file, f"Missing label file: {input_dir}"
+
+            for input_file in [train_file, eval_file, test_file]:
+                normalize_conll(input_file)
 
             classes = [x.strip() for x in all_line_list(label_file)]
             labels = [f"B-{x}" for x in classes] + [f"I-{x}" for x in classes] + ["O"]
             logger.info("  - class(%d): %s", len(classes), ', '.join(classes))
             logger.info("  - label(%d): %s", len(labels), ', '.join(labels))
-        # logger.info(hr())
-        # for x in extraordinary:
-        #     logger.info("[extraordinary]: %s", x)
 
     # input_dir = Path(input_dir)
     # if not output_file:
