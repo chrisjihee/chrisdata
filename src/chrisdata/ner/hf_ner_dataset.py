@@ -197,23 +197,23 @@ wikineural_label2id = {  # https://huggingface.co/datasets/Babelscape/wikineural
 if __name__ == "__main__":
     dataset_infos = [
         HfNerDatasetInfo(domain="general", id="conll2003", home="https://huggingface.co/datasets/eriktks/conll2003"),
-        HfNerDatasetInfo(domain="general", id="multinerd-en", home="https://huggingface.co/datasets/Babelscape/multinerd", lang="en", label2id=multinerd_label2id),
-        HfNerDatasetInfo(domain="general", id="ontonotes5", home="https://huggingface.co/datasets/tner/ontonotes5", label_column="tags", label2id=ontonotes5_label2id),
-        # HfNerDatasetInfo(domain="general", id="polyglot_ner", home="https://huggingface.co/datasets/rmyeid/polyglot_ner"),  # FileNotFoundError: http://cs.stonybrook.edu/~polyglot/ner2/emnlp_datasets.tgz
-        HfNerDatasetInfo(domain="general", id="wikiann-en", home="https://huggingface.co/datasets/unimelb-nlp/wikiann", subset="en"),
-        HfNerDatasetInfo(domain="general", id="wikineural-en", home="https://huggingface.co/datasets/Babelscape/wikineural", label2id=wikineural_label2id,
+        HfNerDatasetInfo(domain="general", id="MultiNERD", home="https://huggingface.co/datasets/Babelscape/multinerd", lang="en", label2id=multinerd_label2id),
+        HfNerDatasetInfo(domain="general", id="Ontonotes", home="https://huggingface.co/datasets/tner/ontonotes5", label_column="tags", label2id=ontonotes5_label2id),
+        # HfNerDatasetInfo(domain="general", id="PolyglotNER", home="https://huggingface.co/datasets/rmyeid/polyglot_ner"),  # FileNotFoundError: http://cs.stonybrook.edu/~polyglot/ner2/emnlp_datasets.tgz
+        HfNerDatasetInfo(domain="general", id="WikiANN-en", home="https://huggingface.co/datasets/unimelb-nlp/wikiann", subset="en"),
+        HfNerDatasetInfo(domain="general", id="WikiNeural", home="https://huggingface.co/datasets/Babelscape/wikineural", label2id=wikineural_label2id,
                          train_splits=["train_en"], dev_splits=["val_en"], test_splits=["test_en"]),
 
         HfNerDatasetInfo(domain="biomed", id="bc2gm", home="https://huggingface.co/datasets/spyysalo/bc2gm_corpus"),
         HfNerDatasetInfo(domain="biomed", id="bc4chemd", home="https://huggingface.co/datasets/chintagunta85/bc4chemd"),
         HfNerDatasetInfo(domain="biomed", id="bc5cdr", home="https://huggingface.co/datasets/ghadeermobasher/BC5CDR-Chemical-Disease"),
-        HfNerDatasetInfo(domain="biomed", id="ncbi_disease", home="https://huggingface.co/datasets/ncbi/ncbi_disease"),
+        HfNerDatasetInfo(domain="biomed", id="ncbi", home="https://huggingface.co/datasets/ncbi/ncbi_disease"),
 
         HfNerDatasetInfo(domain="social media", id="broad_twitter_corpus", home="https://huggingface.co/datasets/strombergnlp/broad_twitter_corpus"),
-        HfNerDatasetInfo(domain="social media", id="tweetner7", home="https://huggingface.co/datasets/tner/tweetner7", label_column="tags",
+        HfNerDatasetInfo(domain="social media", id="TweetNER7", home="https://huggingface.co/datasets/tner/tweetner7", label_column="tags",
                          train_splits=["train_2020", "train_2021"], dev_splits=["validation_2020", "validation_2021"], test_splits=["test_2020"]),
 
-        HfNerDatasetInfo(domain="stem", id="fabner", home="https://huggingface.co/datasets/DFKI-SLT/fabner"),
+        HfNerDatasetInfo(domain="stem", id="FabNER", home="https://huggingface.co/datasets/DFKI-SLT/fabner"),
     ]
     for dataset_info in dataset_infos:
         dataset_info.download_hf_dataset()
