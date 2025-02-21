@@ -15,10 +15,12 @@ Here, we define a "sample" as one sentence (a block of non-blank lines
 separated by blank lines in CoNLL format).
 
 Usage:
-    python merge_anatem_conll.py
+    python anatem.py
 """
 
 import os
+from pathlib import Path
+
 
 def merge_conll_files(input_dir, output_file, label_set):
     """
@@ -87,35 +89,24 @@ def merge_conll_files(input_dir, output_file, label_set):
 
 
 def main():
-    # Adjust this path if needed
-    base_dir = "AnatEM-1.0.2/conll"
-
-    train_dir = os.path.join(base_dir, "train")
-    dev_dir   = os.path.join(base_dir, "devel")
-    test_dir  = os.path.join(base_dir, "test")
+    input_dir = Path("data/AnatEM-1.0.2/conll")
+    output_dir = Path("data/AnatEM")
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     label_set = set()
+    train_samples = merge_conll_files(input_dir / "train", output_dir / "train.txt", label_set)
+    dev_samples = merge_conll_files(input_dir / "devel", output_dir / "dev.txt", label_set)
+    test_samples = merge_conll_files(input_dir / "test", output_dir / "test.txt", label_set)
 
-    # 1) Merge train
-    train_samples = merge_conll_files(train_dir, "train.txt", label_set)
-    print(f"Number of train samples (sentences): {train_samples}")
-
-    # 2) Merge dev
-    dev_samples = merge_conll_files(dev_dir, "dev.txt", label_set)
-    print(f"Number of dev samples (sentences): {dev_samples}")
-
-    # 3) Merge test
-    test_samples = merge_conll_files(test_dir, "test.txt", label_set)
-    print(f"Number of test samples (sentences): {test_samples}")
-
-    # 4) Write all unique labels to label.txt
-    # Sort labels for consistency
     sorted_labels = sorted(label_set)
-    with open("label.txt", "w", encoding="utf-8") as label_f:
+    with open(output_dir / "label.txt", "w", encoding="utf-8") as label_f:
         for lbl in sorted_labels:
             label_f.write(f"{lbl}\n")
 
-    print("Merging complete. train.txt, dev.txt, test.txt, and label.txt have been created.")
+    print(f"# train : {train_samples}")
+    print(f"# dev   : {dev_samples}")
+    print(f"# test  : {test_samples}")
+    print(f"# label : {len(label_set)}")
 
 
 if __name__ == "__main__":
