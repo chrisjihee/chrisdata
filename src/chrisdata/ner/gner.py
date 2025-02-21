@@ -561,6 +561,9 @@ def normalize_conll(input_file, temp_file="temp.txt"):
                 m = conll_label.search(line)
                 assert m, f"Invalid line: {line}"
                 word = line[:m.start()]
+                if len(word) == 0:
+                    word = " "
+                assert word, f"Invalid word: input_file={input_file}, text_block=[{text_block}] / len(word)={len(word)}"
                 label = m.group(1)
                 f.write(f"{word}\t{label}\n")
             f.write("\n")
