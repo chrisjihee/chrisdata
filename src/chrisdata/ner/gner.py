@@ -615,11 +615,10 @@ def convert_conll_to_jsonl(
 
             for input_file in [train_file, eval_file, test_file]:
                 normalize_conll(input_file)
-
-            classes = [x.strip() for x in all_line_list(label_file)]
-            labels = [f"B-{x}" for x in classes] + [f"I-{x}" for x in classes] + ["O"]
-            logger.info("  - class(%d): %s", len(classes), ', '.join(classes))
-            logger.info("  - label(%d): %s", len(labels), ', '.join(labels))
+            # classes = [x.strip() for x in all_line_list(label_file)]
+            # labels = [f"B-{x}" for x in classes] + [f"I-{x}" for x in classes] + ["O"]
+            # logger.info("  - class(%d): %s", len(classes), ', '.join(classes))
+            # logger.info("  - label(%d): %s", len(labels), ', '.join(labels))
 
     # input_dir = Path(input_dir)
     # if not output_file:
