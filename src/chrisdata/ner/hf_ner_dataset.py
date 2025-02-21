@@ -51,10 +51,11 @@ def save_conll_format(dataset_split, output_file, output_mode, label_names, data
         for example in dataset_split:
             tokens = example[data_info.token_column]
             tags = example[data_info.label_column]
-            for token, tag_id in zip(tokens, tags):
-                label = label_names[tag_id]
-                assert label is not None, f"Missing label for tag_id={tag_id}"
-                f.write(f"{token}\t{label}\n")
+            if len(tokens) > 0 and len(tags) > 0:
+                for token, tag_id in zip(tokens, tags):
+                    label = label_names[tag_id]
+                    assert label is not None, f"Missing label for tag_id={tag_id}"
+                    f.write(f"{token}\t{label}\n")
             f.write("\n")
             num_output += 1
     return num_output
@@ -63,7 +64,7 @@ def save_conll_format(dataset_split, output_file, output_mode, label_names, data
 def download_hf_dataset(data_info: HfNerDatasetInfo, output_dir: str = "data", force_download: bool = False):
     output_dir = Path(output_dir) / data_info.id
     output_dir.mkdir(parents=True, exist_ok=True)
-    print("=" * 80)
+    print("=" * 120)
     print(f"[HF dataset] {data_info.source} => {output_dir}")
     (output_dir / "source.txt").write_text(data_info.source)
     dataset = load_dataset(
@@ -90,7 +91,7 @@ def download_hf_dataset(data_info: HfNerDatasetInfo, output_dir: str = "data", f
         print(f"  # {group:5s} : {num_output:,}")
     (output_dir / "label.txt").write_text("\n".join(all_label_names) + "\n")
     print(f"  # label : {len(all_label_names):,}")
-    print("=" * 80)
+    print("-" * 120)
 
 
 multinerd_label2id = {  # https://huggingface.co/datasets/Babelscape/multinerd
@@ -183,7 +184,7 @@ tweetner7_label2id = {
 if __name__ == "__main__":
     dataset_infos = [
         HfNerDatasetInfo(id="bc2gm", hf_name="spyysalo/bc2gm_corpus"),  # https://huggingface.co/datasets/spyysalo/bc2gm_corpus
-
+        HfNerDatasetInfo(id="bc4chemd", hf_name="chintagunta85/bc4chemd"),  # https://huggingface.co/datasets/chintagunta85/bc4chemd
     ]
     for dataset_info in dataset_infos:
         download_hf_dataset(dataset_info)
