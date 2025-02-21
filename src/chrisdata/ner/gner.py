@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 from typing_extensions import Annotated
 
 from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, NewProjectEnv
-from chrisbase.io import LoggingFormat, new_path, merge_dicts, normalize_simple_list_in_json, LoggerWriter, strip_lines
+from chrisbase.io import LoggingFormat, new_path, merge_dicts, normalize_simple_list_in_json, LoggerWriter, strip_lines, dirs, text_blocks, all_lines, all_line_list, hr
 from chrisbase.util import mute_tqdm_cls, shuffled
 from progiter import ProgIter
 from . import *
@@ -553,46 +553,79 @@ def convert_json_to_jsonl(
 
 @app.command("convert_conll")
 def convert_conll_to_jsonl(
-        input_dir: Annotated[str, typer.Argument()] = ...,  # "data/gner/each/crossner_ai"
-        output_file: Annotated[str, typer.Option("--output_file")] = "",
+        input_dirs: Annotated[str, typer.Argument()] = "data/*",  # "data"
         instruction_file: Annotated[str, typer.Option("--instruction_file")] = "configs/instruction/GNER-paper.txt",
-        split_name: Annotated[str, typer.Option("--split_name")] = "train",  # "train", "dev", "test"
+        split_names: Annotated[List[str], typer.Option("--split_names")] = ("train", "dev", "test"),
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     env = NewProjectEnv(logging_level=logging_level)
-    input_dir = Path(input_dir)
-    if not output_file:
-        output_file = input_dir.with_suffix(".jsonl")
     with (
         JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
-        FileStreamer(FileOption.from_path(path=new_path(output_file, post=split_name), mode="w")) as output_file,
-        FileStreamer(FileOption.from_path(path=input_dir)) as input_dir,
     ):
-        num_outputs = 0
-        dataset_builder = GNERDataset()
-        dataset_path = input_dir.path / f"{split_name}.txt"
-        labels_path = input_dir.path / "label.txt"
-        if dataset_path.exists() and labels_path.exists():
-            instances, label_list = dataset_builder._load_dataset(dataset_path, labels_path)
-            for instance in ProgIter(instances, total=len(instances), desc=f"Converting {input_dir.path}:",
-                                     stream=LoggerWriter(logger), verbose=2):
-                instance_id = f"{instance.pop('id')}"
-                instance = GenNERSample.model_validate(
-                    merge_dicts({"id": f"{instance_id}"}, instance)
-                ).set_instruction_prompt(
-                    instruction_file=instruction_file,
-                    label_list=label_list,
-                )
-                wrapped = GenNERSampleWrapper(
-                    id=instance_id,
-                    dataset=input_dir.path.stem,
-                    split=split_name,
-                    label_list=label_list,
-                    instance=instance,
-                )
-                output_file.fp.write(wrapped.model_dump_json() + "\n")
-                num_outputs += 1
-        logger.info(f"Number of samples in {output_file.path}: %d", num_outputs)
+        extraordinary = []
+        for input_dir in sorted(dirs(input_dirs), key=lambda x: x.name.lower()):
+            logger.info("[input_dir]: %s", input_dir)
+            label_file = [x for x in [input_dir / "label.txt", input_dir / "label.tsv"] if x.exists() and x.is_file()]
+            train_file = [x for x in [input_dir / "train.txt", input_dir / "train.tsv"] if x.exists() and x.is_file()]
+            eval_file = [x for x in [input_dir / "dev.txt", input_dir / "val.txt", input_dir / "dev.tsv", input_dir / "val.tsv"] if x.exists() and x.is_file()]
+            test_file = [x for x in [input_dir / "test.txt", input_dir / "test.tsv"] if x.exists() and x.is_file()]
+            label_file = label_file[0] if label_file else None
+            train_file = train_file[0] if train_file else None
+            eval_file = eval_file[0] if eval_file else None
+            test_file = test_file[0] if test_file else None
+            if label_file:
+                classes = [x.strip() for x in all_line_list(label_file)]
+                classes = [x[2:] if x.upper().startswith("B-") else x if not x.upper().startswith("I-") else "" for x in classes]
+                classes = [x for x in classes if len(x) > 0 and x.upper() != "O"]
+                labels = [f"B-{x}" for x in classes] + [f"I-{x}" for x in classes] + ["O"]
+                logger.info("  - classes(%d): %s", len(classes), classes)
+                logger.info("  - labels(%d): %s", len(labels), labels)
+            else:
+                extraordinary.append(input_dir)
+            #
+            # for text_block in text_blocks(train_file):
+            #     aa = [line.split("\t") for line in text_block]
+            #     print(aa)
+            #     print("-" * 80)
+            #     exit(0)
+            # exit(0)
+        logger.info(hr())
+        for x in extraordinary:
+            logger.info("[extraordinary]: %s", x)
+
+    # input_dir = Path(input_dir)
+    # if not output_file:
+    #     output_file = input_dir.with_suffix(".jsonl")
+    # with (
+    #     JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
+    #     FileStreamer(FileOption.from_path(path=new_path(output_file, post=split_name), mode="w")) as output_file,
+    #     FileStreamer(FileOption.from_path(path=input_dir)) as input_dir,
+    # ):
+    #     num_outputs = 0
+    #     dataset_builder = GNERDataset()
+    #     dataset_path = input_dir.path / f"{split_name}.txt"
+    #     labels_path = input_dir.path / "label.txt"
+    #     if dataset_path.exists() and labels_path.exists():
+    #         instances, label_list = dataset_builder._load_dataset(dataset_path, labels_path)
+    #         for instance in ProgIter(instances, total=len(instances), desc=f"Converting {input_dir.path}:",
+    #                                  stream=LoggerWriter(logger), verbose=2):
+    #             instance_id = f"{instance.pop('id')}"
+    #             instance = GenNERSample.model_validate(
+    #                 merge_dicts({"id": f"{instance_id}"}, instance)
+    #             ).set_instruction_prompt(
+    #                 instruction_file=instruction_file,
+    #                 label_list=label_list,
+    #             )
+    #             wrapped = GenNERSampleWrapper(
+    #                 id=instance_id,
+    #                 dataset=input_dir.path.stem,
+    #                 split=split_name,
+    #                 label_list=label_list,
+    #                 instance=instance,
+    #             )
+    #             output_file.fp.write(wrapped.model_dump_json() + "\n")
+    #             num_outputs += 1
+    #     logger.info(f"Number of samples in {output_file.path}: %d", num_outputs)
 
 
 @app.command("sample_jsonl")
