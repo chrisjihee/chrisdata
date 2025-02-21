@@ -118,11 +118,22 @@ def print_dataset_stats(dataset_folder):
     print(f"[STATS] {dataset_folder.name:25s}: #train={train_count}, #valid={dev_count}, #test={test_count}, #label={label_count}")
 
 
-def main(dataset_name, output_dir, sub_name=None, label2id=None, train_split="train", dev_splits=["validation"], test_splits=["test"]):
-    print("=" * 80)
-    print(f"Saving the '{dataset_name}/{sub_name}' dataset to '{output_dir}'...")
+def download_hf_dataset(
+        dataset_name, output_dir, sub_name=None, label2id=None,
+        train_split="train", dev_splits=("validation",), test_splits=("test",)
+):
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    if sub_name:
+        source = f"https://huggingface.co/datasets/{dataset_name}/{sub_name}"
+    else:
+        source = f"https://huggingface.co/datasets/{dataset_name}"
+    print("=" * 80)
+    print(f"[HF dataset] {source} => {output_dir}")
+
+    # Save the source URL to source.txt
+    with open(output_dir / "source.txt", "w", encoding="utf-8") as f:
+        f.write(source)
 
     # Load the dataset from Hugging Face
     dataset = load_dataset(
@@ -146,52 +157,49 @@ def main(dataset_name, output_dir, sub_name=None, label2id=None, train_split="tr
             f.write(f"{label}\n")
 
     # Save the train, dev, and test splits in CoNLL-like format
+    assert train_split in dataset, f"train_split={train_split} not in dataset: {dataset.keys()}"
+    for dev_split in dev_splits:
+        assert dev_split in dataset, f"dev_split={dev_split} not in dataset: {dataset.keys()}"
+    for test_split in test_splits:
+        assert test_split in dataset, f"test_split={test_split} not in dataset: {dataset.keys()}"
     save_conll_format([dataset[train_split]], output_dir / "train.txt", label_names)
     save_conll_format([dataset[x] for x in dev_splits], output_dir / "dev.txt", label_names)
     save_conll_format([dataset[x] for x in test_splits], output_dir / "test.txt", label_names)
 
     # Print the number of samples in each split
-    print(f"Number of train samples: {len(dataset[train_split])}")
-    print(f"Number of dev samples: {sum([len(dataset[x]) for x in dev_splits])}")
-    print(f"Number of test samples: {sum([len(dataset[x]) for x in test_splits])}")
+    print(f"  # train : {len(dataset[train_split]):,}")
+    print(f"  # dev   : {sum([len(dataset[x]) for x in dev_splits]):,}")
+    print(f"  # test  : {sum([len(dataset[x]) for x in test_splits]):,}")
+    print("=" * 80)
 
 
-multinerd_label2id = {
+multinerd_label2id = {  # https://huggingface.co/datasets/Babelscape/multinerd
     "O": 0,
-    "B-PER": 1,
-    "I-PER": 2,
-    "B-LOC": 3,
-    "I-LOC": 4,
-    "B-ORG": 5,
-    "I-ORG": 6,
-    "B-ANIM": 7,
-    "I-ANIM": 8,
-    "B-BIO": 9,
-    "I-BIO": 10,
-    "B-CEL": 11,
-    "I-CEL": 12,
-    "B-DIS": 13,
-    "I-DIS": 14,
-    "B-EVE": 15,
-    "I-EVE": 16,
-    "B-FOOD": 17,
-    "I-FOOD": 18,
-    "B-INST": 19,
-    "I-INST": 20,
-    "B-MEDIA": 21,
-    "I-MEDIA": 22,
-    "B-PLANT": 23,
-    "I-PLANT": 24,
-    "B-MYTH": 25,
-    "I-MYTH": 26,
-    "B-TIME": 27,
-    "I-TIME": 28,
-    "B-VEHI": 29,
-    "I-VEHI": 30,
-    "B-SUPER": 31,
-    "I-SUPER": 32,
-    "B-PHY": 33,
-    "I-PHY": 34
+    "B-PER": 1, "I-PER": 2,
+    "B-LOC": 3, "I-LOC": 4,
+    "B-ORG": 5, "I-ORG": 6,
+    "B-ANIM": 7, "I-ANIM": 8,
+    "B-BIO": 9, "I-BIO": 10,
+    "B-CEL": 11, "I-CEL": 12,
+    "B-DIS": 13, "I-DIS": 14,
+    "B-EVE": 15, "I-EVE": 16,
+    "B-FOOD": 17, "I-FOOD": 18,
+    "B-INST": 19, "I-INST": 20,
+    "B-MEDIA": 21, "I-MEDIA": 22,
+    "B-PLANT": 23, "I-PLANT": 24,
+    "B-MYTH": 25, "I-MYTH": 26,
+    "B-TIME": 27, "I-TIME": 28,
+    "B-VEHI": 29, "I-VEHI": 30,
+    "B-SUPER": 31, "I-SUPER": 32,
+    "B-PHY": 33, "I-PHY": 34,
+}
+
+wikineural_label2id = {  # https://huggingface.co/datasets/Babelscape/wikineural
+    'O': 0,
+    'B-PER': 1, 'I-PER': 2,
+    'B-ORG': 3, 'I-ORG': 4,
+    'B-LOC': 5, 'I-LOC': 6,
+    'B-MISC': 7, 'I-MISC': 8,
 }
 
 ontonotes5_label2id = {
@@ -254,17 +262,21 @@ tweetner7_label2id = {
 
 if __name__ == "__main__":
     pass
-    main("Babelscape/multinerd", "data/MultiNERD-2", label2id=multinerd_label2id)  # TODO: filter out the non-English samples
-    # main("ghadeermobasher/BC5CDR-Chemical-Disease", "data/bc5cdr")
-    # main("chintagunta85/bc4chemd", "data/bc4chemd")
-    # main("strombergnlp/broad_twitter_corpus", "data/broad_twitter_corpus")
-    # main("eriktks/conll2003", "data/conll2003")
-    # main("DFKI-SLT/fabner", "data/FabNER")
-    # main("ncbi/ncbi_disease", "data/ncbi")
-    # main("tner/ontonotes5", "data/Ontonotes", label2id=ontonotes5_label2id)
-    # main("rmyeid/polyglot_ner", "data/PolyglotNER")
-    # main("tner/tweetner7", "data/TweetNER7", label2id=tweetner7_label2id,
-    #      train_split="train_all", dev_splits=["validation_2020", "validation_2021"], test_splits=["test_2020"])
+    # download_hf_dataset("Babelscape/multinerd", "data/MultiNERD-2", label2id=multinerd_label2id)  # TODO: filter out the non-English samples
+    download_hf_dataset(
+        "Babelscape/wikineural", "data/WikiNeural-en", label2id=wikineural_label2id,
+        train_split="train_en", dev_splits=("val_en",), test_splits=("test_en",),
+    )
+    # download_hf_dataset("ghadeermobasher/BC5CDR-Chemical-Disease", "data/bc5cdr")
+    # download_hf_dataset("chintagunta85/bc4chemd", "data/bc4chemd")
+    # download_hf_dataset("strombergnlp/broad_twitter_corpus", "data/broad_twitter_corpus")
+    # download_hf_dataset("eriktks/conll2003", "data/conll2003")
+    # download_hf_dataset("DFKI-SLT/fabner", "data/FabNER")
+    # download_hf_dataset("ncbi/ncbi_disease", "data/ncbi")
+    # download_hf_dataset("tner/ontonotes5", "data/Ontonotes", label2id=ontonotes5_label2id)
+    # download_hf_dataset("rmyeid/polyglot_ner", "data/PolyglotNER")
+    # download_hf_dataset("tner/tweetner7", "data/TweetNER7", label2id=tweetner7_label2id,
+    #                     train_split="train_all", dev_splits=["validation_2020", "validation_2021"], test_splits=["test_2020"])
 
     # for dataset_dir in sorted([x for x in Path("data").glob("*") if x.is_dir()]):
     #     if not Path(dataset_dir / "label.txt").exists():
