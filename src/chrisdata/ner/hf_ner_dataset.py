@@ -72,8 +72,8 @@ def save_conll_format(split, dataset, output_file, output_mode, label_names, dat
                     label = label_names[tag_id]
                     assert label is not None, f"Missing label for tag_id={tag_id}"
                     f.write(f"{token}\t{label}\n")
-            f.write("\n")
-            num_output += 1
+                f.write("\n")
+                num_output += 1
     return num_output
 
 
@@ -236,12 +236,14 @@ if __name__ == "__main__":
         # HfNerDatasetInfo(id="FabNER", hf_name="DFKI-SLT/fabner"),
 
         # https://huggingface.co/datasets/Babelscape/multinerd
-        HfNerDatasetInfo(id="MultiNERD-en", hf_name="Babelscape/multinerd", lang="en", label2id=multinerd_label2id),
+        # HfNerDatasetInfo(id="MultiNERD-en", hf_name="Babelscape/multinerd", lang="en", label2id=multinerd_label2id),
+
+        # https://huggingface.co/datasets/ncbi/ncbi_disease
+        HfNerDatasetInfo(id="ncbi", hf_name="ncbi/ncbi_disease"),
     ]
     for dataset_info in dataset_infos:
         download_hf_dataset(dataset_info)
 
-    # download_hf_dataset("Babelscape/multinerd", "data/MultiNERD-2", label2id=multinerd_label2id)  # TODO: filter out the non-English samples
     # download_hf_dataset(
     #     "Babelscape/wikineural", "data/WikiNeural-en", label2id=wikineural_label2id,
     #     train_split="train_en", dev_splits=("val_en",), test_splits=("test_en",),
@@ -250,7 +252,6 @@ if __name__ == "__main__":
     #     dataset_path="unimelb-nlp/wikiann::en",
     #     output_dir="data/WikiANN-en",
     # )
-    # download_hf_dataset("DFKI-SLT/fabner", "data/FabNER")
     # download_hf_dataset("ncbi/ncbi_disease", "data/ncbi")
     # download_hf_dataset("tner/ontonotes5", "data/Ontonotes", label2id=ontonotes5_label2id)
     # download_hf_dataset("rmyeid/polyglot_ner", "data/PolyglotNER")
