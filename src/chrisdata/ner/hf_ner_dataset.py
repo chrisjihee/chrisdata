@@ -199,7 +199,6 @@ if __name__ == "__main__":
     #     output_dir="data/WikiANN-en",
     # )
     # download_hf_dataset("ghadeermobasher/BC5CDR-Chemical-Disease", "data/bc5cdr")
-    # download_hf_dataset("chintagunta85/bc4chemd", "data/bc4chemd")
     # download_hf_dataset("strombe  rgnlp/broad_twitter_corpus", "data/broad_twitter_corpus")
     # download_hf_dataset("eriktks/conll2003", "data/conll2003")
     # download_hf_dataset("DFKI-SLT/fabner", "data/FabNER")
