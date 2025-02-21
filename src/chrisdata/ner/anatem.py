@@ -19,6 +19,7 @@ Usage:
 """
 
 import os
+import re
 from pathlib import Path
 
 
@@ -94,28 +95,21 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     label_set = set()
-    train_samples = merge_conll_files(
-        input_dir / "train",
-        output_dir / "train.txt",
-        label_set)
-    dev_samples = merge_conll_files(
-        input_dir / "dev",
-        output_dir / "dev.txt",
-        label_set)
-    test_samples = merge_conll_files(
-        input_dir / "test",
-        output_dir / "test.txt",
-        label_set)
+    train_samples = merge_conll_files(input_dir / "train", output_dir / "train.txt", label_set)
+    eval_samples = merge_conll_files(input_dir / "dev", output_dir / "dev.txt", label_set)
+    test_samples = merge_conll_files(input_dir / "test", output_dir / "test.txt", label_set)
 
-    sorted_labels = sorted(label_set)
-    with open(output_dir / "label.txt", "w", encoding="utf-8") as label_f:
-        for lbl in sorted_labels:
-            label_f.write(f"{lbl}\n")
+    class_names = []
+    for label_name in sorted(label_set):
+        class_name = re.sub(r"^[BIES]-|^O$", "", label_name)
+        if class_name and class_name not in class_names:
+            class_names.append(class_name)
 
-    print(f"# train : {train_samples}")
-    print(f"# dev   : {dev_samples}")
-    print(f"# test  : {test_samples}")
-    print(f"# label : {len(label_set)}")
+    (output_dir / "label.txt").write_text("\n".join(class_names) + "\n")
+    print(f"  # train : {train_samples}")
+    print(f"  # dev   : {eval_samples}")
+    print(f"  # test  : {test_samples}")
+    print(f"  # label : {len(label_set)}")
 
 
 if __name__ == "__main__":
