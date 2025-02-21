@@ -89,14 +89,23 @@ def merge_conll_files(input_dir, output_file, label_set):
 
 
 def main():
-    input_dir = Path("data/AnatEM-1.0.2/conll")
+    input_dir = Path("data/AnatEM/conll")
     output_dir = Path("data/AnatEM")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     label_set = set()
-    train_samples = merge_conll_files(input_dir / "train", output_dir / "train.txt", label_set)
-    dev_samples = merge_conll_files(input_dir / "devel", output_dir / "dev.txt", label_set)
-    test_samples = merge_conll_files(input_dir / "test", output_dir / "test.txt", label_set)
+    train_samples = merge_conll_files(
+        input_dir / "train",
+        output_dir / "train.txt",
+        label_set)
+    dev_samples = merge_conll_files(
+        input_dir / "dev",
+        output_dir / "dev.txt",
+        label_set)
+    test_samples = merge_conll_files(
+        input_dir / "test",
+        output_dir / "test.txt",
+        label_set)
 
     sorted_labels = sorted(label_set)
     with open(output_dir / "label.txt", "w", encoding="utf-8") as label_f:
