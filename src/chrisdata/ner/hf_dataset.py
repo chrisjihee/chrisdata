@@ -125,7 +125,12 @@ def main(dataset_name, output_dir, sub_name=None, label2id=None, train_split="tr
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Load the dataset from Hugging Face
-    dataset = load_dataset(dataset_name, sub_name, trust_remote_code=True)
+    dataset = load_dataset(
+        dataset_name, sub_name,
+        trust_remote_code=True,
+        verification_mode="no_checks",
+        # download_mode="force_redownload",
+    )
 
     # Retrieve the list of label names
     if label2id:
@@ -249,6 +254,7 @@ tweetner7_label2id = {
 
 if __name__ == "__main__":
     pass
+    main("Babelscape/multinerd", "data/MultiNERD-2", label2id=multinerd_label2id)  # TODO: filter out the non-English samples
     # main("ghadeermobasher/BC5CDR-Chemical-Disease", "data/bc5cdr")
     # main("chintagunta85/bc4chemd", "data/bc4chemd")
     # main("strombergnlp/broad_twitter_corpus", "data/broad_twitter_corpus")
