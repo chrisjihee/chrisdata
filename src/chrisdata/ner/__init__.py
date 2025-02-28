@@ -68,7 +68,7 @@ class GenSeq2SeqSample(BaseModel):
 
 
 class GenNERSample(GenSeq2SeqSample):
-    id: str = None
+    id: Optional[str] = None
     group: Optional[str] = None
     words: list[str] = None
     labels: list[str] = None
@@ -133,7 +133,7 @@ class GenNERSample(GenSeq2SeqSample):
 
 
 class GenSeq2SeqSampleWrapper(BaseModel):
-    id: str = None
+    id: Optional[str] = None
     dataset: str = "unknown"
     split: str = "unknown"
     instance: GenSeq2SeqSample
