@@ -8,7 +8,7 @@ data_files = [
 ]
 
 # Iterate over each dataset and split
-for label_levels in target_label_levels:
+for label_level in target_label_levels:
     for data_file in data_files:
         subprocess.run((f"python -m chrisdata.cli ner convert_to_WQ {data_file}"
-                        f" --label_level_main {label_levels}").split())
+                        f" --label_level_main {label_level}").split())
