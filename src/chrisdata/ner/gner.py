@@ -777,6 +777,11 @@ def convert_to_word_query_version(
         FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
         FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
     ):
+        logger.info("[input_file]       : %s", input_file)
+        logger.info("[output_file]      : %s", output_file)
+        logger.info("[instruction_file] : %s", instruction_file)
+        logger.info("[label_level_main] : %s", label_level_main)
+        logger.info("[label_level_sub]  : %s", label_level_sub)
         num_new_samples = 0
         for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Converting {input_file.path}:",
                                stream=LoggerWriter(logger, level=logging_level), verbose=3):
