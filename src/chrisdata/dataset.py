@@ -69,12 +69,15 @@ class HfDatasetsInfo(BaseModel):
 if __name__ == "__main__":
     env = NewProjectEnv(logging_level=logging.INFO, logging_format=LoggingFormat.CHECK_20)
     datasets_info_list = [
-        # HfDatasetsInfo(id="nsmc", home="https://huggingface.co/datasets/e9t/nsmc"),
-        # HfDatasetsInfo(id="KLUE-TC", home="https://huggingface.co/datasets/klue/klue", subset="ynat"),
-        # HfDatasetsInfo(id="KLUE-STS", home="https://huggingface.co/datasets/klue/klue", subset="sts"),
-        # HfDatasetsInfo(id="KLUE-NLI", home="https://huggingface.co/datasets/klue/klue", subset="nli"),
-        # HfDatasetsInfo(id="KMOU-NER", home="https://huggingface.co/datasets/nlp-kmu/kor_ner"),
-        HfDatasetsInfo(id="korquad", home="https://huggingface.co/datasets/KorQuAD/squad_kor_v1"),
+        # HfDatasetsInfo(id="korquad", home="https://huggingface.co/datasets/KorQuAD/squad_kor_v1"),
+        HfDatasetsInfo(id="nsmc", home="https://huggingface.co/datasets/e9t/nsmc"),
+        HfDatasetsInfo(id="klue/ynat", home="https://huggingface.co/datasets/klue/klue", subset="ynat"),
+        HfDatasetsInfo(id="klue/nli", home="https://huggingface.co/datasets/klue/klue", subset="nli"),
+        HfDatasetsInfo(id="klue/sts", home="https://huggingface.co/datasets/klue/klue", subset="sts"),
+        HfDatasetsInfo(id="klue/ner", home="https://huggingface.co/datasets/klue/klue", subset="ner"),
+        HfDatasetsInfo(id="kmou_ner", home="https://huggingface.co/datasets/nlp-kmu/kor_ner"),
+        HfDatasetsInfo(id="glue/stsb", home="https://huggingface.co/datasets/glue", subset="stsb"),
+        HfDatasetsInfo(id="conll2003", home="https://huggingface.co/datasets/conll2003"),
     ]
     for datasets_info in datasets_info_list:
         datasets_info.download_dataset(output_dir="data")
