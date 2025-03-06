@@ -56,11 +56,11 @@ class HfDatasetsInfo(BaseModel):
                         logger.info(f"  * [{split_name}] features")
                         for feature_name, feature_type in split_data.features.items():
                             logger.info(f"    - {feature_name:10s}: {feature_type}")
-                        jsonl_path = output_dir / f"{split_name}.jsonl"
+                        json_path = output_dir / f"{split_name}.json"
                         disable_progress_bars()
-                        split_data.to_json(jsonl_path, orient="records", lines=True, force_ascii=False)
+                        split_data.to_json(json_path, orient="records", lines=True, force_ascii=False)
                         enable_progress_bars()
-                        logger.info(f"    => Saved {split_name} to {jsonl_path}")
+                        logger.info(f"    => Saved {split_name} to {json_path}")
                     else:
                         logger.info(f"  * Split {split_name} not found in dataset {self.id}")
         logger.info("-" * 120)
