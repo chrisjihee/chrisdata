@@ -29,3 +29,10 @@ class F1(BaseModel):
     @property
     def f1(self):
         return 2 * self.prec * self.rec / (self.prec + self.rec + 1e-10)
+
+
+class RegressionSample(BaseModel):
+    sentence1: str
+    sentence2: str
+    label: float
+    idx: int
