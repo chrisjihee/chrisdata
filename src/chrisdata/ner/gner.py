@@ -685,13 +685,13 @@ def sample_jsonl_lines(
 
 @app.command("stratified_sample_jsonl")
 def stratified_sample_jsonl_lines(
-        input_file: Annotated[str, typer.Argument()] = "data/gner/united/pile-ner.jsonl",
-        min_num_word: Annotated[int, typer.Option("--min_num_word")] = 5,
-        max_num_word: Annotated[int, typer.Option("--max_num_word")] = 120,
+        input_file: Annotated[str, typer.Argument()] = "data/pile-ner.jsonl",
+        min_num_word: Annotated[int, typer.Option("--min_num_word")] = 10,
+        max_num_word: Annotated[int, typer.Option("--max_num_word")] = 100,
         min_num_label: Annotated[int, typer.Option("--min_num_label")] = 3,
-        max_num_label: Annotated[int, typer.Option("--max_num_label")] = 12,
+        max_num_label: Annotated[int, typer.Option("--max_num_label")] = 7,
         min_num_samples: Annotated[int, typer.Option("--min_num_samples")] = 3,
-        max_num_samples: Annotated[int, typer.Option("--max_num_samples")] = 40,
+        max_num_samples: Annotated[int, typer.Option("--max_num_samples")] = 10,
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     env = NewProjectEnv()
