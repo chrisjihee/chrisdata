@@ -689,7 +689,7 @@ def stratified_sample_jsonl_lines(
         min_num_word: Annotated[int, typer.Option("--min_num_word")] = 10,
         max_num_word: Annotated[int, typer.Option("--max_num_word")] = 100,
         min_num_label: Annotated[int, typer.Option("--min_num_label")] = 3,
-        max_num_label: Annotated[int, typer.Option("--max_num_label")] = 7,
+        max_num_label: Annotated[int, typer.Option("--max_num_label")] = 10,
         min_num_samples: Annotated[int, typer.Option("--min_num_samples")] = 3,
         max_num_samples: Annotated[int, typer.Option("--max_num_samples")] = 10,
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
