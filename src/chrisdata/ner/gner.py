@@ -2,6 +2,7 @@ import json
 import math
 import time
 from concurrent.futures import ProcessPoolExecutor
+from contextlib import nullcontext
 from enum import Enum
 from itertools import groupby, islice
 from typing import Iterable
@@ -13,7 +14,7 @@ from bs4 import BeautifulSoup
 from typing_extensions import Annotated
 
 from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, NewProjectEnv
-from chrisbase.io import LoggingFormat, new_path, merge_dicts, normalize_simple_list_in_json, LoggerWriter, strip_lines, dirs, text_blocks, all_line_list
+from chrisbase.io import LoggingFormat, new_path, merge_dicts, normalize_simple_list_in_json, LoggerWriter, dirs, text_blocks
 from chrisbase.util import mute_tqdm_cls, shuffled
 from progiter import ProgIter
 from . import *
@@ -708,8 +709,7 @@ def stratified_sample_jsonl_lines(
         FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
     ):
         data_label_lists = dict()
-        for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Converting {input_file.path}:",
-                               stream=LoggerWriter(logger, level=logging_level), verbose=3):
+        for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Sampling {input_file.path}:", stream=LoggerWriter(logger, level=logging_level), verbose=3):
             sample.label_list = [str(x).replace(' ', '_').lower() for x in sample.label_list]
             if min_num_word <= len(sample.instance.words) == len(sample.instance.labels) <= max_num_word:
                 label_list = sorted(set(sample.label_list))
@@ -730,99 +730,134 @@ def stratified_sample_jsonl_lines(
                 num_outputs += 1
         logger.info(f"Number of samples in {output_file.path}: %d", num_outputs)
         final_output_file = new_path(output_file.path, post=f"N{num_outputs}")
-        output_file.path = output_file.path.rename(final_output_file)
-        logger.info(f"Renamed to {output_file.path}")
+        output_file.path.rename(final_output_file)
+        logger.info(f"Renamed to {final_output_file}")
+    return final_output_file
 
 
 @app.command("convert_to_hybrid_round_version")
 def convert_to_hybrid_round_version(
-        input_file: Annotated[str, typer.Argument()] = ...,  # "data/pile-ner=10-100,3-7,3-10.jsonl", "data/pile-ner=10-100,3-10,3-10.jsonl", "data/pile-ner.jsonl", "data/ZSE-validation.jsonl", "data/ZSE-test.jsonl"
-        instruction_file1: Annotated[str, typer.Option("--instruction_file1")] = "configs/instruction/GNER-EQ-SR.txt",
-        instruction_file2: Annotated[str, typer.Option("--instruction_file2")] = "configs/instruction/GNER-EQ-MR.txt",
+        mr_input_file: Annotated[str, typer.Option("--mr_input_file")] = None,  # "data/pile-ner=10-100,3-7,3-10.jsonl", "data/pile-ner=10-100,3-10,3-10.jsonl", "data/pile-ner.jsonl", "data/ZSE-validation.jsonl", "data/ZSE-test.jsonl"
+        sr_input_file: Annotated[str, typer.Option("--sr_input_file")] = None,  # "data/pile-ner.jsonl"
+        mr_inst_file: Annotated[str, typer.Option("--mr_inst_file")] = None,  # "configs/instruction/GNER-EQ-MR.txt",
+        sr_inst_file: Annotated[str, typer.Option("--sr_inst_file")] = None,  # "configs/instruction/GNER-EQ-SR.txt"
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     env = NewProjectEnv(logging_level=logging_level)
-    output_file = new_path(input_file, post="HR")
-    instruction_template1 = Path(instruction_file1).read_text()
-    instruction_template2 = Path(instruction_file2).read_text()
+    assert sr_input_file or mr_input_file, "Either sr_input_file or mr_input_file is required"
+    post = "HR" if sr_inst_file and mr_inst_file else "MR" if mr_inst_file else "SR" if sr_inst_file else None
+    output_file = new_path(mr_input_file or sr_input_file, post=post)
+    mr_inst_temp = Path(mr_inst_file).read_text() if mr_inst_file else None
+    sr_inst_temp = Path(sr_inst_file).read_text() if sr_inst_file else None
+    if not sr_input_file:
+        sr_input_file = mr_input_file
     with (
         JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
-        FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
+        FileStreamer(FileOption.from_path(path=mr_input_file, required=True)) if mr_input_file else nullcontext() as mr_input_file,
+        FileStreamer(FileOption.from_path(path=sr_input_file, required=True)) if sr_input_file else nullcontext() as sr_input_file,
         FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
     ):
-        logger.info("[input_file]        : %s", input_file.path)
-        logger.info("[output_file]       : %s", output_file.path)
-        logger.info("[instruction_file1] : %s", instruction_file1)
-        logger.info("[instruction_file2] : %s", instruction_file2)
         num_new_samples = 0
-        for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Converting {input_file.path}:",
-                               stream=LoggerWriter(logger, level=logging_level), verbose=3):
-            sample.instance.id = sample.id = sample.instance.id or sample.id
-            sample.label_list = [x.replace(" ", "_") for x in sample.label_list]  # for easy post-processing
-            sample.instance.labels = [x.replace(" ", "_") for x in sample.instance.labels]  # for easy post-processing
-            if len(sample.instance.words) != len(sample.instance.labels):
-                continue
-            possible_labels = [tag for entity_type in sample.label_list for tag in (f"B-{entity_type}", f"I-{entity_type}")] + ["O"]
-            if any(label not in possible_labels for label in sample.instance.labels):
-                continue
-            logger.debug("\n" * 5)
-            logger.debug(f">> old_sample_id={sample.id}")
-            logger.debug(f">> old_instruction_inputs=\n{sample.instance.instruction_inputs}")
-            logger.debug(f">> old_prompt_labels=\n{sample.instance.prompt_labels}")
+        logger.info("[output_file]   : %s", output_file.path)
+        if mr_input_file:
+            logger.info("[mr_input_file] : %s", mr_input_file.path)
+        if sr_input_file:
+            logger.info("[sr_input_file] : %s", sr_input_file.path)
+        if mr_inst_file:
+            logger.info("[mr_inst_file]  : %s", mr_inst_file)
+        if sr_inst_file:
+            logger.info("[sr_inst_file]  : %s", sr_inst_file)
 
-            sentence = " ".join(sample.instance.words)
-            entity_types = ", ".join(sample.label_list)
-            instruction_inputs = instruction_template1.format(entity_types=entity_types, sentence=sentence)
-            prompt_labels = GenNERSample.get_prompt_labels(sample.instance.words, sample.instance.labels)
-            logger.debug("\n" * 2)
-            logger.debug("=" * 80)
-            logger.debug(f">> new_instruction_inputs=\n{'-' * 80}\n{instruction_inputs}\n{'-' * 80}")
-            logger.debug(f">> new_prompt_labels=\n{prompt_labels}")
-            new_sample = GenNERSampleWrapper(
-                id=f"{sample.id}.S",
-                dataset=sample.dataset,
-                split=sample.split,
-                label_list=sample.label_list,
-                instance=GenNERSample(
-                    id=f"{sample.instance.id}.S",
-                    group=sample.instance.id,
-                    words=sample.instance.words,
-                    labels=sample.instance.labels,
-                    target_label=None,
-                    prompt_labels=prompt_labels,
-                    instruction_inputs=instruction_inputs,
-                )
-            )
-            num_new_samples += 1
-            output_file.fp.write(new_sample.model_dump_json() + "\n")
+        if sr_input_file:
+            for sample in ProgIter(ner_samples(sr_input_file), total=len(sr_input_file), desc=f"Converting {sr_input_file.path}:", stream=LoggerWriter(logger, level=logging_level), verbose=3):
+                sample.instance.id = sample.id = sample.instance.id or sample.id
+                sample.label_list = [x.replace(" ", "_") for x in sample.label_list]  # for easy post-processing
+                sample.instance.labels = [x.replace(" ", "_") for x in sample.instance.labels]  # for easy post-processing
+                if len(sample.instance.words) != len(sample.instance.labels):
+                    continue
+                possible_labels = [tag for entity_type in sample.label_list for tag in (f"B-{entity_type}", f"I-{entity_type}")] + ["O"]
+                if any(label not in possible_labels for label in sample.instance.labels):
+                    continue
+                sentence = " ".join(sample.instance.words)
+                logger.debug("\n" * 5)
+                logger.debug(f">> old_sample_id={sample.id}")
+                logger.debug(f">> old_instruction_inputs=\n{sample.instance.instruction_inputs}")
+                logger.debug(f">> old_prompt_labels=\n{sample.instance.prompt_labels}")
 
-            for i, entity_type in enumerate(sample.label_list):
-                possible_labels = [tag for tag in (f"B-{entity_type}", f"I-{entity_type}")] + ["O"]
-                filtered_labels = [x if x in possible_labels else "O" for x in sample.instance.labels]
-                prompt_labels = GenNERSample.get_prompt_labels(sample.instance.words, filtered_labels)
-                instruction_inputs = instruction_template2.format(entity_type=entity_type, sentence=sentence)
-                logger.debug("\n" * 2)
-                logger.debug("=" * 80)
-                logger.debug(f">> new_instruction_inputs=\n{'-' * 80}\n{instruction_inputs}\n{'-' * 80}")
-                logger.debug(f">> new_prompt_labels=\n{prompt_labels}")
-                new_sample = GenNERSampleWrapper(
-                    id=f"{sample.id}.M{i}",
-                    dataset=sample.dataset,
-                    split=sample.split,
-                    label_list=sample.label_list,
-                    instance=GenNERSample(
-                        id=f"{sample.instance.id}.{i}",
-                        group=sample.instance.id,
-                        words=sample.instance.words,
-                        labels=sample.instance.labels,
-                        target_label=entity_type,
-                        prompt_labels=prompt_labels,
-                        instruction_inputs=instruction_inputs,
+                if sr_inst_temp:
+                    entity_types = ", ".join(sample.label_list)
+                    prompt_labels = GenNERSample.get_prompt_labels(sample.instance.words, sample.instance.labels)
+                    instruction_inputs = sr_inst_temp.format(entity_types=entity_types, sentence=sentence)
+                    logger.debug("\n" * 2)
+                    logger.debug("=" * 80)
+                    logger.debug(f">> new_instruction_inputs=\n{'-' * 80}\n{instruction_inputs}\n{'-' * 80}")
+                    logger.debug(f">> new_prompt_labels=\n{prompt_labels}")
+                    new_sample = GenNERSampleWrapper(
+                        id=f"{sample.id}.S",
+                        dataset=sample.dataset,
+                        split=sample.split,
+                        label_list=sample.label_list,
+                        instance=GenNERSample(
+                            id=f"{sample.instance.id}.S",
+                            group=sample.instance.id,
+                            words=sample.instance.words,
+                            labels=sample.instance.labels,
+                            target_label=None,
+                            prompt_labels=prompt_labels,
+                            instruction_inputs=instruction_inputs,
+                        )
                     )
-                )
-                num_new_samples += 1
-                output_file.fp.write(new_sample.model_dump_json() + "\n")
+                    output_file.fp.write(new_sample.model_dump_json() + "\n")
+                    num_new_samples += 1
+
+        if mr_input_file:
+            for sample in ProgIter(ner_samples(mr_input_file), total=len(mr_input_file), desc=f"Converting {mr_input_file.path}:", stream=LoggerWriter(logger, level=logging_level), verbose=3):
+                sample.instance.id = sample.id = sample.instance.id or sample.id
+                sample.label_list = [x.replace(" ", "_") for x in sample.label_list]  # for easy post-processing
+                sample.instance.labels = [x.replace(" ", "_") for x in sample.instance.labels]  # for easy post-processing
+                if len(sample.instance.words) != len(sample.instance.labels):
+                    continue
+                possible_labels = [tag for entity_type in sample.label_list for tag in (f"B-{entity_type}", f"I-{entity_type}")] + ["O"]
+                if any(label not in possible_labels for label in sample.instance.labels):
+                    continue
+                sentence = " ".join(sample.instance.words)
+                logger.debug("\n" * 5)
+                logger.debug(f">> old_sample_id={sample.id}")
+                logger.debug(f">> old_instruction_inputs=\n{sample.instance.instruction_inputs}")
+                logger.debug(f">> old_prompt_labels=\n{sample.instance.prompt_labels}")
+
+                for i, entity_type in enumerate(sample.label_list if mr_inst_temp else [], start=1):
+                    possible_labels = [tag for tag in (f"B-{entity_type}", f"I-{entity_type}")] + ["O"]
+                    filtered_labels = [x if x in possible_labels else "O" for x in sample.instance.labels]
+                    prompt_labels = GenNERSample.get_prompt_labels(sample.instance.words, filtered_labels)
+                    instruction_inputs = mr_inst_temp.format(entity_type=entity_type, sentence=sentence)
+                    logger.debug("\n" * 2)
+                    logger.debug("=" * 80)
+                    logger.debug(f">> new_instruction_inputs=\n{'-' * 80}\n{instruction_inputs}\n{'-' * 80}")
+                    logger.debug(f">> new_prompt_labels=\n{prompt_labels}")
+                    new_sample = GenNERSampleWrapper(
+                        id=f"{sample.id}.M{i}",
+                        dataset=sample.dataset,
+                        split=sample.split,
+                        label_list=sample.label_list,
+                        instance=GenNERSample(
+                            id=f"{sample.instance.id}.{i}",
+                            group=sample.instance.id,
+                            words=sample.instance.words,
+                            labels=sample.instance.labels,
+                            target_label=entity_type,
+                            prompt_labels=prompt_labels,
+                            instruction_inputs=instruction_inputs,
+                        )
+                    )
+                    output_file.fp.write(new_sample.model_dump_json() + "\n")
+                    num_new_samples += 1
+
         logger.warning(f">> Number of new samples in {output_file.path} = {num_new_samples}")
+        final_output_file = output_file.path.with_stem(output_file.path.stem.replace(f"-{post}", f"-{post}{num_new_samples}"))
+        output_file.path.rename(final_output_file)
+        logger.info(f"Renamed to {final_output_file}")
+    return final_output_file
 
 
 def make_prompt_label(sample: GenNERSampleWrapper, word_id: int, level_main: int, level_sub: int):
