@@ -793,7 +793,9 @@ def convert_to_hybrid_round_version(
 
                 if sr_inst_temp:
                     entity_types = ", ".join(sample.label_list)
-                    prompt_labels = GenNERSample.get_prompt_labels(sample.instance.words, sample.instance.labels)
+                    possible_labels = [tag for entity_type in sample.label_list for tag in (f"B-{entity_type}", f"I-{entity_type}")] + ["O"]
+                    final_words, final_labels = sample.instance.words, [x if x in possible_labels else "O" for x in sample.instance.labels]
+                    prompt_labels = GenNERSample.get_prompt_labels(final_words, final_labels)
                     instruction_inputs = sr_inst_temp.format(entity_types=entity_types, sentence=sentence)
                     logger.debug("\n" * 2)
                     logger.debug("=" * 80)
@@ -805,11 +807,11 @@ def convert_to_hybrid_round_version(
                         split=sample.split,
                         label_list=sample.label_list,
                         instance=GenNERSample(
-                            id=f"{sample.instance.id}.S",
-                            group=sample.instance.id,
-                            words=sample.instance.words,
-                            labels=sample.instance.labels,
-                            target_label=None,
+                            id=f"{sample.id}.S",
+                            group=f"{sample.id}",
+                            words=final_words,
+                            labels=final_labels,
+                            target_label="*",
                             prompt_labels=prompt_labels,
                             instruction_inputs=instruction_inputs,
                         )
@@ -835,8 +837,8 @@ def convert_to_hybrid_round_version(
 
                 for i, entity_type in enumerate(sample.label_list if mr_inst_temp else [], start=1):
                     possible_labels = [tag for tag in (f"B-{entity_type}", f"I-{entity_type}")] + ["O"]
-                    filtered_labels = [x if x in possible_labels else "O" for x in sample.instance.labels]
-                    prompt_labels = GenNERSample.get_prompt_labels(sample.instance.words, filtered_labels)
+                    final_words, final_labels = sample.instance.words, [x if x in possible_labels else "O" for x in sample.instance.labels]
+                    prompt_labels = GenNERSample.get_prompt_labels(final_words, final_labels)
                     instruction_inputs = mr_inst_temp.format(entity_type=entity_type, sentence=sentence)
                     logger.debug("\n" * 2)
                     logger.debug("=" * 80)
@@ -848,10 +850,10 @@ def convert_to_hybrid_round_version(
                         split=sample.split,
                         label_list=sample.label_list,
                         instance=GenNERSample(
-                            id=f"{sample.instance.id}.{i}",
-                            group=sample.instance.id,
-                            words=sample.instance.words,
-                            labels=sample.instance.labels,
+                            id=f"{sample.id}.M{i}",
+                            group=f"{sample.id}",
+                            words=final_words,
+                            labels=final_labels,
                             target_label=entity_type,
                             prompt_labels=prompt_labels,
                             instruction_inputs=instruction_inputs,
