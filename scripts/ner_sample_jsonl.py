@@ -16,23 +16,23 @@ validation_sampled_700 = stratified_sample_jsonl(
     output_file="data/ZSE-validation-sampled.jsonl",
     max_num_samples=100,
 )  # 700
-validation_sampled_2100 = stratified_sample_jsonl(
+validation_sampled_1400 = stratified_sample_jsonl(
     input_file="data/ZSE-validation.jsonl",
     output_file="data/ZSE-validation-sampled.jsonl",
-    max_num_samples=300,
-)  # 2,100
+    max_num_samples=200,
+)  # 1,400
 convert_to_hybrid_round_version(
     mr_input_file=validation_sampled_70,
     sr_input_file=validation_sampled_700,
-)
+)  # 1,500
 convert_to_hybrid_round_version(
     mr_input_file=validation_sampled_210,
     sr_input_file=validation_sampled_700,
-)
+)  # 3,100
 convert_to_hybrid_round_version(
     mr_input_file=validation_sampled_700,
-    sr_input_file=validation_sampled_2100,
-)
+    sr_input_file=validation_sampled_1400,
+)  # 9,400
 
 # TEST SET
 test_sampled_70 = stratified_sample_jsonl(
@@ -58,15 +58,15 @@ test_sampled_2100 = stratified_sample_jsonl(
 convert_to_hybrid_round_version(
     mr_input_file=test_sampled_70,
     sr_input_file=test_sampled_700,
-)
+)  # 1,500
 convert_to_hybrid_round_version(
     mr_input_file=test_sampled_210,
     sr_input_file=test_sampled_700,
-)
+)  # 3,100
 convert_to_hybrid_round_version(
     mr_input_file=test_sampled_700,
     sr_input_file=test_sampled_2100,
-)
+)  # 10,100
 
 # TRAINING SET
 train_sampled_20000 = stratified_sample_jsonl(
@@ -100,14 +100,20 @@ train_sampled_50000 = stratified_sample_jsonl(
 convert_to_hybrid_round_version(
     sr_input_file="data/pile-ner.jsonl",
     mr_inst_file=None,
-)
-for train_sampled in [
-    train_sampled_20000,
-    train_sampled_30000,
-    train_sampled_40000,
-    train_sampled_50000,
-]:
-    convert_to_hybrid_round_version(
-        mr_input_file=train_sampled,
-        sr_input_file="data/pile-ner.jsonl",
-    )
+)  # 103,814
+convert_to_hybrid_round_version(
+    mr_input_file=train_sampled_20000,
+    sr_input_file="data/pile-ner.jsonl",
+)  # 207,842
+convert_to_hybrid_round_version(
+    mr_input_file=train_sampled_30000,
+    sr_input_file="data/pile-ner.jsonl",
+)  # 298,291
+convert_to_hybrid_round_version(
+    mr_input_file=train_sampled_40000,
+    sr_input_file="data/pile-ner.jsonl",
+)  # 433,594
+convert_to_hybrid_round_version(
+    mr_input_file=train_sampled_50000,
+    sr_input_file="data/pile-ner.jsonl",
+)  # 523,562
