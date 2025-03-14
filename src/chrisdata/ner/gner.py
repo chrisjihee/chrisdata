@@ -781,8 +781,8 @@ def convert_to_hybrid_round_version(
         if sr_input_file:
             for sample in ProgIter(ner_samples(sr_input_file), total=len(sr_input_file), desc=f"Converting {sr_input_file.path}:", stream=LoggerWriter(logger, level=logging_level), verbose=3):
                 sample.instance.id = sample.id = sample.instance.id or sample.id
-                sample.label_list = [x.replace(" ", "_") for x in sample.label_list]  # for easy post-processing
-                sample.instance.labels = [x.replace(" ", "_") for x in sample.instance.labels]  # for easy post-processing
+                sample.label_list = [str(x).replace(" ", "_").upper() for x in sample.label_list]  # for easy post-processing
+                sample.instance.labels = [str(x).replace(" ", "_").upper() for x in sample.instance.labels]  # for easy post-processing
                 sample.label_list = [str(x).replace(" ", "_").upper() for x in sample.label_list]  # for easy post-processing
                 sample.instance.labels = [str(x).replace(" ", "_").upper() for x in sample.instance.labels]  # for easy post-processing
                 if len(sample.instance.words) != len(sample.instance.labels):
