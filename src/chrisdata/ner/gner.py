@@ -687,17 +687,21 @@ def sample_jsonl_lines(
 
 @app.command("stratified_sample_jsonl")
 def stratified_sample_jsonl_lines(
-        input_file: Annotated[str, typer.Argument()] = "data/pile-ner.jsonl",
-        min_num_word: Annotated[int, typer.Option("--min_num_word")] = 10,
-        max_num_word: Annotated[int, typer.Option("--max_num_word")] = 100,
-        min_num_label: Annotated[int, typer.Option("--min_num_label")] = 3,
-        max_num_label: Annotated[int, typer.Option("--max_num_label")] = 10,
-        min_num_samples: Annotated[int, typer.Option("--min_num_samples")] = 3,
-        max_num_samples: Annotated[int, typer.Option("--max_num_samples")] = 10,
+        input_file: Annotated[str, typer.Argument()] = ...,  # "data/pile-ner.jsonl",
+        output_file: Annotated[str, typer.Option("--output_file")] = None,
+        min_num_word: Annotated[int, typer.Option("--min_num_word")] = 0,
+        max_num_word: Annotated[int, typer.Option("--max_num_word")] = 512,
+        min_num_label: Annotated[int, typer.Option("--min_num_label")] = 0,
+        max_num_label: Annotated[int, typer.Option("--max_num_label")] = 300,
+        min_num_samples: Annotated[int, typer.Option("--min_num_samples")] = 0,
+        max_num_samples: Annotated[int, typer.Option("--max_num_samples")] = 10000,
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     env = NewProjectEnv()
-    output_file = new_path(input_file, post=f"{min_num_word}-{max_num_word},{min_num_label}-{max_num_label},{min_num_samples}-{max_num_samples}", sep='=')
+    output_file = Path(output_file) if output_file else new_path(
+        input_file, sep='=',
+        post=f"{min_num_word}-{max_num_word},{min_num_label}-{max_num_label},{min_num_samples}-{max_num_samples}"
+    )
     with (
         JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
         FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
@@ -725,6 +729,9 @@ def stratified_sample_jsonl_lines(
                 output_file.fp.write(sample.model_dump_json() + "\n")
                 num_outputs += 1
         logger.info(f"Number of samples in {output_file.path}: %d", num_outputs)
+        final_output_file = new_path(output_file.path, post=f"N{num_outputs}")
+        output_file.path = output_file.path.rename(final_output_file)
+        logger.info(f"Renamed to {output_file.path}")
 
 
 @app.command("convert_to_hybrid_round_version")
@@ -928,10 +935,12 @@ sample_X = {
         "prediction_outputs": None,
         "group": None,
         "words": [
-            "Q:", "Position", "character", "based", "on", "enemy", "coordinates", "in", "lua", "I", "have", "written", "a", "function", "here", "which", "should", "turn", "my", "character", "based", "on", "enemy", "coordinates", "but", "it's", "not", "perfect", "because", "it", "does", "not", "always", "turn", "where", "I", "want", "it", "to", "and", "perhaps", "there", "is", "a", "better", "way", "of", "writing", "it", "local", "myPosition", "=", "{x", "=", "350,", "y", "=", "355}", "local", "enemyPosition", "=", "{x", "=", "352,", "y", "=", "354}", "local", "xValue,", "yValue,", "xDir,", "yDir,", "dir", "if", "myPosition.x", ">", "enemyPosition.x", "then", "xValue", "=", "myPosition.x", "-"
+            "Q:", "Position", "character", "based", "on", "enemy", "coordinates", "in", "lua", "I", "have", "written", "a", "function", "here", "which", "should", "turn", "my", "character", "based", "on", "enemy", "coordinates", "but", "it's", "not", "perfect", "because", "it", "does", "not", "always", "turn", "where", "I", "want", "it", "to", "and", "perhaps", "there", "is", "a", "better", "way", "of", "writing", "it", "local", "myPosition", "=", "{x", "=", "350,", "y", "=", "355}", "local",
+            "enemyPosition", "=", "{x", "=", "352,", "y", "=", "354}", "local", "xValue,", "yValue,", "xDir,", "yDir,", "dir", "if", "myPosition.x", ">", "enemyPosition.x", "then", "xValue", "=", "myPosition.x", "-"
         ],
         "labels": [
-            "O", "O", "O", "O", "O", "O", "O", "O", "B-programming language", "O", "O", "O", "O", "B-programming concept", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "B-variable", "O", "O", "O", "O", "O", "O", "O", "O", "B-variable", "O", "O", "O", "O", "O", "O", "O", "O", "B-variable", "B-variable", "B-variable", "B-variable", "B-variable", "O", "B-variable", "O", "B-variable", "O", "B-variable", "O", "B-variable", "O"
+            "O", "O", "O", "O", "O", "O", "O", "O", "B-programming language", "O", "O", "O", "O", "B-programming concept", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "B-variable", "O", "O", "O", "O", "O", "O", "O", "O", "B-variable", "O", "O", "O", "O", "O", "O", "O", "O", "B-variable", "B-variable", "B-variable", "B-variable", "B-variable", "O", "B-variable",
+            "O", "B-variable", "O", "B-variable", "O", "B-variable", "O"
         ],
         "target_index": None,
         "target_label": None
