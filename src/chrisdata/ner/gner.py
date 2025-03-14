@@ -40,6 +40,7 @@ class EntityTextSource(str, Enum):
 def ner_samples_from_json(input_file: FileStreamer) -> Iterable[GenNERSampleWrapper]:
     for sample in json.load(input_file.fp):
         sample = GenNERSampleWrapper.model_validate(sample)
+        sample.id = sample.instance.id = sample.id or sample.instance.id
         if not sample.instance.words or not sample.instance.labels or not sample.label_list:
             sample.set_missing_values_by_instruction_prompt(input_file.path)
         yield sample
@@ -48,6 +49,7 @@ def ner_samples_from_json(input_file: FileStreamer) -> Iterable[GenNERSampleWrap
 def ner_samples_from_jsonl(input_file: FileStreamer) -> Iterable[GenNERSampleWrapper]:
     for sample in input_file:
         sample = GenNERSampleWrapper.model_validate_json(sample)
+        sample.id = sample.instance.id = sample.id or sample.instance.id
         if not sample.instance.words or not sample.instance.labels or not sample.label_list:
             sample.set_missing_values_by_instruction_prompt(input_file.path)
         yield sample
