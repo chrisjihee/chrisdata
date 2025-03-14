@@ -759,9 +759,18 @@ def make_prompt_label(sample: GenNERSampleWrapper, word_id: int, level_main: int
     return prompt_label
 
 
+@app.command("convert_to_hybrid_round_version")
+def convert_to_hybrid_round_version(
+        input_file: Annotated[str, typer.Argument()] = ...,  # "data/pile-ner=10-100,3-7,3-10.jsonl"
+        logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
+):
+    env = NewProjectEnv(logging_level=logging_level)
+    print(env)
+
+
 @app.command("convert_to_WQ")
 def convert_to_word_query_version(
-        input_file: Annotated[str, typer.Argument()] = ...,  # "data/gner/united/pile-ner=5-120,3-12,3-40.jsonl"
+        input_file: Annotated[str, typer.Argument()] = ...,  # "data/pile-ner=10-100,3-7,3-10.jsonl"
         label_level_main: Annotated[int, typer.Option("--label_level_main")] = ...,
         label_level_sub: Annotated[int, typer.Option("--label_level_sub")] = 0,
         instruction_file: Annotated[str, typer.Option("--instruction_file")] = "configs/instruction/GNER-WQ.txt",
