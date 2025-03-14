@@ -764,7 +764,7 @@ def convert_to_hybrid_round_version(
         input_file: Annotated[str, typer.Argument()] = ...,  # "data/pile-ner=10-100,3-7,3-10.jsonl"
         instruction_file1: Annotated[str, typer.Option("--instruction_file1")] = "configs/instruction/GNER-EQ-SR.txt",
         instruction_file2: Annotated[str, typer.Option("--instruction_file2")] = "configs/instruction/GNER-EQ-MR.txt",
-        logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
+        logging_level: Annotated[int, typer.Option("--logging_level")] = logging.DEBUG,
 ):
     env = NewProjectEnv(logging_level=logging_level)
     output_file = new_path(input_file, post="HR")
@@ -782,9 +782,47 @@ def convert_to_hybrid_round_version(
         num_new_samples = 0
         for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Converting {input_file.path}:",
                                stream=LoggerWriter(logger, level=logging_level), verbose=3):
-            print(sample.model_dump_json())
-            exit(1)
             sample.instance.id = sample.id = sample.instance.id or sample.id
+            sample.label_list = [x.replace(" ", "_") for x in sample.label_list]  # for easy post-processing
+            sample.instance.labels = [x.replace(" ", "_") for x in sample.instance.labels]  # for easy post-processing
+            if len(sample.instance.words) != len(sample.instance.labels):
+                continue
+            possible_labels = [tag for x in sample.label_list for tag in (f"B-{x}", f"I-{x}")] + ["O"]
+            if any(label not in possible_labels for label in sample.instance.labels):
+                continue
+            sentence = " ".join(sample.instance.words)
+            entity_types = ", ".join(sample.label_list)
+            logger.debug("\n" * 5)
+            logger.debug(f">> old_sample_id={sample.id}")
+            logger.debug(f">> old_instruction_inputs=\n{sample.instance.instruction_inputs}")
+            logger.debug(f">> old_prompt_labels=\n{sample.instance.prompt_labels}")
+            instruction_inputs = instruction_template1.format(entity_types=entity_types, sentence=sentence)
+            prompt_labels = GenNERSample.get_prompt_labels(sample.instance.words, sample.instance.labels)
+            logger.debug("\n" * 2)
+            logger.debug("=" * 80)
+            logger.debug(f">> new_instruction_inputs=\n{'-' * 80}\n{instruction_inputs}\n{'-' * 80}")
+            logger.debug(f">> new_prompt_labels=\n{prompt_labels}")
+            new_sample = GenNERSampleWrapper(
+                id=f"{sample.id}.S",
+                dataset=sample.dataset,
+                split=sample.split,
+                label_list=sample.label_list,
+                instance=GenNERSample(
+                    id=f"{sample.instance.id}.S",
+                    group=sample.instance.id,
+                    words=sample.instance.words,
+                    labels=sample.instance.labels,
+                    target_label=None,
+                    prompt_labels=prompt_labels,
+                    instruction_inputs=instruction_inputs,
+                )
+            )
+            num_new_samples += 1
+            output_file.fp.write(new_sample.model_dump_json() + "\n")
+            exit(0)
+
+            for entity_type in sample.label_list:
+                pass
 
 
 @app.command("convert_to_WQ")
@@ -814,8 +852,8 @@ def convert_to_word_query_version(
         for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Converting {input_file.path}:",
                                stream=LoggerWriter(logger, level=logging_level), verbose=3):
             sample.instance.id = sample.id = sample.instance.id or sample.id
-            sample.label_list = [x.replace(" ", "_") for x in sample.label_list]
-            sample.instance.labels = [x.replace(" ", "_") for x in sample.instance.labels]
+            sample.label_list = [x.replace(" ", "_") for x in sample.label_list]  # for easy post-processing
+            sample.instance.labels = [x.replace(" ", "_") for x in sample.instance.labels]  # for easy post-processing
             if len(sample.instance.words) != len(sample.instance.labels):
                 continue
             sentence = " ".join(sample.instance.words)
@@ -823,14 +861,14 @@ def convert_to_word_query_version(
             logger.debug("\n" * 5)
             logger.debug(f">> old_sample_id={sample.id}")
             logger.debug(f">> old_instruction_inputs=\n{sample.instance.instruction_inputs}")
-            logger.debug(f">> old_prompt_labels={sample.instance.prompt_labels}")
+            logger.debug(f">> old_prompt_labels=\n{sample.instance.prompt_labels}")
             for i, word in enumerate(sample.instance.words):
                 instruction_inputs = instruction_template.format(label_list=label_list, sentence=sentence, word=word, position=i)
                 prompt_labels = make_prompt_label(sample, i, label_level_main, label_level_sub)
                 logger.debug("\n" * 2)
                 logger.debug("=" * 80)
                 logger.debug(f">> new_instruction_inputs=\n{'-' * 80}\n{instruction_inputs}\n{'-' * 80}")
-                logger.debug(f">> new_prompt_labels={prompt_labels}")
+                logger.debug(f">> new_prompt_labels=\n{prompt_labels}")
                 new_sample = GenNERSampleWrapper(
                     id=f"{sample.id}.{i}",
                     dataset=sample.dataset,
