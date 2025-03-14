@@ -69,6 +69,13 @@ convert_to_hybrid_round_version(
 )  # 10,100
 
 # TRAINING SET
+train_sampled_1000 = stratified_sample_jsonl(
+    input_file="data/pile-ner.jsonl",
+    output_file="data/pile-ner-sampled.jsonl",
+    min_num_word=10, max_num_word=80,
+    min_num_label=3, max_num_label=7,
+    min_num_samples=3, max_num_samples=10,
+)  # 902
 train_sampled_20000 = stratified_sample_jsonl(
     input_file="data/pile-ner.jsonl",
     output_file="data/pile-ner-sampled.jsonl",
@@ -101,6 +108,10 @@ convert_to_hybrid_round_version(
     sr_input_file="data/pile-ner.jsonl",
     mr_inst_file=None,
 )  # 103,814
+convert_to_hybrid_round_version(
+    mr_input_file=train_sampled_1000,
+    sr_input_file=train_sampled_1000,
+)  # 4,244
 convert_to_hybrid_round_version(
     mr_input_file=train_sampled_20000,
     sr_input_file="data/pile-ner.jsonl",
