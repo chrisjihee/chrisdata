@@ -700,10 +700,7 @@ def stratified_sample_jsonl_lines(
         random_seed: Annotated[int, typer.Option("--random_seed")] = 7,
 ):
     env = NewProjectEnv(random_seed=random_seed)
-    output_file = Path(output_file) if output_file else new_path(
-        input_file, sep='=',
-        post=f"{min_num_word}-{max_num_word},{min_num_label}-{max_num_label},{min_num_samples}-{max_num_samples}"
-    )
+    output_file = Path(output_file) if output_file else new_path(input_file, post="sampled")
     with (
         JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
         FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
@@ -752,10 +749,10 @@ def convert_to_hybrid_round_version(
         sr_inst_file: Annotated[str, typer.Option("--sr_inst_file")] = None,  # "configs/instruction/GNER-EQ-SR.txt"
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
-    env = NewProjectEnv(logging_level=logging_level)
     assert sr_input_file or mr_input_file, "Either sr_input_file or mr_input_file is required"
     post = "HR" if sr_inst_file and mr_inst_file else "MR" if mr_inst_file else "SR" if sr_inst_file else None
-    output_file = new_path(mr_input_file or sr_input_file, sep='=', post=post)
+    env = NewProjectEnv(logging_level=logging_level)
+    output_file = new_path(mr_input_file or sr_input_file, post=post)
     mr_inst_temp = Path(mr_inst_file).read_text() if mr_inst_file else None
     sr_inst_temp = Path(sr_inst_file).read_text() if sr_inst_file else None
     if not sr_input_file:
@@ -865,9 +862,9 @@ def convert_to_hybrid_round_version(
 
         logger.warning(f">> Number of new SR samples in {output_file.path} = {num_new_sr_samples}")
         logger.warning(f">> Number of new MR samples in {output_file.path} = {num_new_mr_samples}")
-        final_output_file = output_file.path.with_stem(output_file.path.stem.replace(f"={post}", f"={post}{num_new_sr_samples + num_new_mr_samples}"
-                                                                                                 f"=SR{num_new_sr_samples if post == 'HR' else ''}"
-                                                                                                 f"=MR{num_new_mr_samples if post == 'HR' else ''}"))
+        final_output_file = output_file.path.with_stem(output_file.path.stem.replace(post, f"{post}{num_new_sr_samples + num_new_mr_samples}"
+                                                                                           f"{f',{num_new_sr_samples}' if post == 'HR' else ''}"
+                                                                                           f"{f',{num_new_mr_samples}' if post == 'HR' else ''}"))
         output_file.path.rename(final_output_file)
         logger.info(f"Renamed to {final_output_file}")
     print()
