@@ -725,40 +725,6 @@ def stratified_sample_jsonl_lines(
         logger.info(f"Number of samples in {output_file.path}: %d", num_outputs)
 
 
-def make_prompt_label(sample: GenNERSampleWrapper, word_id: int, level_main: int, level_sub: int):
-    if level_main == 1:
-        prompt_label = sample.instance.labels[word_id]
-    elif level_main == 2:
-        prompt_label = GenNERSample.get_prompt_labels([sample.instance.words[word_id]], [sample.instance.labels[word_id]])
-    elif level_main == 3:
-        total_labels = len(sample.instance.labels)
-        start_idx = max(0, word_id)
-        end_idx = min(total_labels, word_id + 1)
-        labels = (
-                ["?"] * start_idx +
-                sample.instance.labels[start_idx: end_idx] +
-                ["?"] * (total_labels - end_idx)
-        )
-        assert len(labels) == len(sample.instance.labels)
-        prompt_label = GenNERSample.get_prompt_labels(sample.instance.words, labels)
-    elif level_main == 4:
-        total_labels = len(sample.instance.labels)
-        start_idx = max(0, word_id - level_sub)
-        end_idx = min(total_labels, word_id + level_sub + 1)
-        labels = (
-                ["?"] * start_idx +
-                sample.instance.labels[start_idx: end_idx] +
-                ["?"] * (total_labels - end_idx)
-        )
-        assert len(labels) == len(sample.instance.labels)
-        prompt_label = GenNERSample.get_prompt_labels(sample.instance.words, labels)
-    elif level_main == 5:
-        prompt_label = GenNERSample.get_prompt_labels(sample.instance.words, sample.instance.labels)
-    else:
-        raise ValueError(f"Unsupported level_main: {level_main}")
-    return prompt_label
-
-
 @app.command("convert_to_hybrid_round_version")
 def convert_to_hybrid_round_version(
         input_file: Annotated[str, typer.Argument()] = ...,  # "data/pile-ner=10-100,3-7,3-10.jsonl"
@@ -848,6 +814,40 @@ def convert_to_hybrid_round_version(
                 num_new_samples += 1
                 output_file.fp.write(new_sample.model_dump_json() + "\n")
         logger.warning(f">> Number of new samples in {output_file.path} = {num_new_samples}")
+
+
+def make_prompt_label(sample: GenNERSampleWrapper, word_id: int, level_main: int, level_sub: int):
+    if level_main == 1:
+        prompt_label = sample.instance.labels[word_id]
+    elif level_main == 2:
+        prompt_label = GenNERSample.get_prompt_labels([sample.instance.words[word_id]], [sample.instance.labels[word_id]])
+    elif level_main == 3:
+        total_labels = len(sample.instance.labels)
+        start_idx = max(0, word_id)
+        end_idx = min(total_labels, word_id + 1)
+        labels = (
+                ["?"] * start_idx +
+                sample.instance.labels[start_idx: end_idx] +
+                ["?"] * (total_labels - end_idx)
+        )
+        assert len(labels) == len(sample.instance.labels)
+        prompt_label = GenNERSample.get_prompt_labels(sample.instance.words, labels)
+    elif level_main == 4:
+        total_labels = len(sample.instance.labels)
+        start_idx = max(0, word_id - level_sub)
+        end_idx = min(total_labels, word_id + level_sub + 1)
+        labels = (
+                ["?"] * start_idx +
+                sample.instance.labels[start_idx: end_idx] +
+                ["?"] * (total_labels - end_idx)
+        )
+        assert len(labels) == len(sample.instance.labels)
+        prompt_label = GenNERSample.get_prompt_labels(sample.instance.words, labels)
+    elif level_main == 5:
+        prompt_label = GenNERSample.get_prompt_labels(sample.instance.words, sample.instance.labels)
+    else:
+        raise ValueError(f"Unsupported level_main: {level_main}")
+    return prompt_label
 
 
 @app.command("convert_to_WQ")
