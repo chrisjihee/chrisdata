@@ -762,10 +762,29 @@ def make_prompt_label(sample: GenNERSampleWrapper, word_id: int, level_main: int
 @app.command("convert_to_hybrid_round_version")
 def convert_to_hybrid_round_version(
         input_file: Annotated[str, typer.Argument()] = ...,  # "data/pile-ner=10-100,3-7,3-10.jsonl"
+        instruction_file1: Annotated[str, typer.Option("--instruction_file1")] = "configs/instruction/GNER-EQ-SR.txt",
+        instruction_file2: Annotated[str, typer.Option("--instruction_file2")] = "configs/instruction/GNER-EQ-MR.txt",
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     env = NewProjectEnv(logging_level=logging_level)
-    print(env)
+    output_file = new_path(input_file, post="HR")
+    instruction_template1 = Path(instruction_file1).read_text()
+    instruction_template2 = Path(instruction_file2).read_text()
+    with (
+        JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
+        FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
+        FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
+    ):
+        logger.info("[input_file]        : %s", input_file.path)
+        logger.info("[output_file]       : %s", output_file.path)
+        logger.info("[instruction_file1] : %s", instruction_file1)
+        logger.info("[instruction_file2] : %s", instruction_file2)
+        num_new_samples = 0
+        for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Converting {input_file.path}:",
+                               stream=LoggerWriter(logger, level=logging_level), verbose=3):
+            print(sample.model_dump_json())
+            exit(1)
+            sample.instance.id = sample.id = sample.instance.id or sample.id
 
 
 @app.command("convert_to_WQ")
@@ -931,15 +950,20 @@ sample_X = {
         "prompt_labels": "Q:(O) Position(O) character(O) based(O) on(O) enemy(O) coordinates(O) in(O) lua(B-programming language) I(O) have(O) written(O) a(O) function(B-programming concept) here(O) which(O) should(O) turn(O) my(O) character(O) based(O) on(O) enemy(O) coordinates(O) but(O) it's(O) not(O) perfect(O) because(O) it(O) does(O) not(O) always(O) turn(O) where(O) I(O) want(O) it(O) to(O) and(O) perhaps(O) there(O) is(O) a(O) better(O) way(O) of(O) writing(O) it(O) local(O) myPosition(B-variable) =(O) {x(O) =(O) 350,(O) y(O) =(O) 355}(O) local(O) enemyPosition(B-variable) =(O) {x(O) =(O) 352,(O) y(O) =(O) 354}(O) local(O) xValue,(B-variable) yValue,(B-variable) xDir,(B-variable) yDir,(B-variable) dir(B-variable) if(O) myPosition.x(B-variable) >(O) enemyPosition.x(B-variable) then(O) xValue(B-variable) =(O) myPosition.x(B-variable) -(O)",
         "instruction_inputs": "Please analyze the sentence provided, identifying the type of entity for each word on a token-by-token basis.\nOutput format is: word_1(label_1), word_2(label_2), ...\nWe'll use the BIO-format to label the entities, where:\n1. B- (Begin) indicates the start of a named entity.\n2. I- (Inside) is used for words within a named entity but are not the first word.\n3. O (Outside) denotes words that are not part of a named entity.\n\nUse the specific entity tags: programming concept, programming language, database, variable, Date and O.\nSentence: Q: Position character based on enemy coordinates in lua I have written a function here which should turn my character based on enemy coordinates but it's not perfect because it does not always turn where I want it to and perhaps there is a better way of writing it local myPosition = {x = 350, y = 355} local enemyPosition = {x = 352, y = 354} local xValue, yValue, xDir, yDir, dir if myPosition.x > enemyPosition.x then xValue = myPosition.x -",
         "prediction_output": None,
+        "prediction_outputs": None,
         "group": None,
-        "words": ["Q:", "Position", "character", "based", "on", "enemy", "coordinates", "in", "lua", "I", "have", "written", "a", "function", "here", "which", "should", "turn", "my", "character", "based", "on", "enemy", "coordinates", "but", "it's", "not", "perfect", "because", "it", "does", "not", "always", "turn", "where", "I", "want", "it", "to", "and", "perhaps", "there", "is", "a", "better", "way", "of", "writing", "it", "local", "myPosition", "=", "{x", "=", "350,", "y", "=", "355}",
-                  "local", "enemyPosition", "=", "{x", "=", "352,", "y", "=", "354}", "local", "xValue,", "yValue,", "xDir,", "yDir,", "dir", "if", "myPosition.x", ">", "enemyPosition.x", "then", "xValue", "=", "myPosition.x", "-"],
-        "labels": ["O", "O", "O", "O", "O", "O", "O", "O", "B-programming language", "O", "O", "O", "O", "B-programming concept", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "B-variable", "O", "O", "O", "O", "O", "O", "O", "O", "B-variable", "O", "O", "O", "O", "O", "O", "O", "O", "B-variable", "B-variable", "B-variable", "B-variable", "B-variable", "O",
-                   "B-variable", "O", "B-variable", "O", "B-variable", "O", "B-variable", "O"],
+        "words": [
+            "Q:", "Position", "character", "based", "on", "enemy", "coordinates", "in", "lua", "I", "have", "written", "a", "function", "here", "which", "should", "turn", "my", "character", "based", "on", "enemy", "coordinates", "but", "it's", "not", "perfect", "because", "it", "does", "not", "always", "turn", "where", "I", "want", "it", "to", "and", "perhaps", "there", "is", "a", "better", "way", "of", "writing", "it", "local", "myPosition", "=", "{x", "=", "350,", "y", "=", "355}", "local", "enemyPosition", "=", "{x", "=", "352,", "y", "=", "354}", "local", "xValue,", "yValue,", "xDir,", "yDir,", "dir", "if", "myPosition.x", ">", "enemyPosition.x", "then", "xValue", "=", "myPosition.x", "-"
+        ],
+        "labels": [
+            "O", "O", "O", "O", "O", "O", "O", "O", "B-programming language", "O", "O", "O", "O", "B-programming concept", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "B-variable", "O", "O", "O", "O", "O", "O", "O", "O", "B-variable", "O", "O", "O", "O", "O", "O", "O", "O", "B-variable", "B-variable", "B-variable", "B-variable", "B-variable", "O", "B-variable", "O", "B-variable", "O", "B-variable", "O", "B-variable", "O"
+        ],
         "target_index": None,
-        "target_label": None,
+        "target_label": None
     },
-    "label_list": ["date", "database", "programming_concept", "programming_language", "variable"]
+    "label_list": [
+        "date", "database", "programming_concept", "programming_language", "variable"
+    ]
 }
 
 sample_Y = {
