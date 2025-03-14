@@ -60,6 +60,7 @@ train_sampled_files = []
 train_sampled_files += [
     stratified_sample_jsonl_lines(
         input_file="data/pile-ner.jsonl",
+        output_file="data/pile-ner-sampled.jsonl",
         min_num_word=10, max_num_word=100,
         min_num_label=3, max_num_label=7,
         min_num_samples=3, max_num_samples=10,
@@ -68,6 +69,7 @@ train_sampled_files += [
 train_sampled_files += [
     stratified_sample_jsonl_lines(
         input_file="data/pile-ner.jsonl",
+        output_file="data/pile-ner-sampled.jsonl",
         min_num_word=10, max_num_word=100,
         min_num_label=3, max_num_label=10,
         min_num_samples=3, max_num_samples=10,
@@ -76,6 +78,7 @@ train_sampled_files += [
 train_sampled_files += [
     stratified_sample_jsonl_lines(
         input_file="data/pile-ner.jsonl",
+        output_file="data/pile-ner-sampled.jsonl",
         min_num_word=10, max_num_word=100,
         min_num_label=3, max_num_label=20,
         min_num_samples=3, max_num_samples=10,
@@ -84,6 +87,7 @@ train_sampled_files += [
 train_sampled_files += [
     stratified_sample_jsonl_lines(
         input_file="data/pile-ner.jsonl",
+        output_file="data/pile-ner-sampled.jsonl",
         min_num_word=7, max_num_word=120,
         min_num_label=3, max_num_label=20,
         min_num_samples=3, max_num_samples=10,
