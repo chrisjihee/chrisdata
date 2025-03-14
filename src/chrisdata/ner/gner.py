@@ -687,7 +687,7 @@ def sample_jsonl_lines(
 
 
 @app.command("stratified_sample_jsonl")
-def stratified_sample_jsonl_lines(
+def stratified_sample_jsonl(
         input_file: Annotated[str, typer.Argument()] = ...,  # "data/pile-ner.jsonl",
         output_file: Annotated[str, typer.Option("--output_file")] = None,
         min_num_word: Annotated[int, typer.Option("--min_num_word")] = 0,
@@ -735,8 +735,8 @@ def stratified_sample_jsonl_lines(
                 num_outputs += 1
         logger.info(f"Number of samples in {output_file.path}: %d", num_outputs)
         final_output_file = new_path(output_file.path, post=f"N{num_outputs}")
-        output_file.path.rename(final_output_file)
-        logger.info(f"Renamed to {final_output_file}")
+    output_file.path.rename(final_output_file)
+    logger.info(f"Renamed output file to {final_output_file}")
     print()
     return final_output_file
 
@@ -865,8 +865,8 @@ def convert_to_hybrid_round_version(
         final_output_file = output_file.path.with_stem(output_file.path.stem.replace(post, f"{post}{num_new_sr_samples + num_new_mr_samples}"
                                                                                            f"{f',{num_new_sr_samples}' if post == 'HR' else ''}"
                                                                                            f"{f',{num_new_mr_samples}' if post == 'HR' else ''}"))
-        output_file.path.rename(final_output_file)
-        logger.info(f"Renamed to {final_output_file}")
+    output_file.path.rename(final_output_file)
+    logger.info(f"Renamed output file to {final_output_file}")
     print()
     return final_output_file
 
