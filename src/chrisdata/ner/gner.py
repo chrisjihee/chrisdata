@@ -727,7 +727,7 @@ def stratified_sample_jsonl_lines(
 
 @app.command("convert_to_hybrid_round_version")
 def convert_to_hybrid_round_version(
-        input_file: Annotated[str, typer.Argument()] = ...,  # "data/pile-ner=10-100,3-7,3-10.jsonl", "data/pile-ner=10-100,3-10,3-10.jsonl", "data/pile-ner.jsonl"
+        input_file: Annotated[str, typer.Argument()] = ...,  # "data/pile-ner=10-100,3-7,3-10.jsonl", "data/pile-ner=10-100,3-10,3-10.jsonl", "data/pile-ner.jsonl", "data/ZSE-validation.jsonl", "data/ZSE-test.jsonl"
         instruction_file1: Annotated[str, typer.Option("--instruction_file1")] = "configs/instruction/GNER-EQ-SR.txt",
         instruction_file2: Annotated[str, typer.Option("--instruction_file2")] = "configs/instruction/GNER-EQ-MR.txt",
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
