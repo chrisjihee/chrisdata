@@ -743,10 +743,10 @@ def stratified_sample_jsonl(
 
 @app.command("convert_to_hybrid_round_version")
 def convert_to_hybrid_round_version(
-        mr_input_file: Annotated[str, typer.Option("--mr_input_file")] = None,  # "data/pile-ner=10-100,3-7,3-10.jsonl", "data/pile-ner=10-100,3-10,3-10.jsonl", "data/pile-ner.jsonl", "data/ZSE-validation.jsonl", "data/ZSE-test.jsonl"
-        sr_input_file: Annotated[str, typer.Option("--sr_input_file")] = None,  # "data/pile-ner.jsonl"
-        mr_inst_file: Annotated[str, typer.Option("--mr_inst_file")] = None,  # "configs/instruction/GNER-EQ-MR.txt",
-        sr_inst_file: Annotated[str, typer.Option("--sr_inst_file")] = None,  # "configs/instruction/GNER-EQ-SR.txt"
+        mr_input_file: Annotated[Optional[str], typer.Option("--mr_input_file")] = None,  # "data/pile-ner=10-100,3-7,3-10.jsonl", "data/pile-ner=10-100,3-10,3-10.jsonl", "data/pile-ner.jsonl", "data/ZSE-validation.jsonl", "data/ZSE-test.jsonl"
+        sr_input_file: Annotated[Optional[str], typer.Option("--sr_input_file")] = None,  # "data/pile-ner.jsonl"
+        mr_inst_file: Annotated[Optional[str], typer.Option("--mr_inst_file")] = "configs/instruction/GNER-EQ-MR.txt",  # "configs/instruction/GNER-EQ-MR.txt",
+        sr_inst_file: Annotated[Optional[str], typer.Option("--sr_inst_file")] = "configs/instruction/GNER-EQ-SR.txt",  # "configs/instruction/GNER-EQ-SR.txt"
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     assert sr_input_file or mr_input_file, "Either sr_input_file or mr_input_file is required"
