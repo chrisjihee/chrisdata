@@ -755,7 +755,7 @@ def convert_to_hybrid_round_version(
     env = NewProjectEnv(logging_level=logging_level)
     assert sr_input_file or mr_input_file, "Either sr_input_file or mr_input_file is required"
     post = "HR" if sr_inst_file and mr_inst_file else "MR" if mr_inst_file else "SR" if sr_inst_file else None
-    output_file = new_path(mr_input_file or sr_input_file, post=post)
+    output_file = new_path(mr_input_file or sr_input_file, sep='=', post=post)
     mr_inst_temp = Path(mr_inst_file).read_text() if mr_inst_file else None
     sr_inst_temp = Path(sr_inst_file).read_text() if sr_inst_file else None
     if not sr_input_file:
@@ -766,7 +766,8 @@ def convert_to_hybrid_round_version(
         FileStreamer(FileOption.from_path(path=sr_input_file, required=True)) if sr_input_file else nullcontext() as sr_input_file,
         FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
     ):
-        num_new_samples = 0
+        num_new_sr_samples = 0
+        num_new_mr_samples = 0
         logger.info("[output_file]   : %s", output_file.path)
         if mr_input_file:
             logger.info("[mr_input_file] : %s", mr_input_file.path)
@@ -782,6 +783,8 @@ def convert_to_hybrid_round_version(
                 sample.instance.id = sample.id = sample.instance.id or sample.id
                 sample.label_list = [x.replace(" ", "_") for x in sample.label_list]  # for easy post-processing
                 sample.instance.labels = [x.replace(" ", "_") for x in sample.instance.labels]  # for easy post-processing
+                sample.label_list = [str(x).replace(" ", "_").upper() for x in sample.label_list]  # for easy post-processing
+                sample.instance.labels = [str(x).replace(" ", "_").upper() for x in sample.instance.labels]  # for easy post-processing
                 if len(sample.instance.words) != len(sample.instance.labels):
                     continue
                 possible_labels = [tag for entity_type in sample.label_list for tag in (f"B-{entity_type}", f"I-{entity_type}")] + ["O"]
@@ -817,13 +820,13 @@ def convert_to_hybrid_round_version(
                         )
                     )
                     output_file.fp.write(new_sample.model_dump_json() + "\n")
-                    num_new_samples += 1
+                    num_new_sr_samples += 1
 
         if mr_input_file:
             for sample in ProgIter(ner_samples(mr_input_file), total=len(mr_input_file), desc=f"Converting {mr_input_file.path}:", stream=LoggerWriter(logger, level=logging_level), verbose=3):
                 sample.instance.id = sample.id = sample.instance.id or sample.id
-                sample.label_list = [x.replace(" ", "_") for x in sample.label_list]  # for easy post-processing
-                sample.instance.labels = [x.replace(" ", "_") for x in sample.instance.labels]  # for easy post-processing
+                sample.label_list = [str(x).replace(" ", "_").upper() for x in sample.label_list]  # for easy post-processing
+                sample.instance.labels = [str(x).replace(" ", "_").upper() for x in sample.instance.labels]  # for easy post-processing
                 if len(sample.instance.words) != len(sample.instance.labels):
                     continue
                 possible_labels = [tag for entity_type in sample.label_list for tag in (f"B-{entity_type}", f"I-{entity_type}")] + ["O"]
@@ -860,12 +863,16 @@ def convert_to_hybrid_round_version(
                         )
                     )
                     output_file.fp.write(new_sample.model_dump_json() + "\n")
-                    num_new_samples += 1
+                    num_new_mr_samples += 1
 
-        logger.warning(f">> Number of new samples in {output_file.path} = {num_new_samples}")
-        final_output_file = output_file.path.with_stem(output_file.path.stem.replace(f"-{post}", f"-{post}{num_new_samples}"))
+        logger.warning(f">> Number of new SR samples in {output_file.path} = {num_new_sr_samples}")
+        logger.warning(f">> Number of new MR samples in {output_file.path} = {num_new_mr_samples}")
+        final_output_file = output_file.path.with_stem(output_file.path.stem.replace(f"={post}", f"={post}{num_new_sr_samples + num_new_mr_samples}"
+                                                                                                 f"=SR{num_new_sr_samples if post == 'HR' else ''}"
+                                                                                                 f"=MR{num_new_mr_samples if post == 'HR' else ''}"))
         output_file.path.rename(final_output_file)
         logger.info(f"Renamed to {final_output_file}")
+    print()
     return final_output_file
 
 
