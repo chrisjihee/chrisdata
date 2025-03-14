@@ -697,8 +697,9 @@ def stratified_sample_jsonl_lines(
         min_num_samples: Annotated[int, typer.Option("--min_num_samples")] = 0,
         max_num_samples: Annotated[int, typer.Option("--max_num_samples")] = 10000,
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
+        random_seed: Annotated[int, typer.Option("--random_seed")] = 7,
 ):
-    env = NewProjectEnv()
+    env = NewProjectEnv(random_seed=random_seed)
     output_file = Path(output_file) if output_file else new_path(
         input_file, sep='=',
         post=f"{min_num_word}-{max_num_word},{min_num_label}-{max_num_label},{min_num_samples}-{max_num_samples}"
@@ -708,9 +709,16 @@ def stratified_sample_jsonl_lines(
         FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
         FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
     ):
+        random.seed(env.random_seed)
         data_label_lists = dict()
         for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Sampling {input_file.path}:", stream=LoggerWriter(logger, level=logging_level), verbose=3):
-            sample.label_list = [str(x).replace(' ', '_').lower() for x in sample.label_list]
+            sample.label_list = [str(x).replace(" ", "_").upper() for x in sample.label_list]  # for easy post-processing
+            sample.instance.labels = [str(x).replace(" ", "_").upper() for x in sample.instance.labels]  # for easy post-processing
+            if len(sample.instance.words) != len(sample.instance.labels):
+                continue
+            possible_labels = [tag for entity_type in sample.label_list for tag in (f"B-{entity_type}", f"I-{entity_type}")] + ["O"]
+            if any(label not in possible_labels for label in sample.instance.labels):
+                continue
             if min_num_word <= len(sample.instance.words) == len(sample.instance.labels) <= max_num_word:
                 label_list = sorted(set(sample.label_list))
                 if min_num_label <= len(label_list) <= max_num_label:
@@ -732,6 +740,7 @@ def stratified_sample_jsonl_lines(
         final_output_file = new_path(output_file.path, post=f"N{num_outputs}")
         output_file.path.rename(final_output_file)
         logger.info(f"Renamed to {final_output_file}")
+    print()
     return final_output_file
 
 
