@@ -764,7 +764,7 @@ def convert_to_hybrid_round_version(
         input_file: Annotated[str, typer.Argument()] = ...,  # "data/pile-ner=10-100,3-7,3-10.jsonl"
         instruction_file1: Annotated[str, typer.Option("--instruction_file1")] = "configs/instruction/GNER-EQ-SR.txt",
         instruction_file2: Annotated[str, typer.Option("--instruction_file2")] = "configs/instruction/GNER-EQ-MR.txt",
-        logging_level: Annotated[int, typer.Option("--logging_level")] = logging.DEBUG,
+        logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     env = NewProjectEnv(logging_level=logging_level)
     output_file = new_path(input_file, post="HR")
@@ -787,15 +787,16 @@ def convert_to_hybrid_round_version(
             sample.instance.labels = [x.replace(" ", "_") for x in sample.instance.labels]  # for easy post-processing
             if len(sample.instance.words) != len(sample.instance.labels):
                 continue
-            possible_labels = [tag for x in sample.label_list for tag in (f"B-{x}", f"I-{x}")] + ["O"]
+            possible_labels = [tag for entity_type in sample.label_list for tag in (f"B-{entity_type}", f"I-{entity_type}")] + ["O"]
             if any(label not in possible_labels for label in sample.instance.labels):
                 continue
-            sentence = " ".join(sample.instance.words)
-            entity_types = ", ".join(sample.label_list)
             logger.debug("\n" * 5)
             logger.debug(f">> old_sample_id={sample.id}")
             logger.debug(f">> old_instruction_inputs=\n{sample.instance.instruction_inputs}")
             logger.debug(f">> old_prompt_labels=\n{sample.instance.prompt_labels}")
+
+            sentence = " ".join(sample.instance.words)
+            entity_types = ", ".join(sample.label_list)
             instruction_inputs = instruction_template1.format(entity_types=entity_types, sentence=sentence)
             prompt_labels = GenNERSample.get_prompt_labels(sample.instance.words, sample.instance.labels)
             logger.debug("\n" * 2)
@@ -819,10 +820,34 @@ def convert_to_hybrid_round_version(
             )
             num_new_samples += 1
             output_file.fp.write(new_sample.model_dump_json() + "\n")
-            exit(0)
 
-            for entity_type in sample.label_list:
-                pass
+            for i, entity_type in enumerate(sample.label_list):
+                possible_labels = [tag for tag in (f"B-{entity_type}", f"I-{entity_type}")] + ["O"]
+                filtered_labels = [x if x in possible_labels else "O" for x in sample.instance.labels]
+                prompt_labels = GenNERSample.get_prompt_labels(sample.instance.words, filtered_labels)
+                instruction_inputs = instruction_template2.format(entity_type=entity_type, sentence=sentence)
+                logger.debug("\n" * 2)
+                logger.debug("=" * 80)
+                logger.debug(f">> new_instruction_inputs=\n{'-' * 80}\n{instruction_inputs}\n{'-' * 80}")
+                logger.debug(f">> new_prompt_labels=\n{prompt_labels}")
+                new_sample = GenNERSampleWrapper(
+                    id=f"{sample.id}.M{i}",
+                    dataset=sample.dataset,
+                    split=sample.split,
+                    label_list=sample.label_list,
+                    instance=GenNERSample(
+                        id=f"{sample.instance.id}.{i}",
+                        group=sample.instance.id,
+                        words=sample.instance.words,
+                        labels=sample.instance.labels,
+                        target_label=entity_type,
+                        prompt_labels=prompt_labels,
+                        instruction_inputs=instruction_inputs,
+                    )
+                )
+                num_new_samples += 1
+                output_file.fp.write(new_sample.model_dump_json() + "\n")
+        logger.warning(f">> Number of new samples in {output_file.path} = {num_new_samples}")
 
 
 @app.command("convert_to_WQ")
