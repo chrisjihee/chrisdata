@@ -783,8 +783,6 @@ def convert_to_hybrid_round_version(
                 sample.instance.id = sample.id = sample.instance.id or sample.id
                 sample.label_list = [str(x).replace(" ", "_").upper() for x in sample.label_list]  # for easy post-processing
                 sample.instance.labels = [str(x).replace(" ", "_").upper() for x in sample.instance.labels]  # for easy post-processing
-                sample.label_list = [str(x).replace(" ", "_").upper() for x in sample.label_list]  # for easy post-processing
-                sample.instance.labels = [str(x).replace(" ", "_").upper() for x in sample.instance.labels]  # for easy post-processing
                 if len(sample.instance.words) != len(sample.instance.labels):
                     continue
                 possible_labels = [tag for entity_type in sample.label_list for tag in (f"B-{entity_type}", f"I-{entity_type}")] + ["O"]
