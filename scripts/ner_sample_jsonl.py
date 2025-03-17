@@ -23,6 +23,10 @@ validation_sampled_1400 = stratified_sample_jsonl(
 )  # 1,400
 convert_to_hybrid_round_version(
     mr_input_file=validation_sampled_70,
+    sr_input_file=validation_sampled_70,
+)  # 870
+convert_to_hybrid_round_version(
+    mr_input_file=validation_sampled_70,
     sr_input_file=validation_sampled_700,
 )  # 1,500
 convert_to_hybrid_round_version(
@@ -55,6 +59,10 @@ test_sampled_2100 = stratified_sample_jsonl(
     output_file="data/ZSE-test-sampled.jsonl",
     max_num_samples=300,
 )  # 2,100
+convert_to_hybrid_round_version(
+    mr_input_file=test_sampled_70,
+    sr_input_file=test_sampled_70,
+)  # 870
 convert_to_hybrid_round_version(
     mr_input_file=test_sampled_70,
     sr_input_file=test_sampled_700,
