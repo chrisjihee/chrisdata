@@ -1,3 +1,5 @@
+from typing import Union
+
 from pydantic import BaseModel
 
 
@@ -31,8 +33,34 @@ class F1(BaseModel):
         return 2 * self.prec * self.rec / (self.prec + self.rec + 1e-10)
 
 
+class Sum(BaseModel):
+    count: int = 0
+    sum: float = 0.0
+
+    def __str__(self):
+        return f"Avg={self.avg:.1f}, Sum={self.sum:.0f}, Count={self.count}"
+
+    def __add__(self, other: Union[int, float, "Sum"]) -> "Sum":
+        if isinstance(other, (int, float)):
+            return Sum(
+                count=self.count + 1,
+                sum=self.sum + other
+            )
+        elif isinstance(other, Sum):
+            return Sum(
+                count=self.count + other.count,
+                sum=self.sum + other.sum
+            )
+        else:
+            return NotImplemented
+
+    @property
+    def avg(self):
+        return self.sum / self.count if self.count > 0 else 0.0
+
+
 class RegressionSample(BaseModel):
     sentence1: str
     sentence2: str
     label: float
-    idx: int
+    id: str
