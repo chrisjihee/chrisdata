@@ -20,6 +20,16 @@ class F1(BaseModel):
             n_pos_pred=self.n_pos_pred + other.n_pos_pred,
         )
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, F1):
+            return NotImplemented
+        return self.f1 == other.f1
+
+    def __lt__(self, other: "F1") -> bool:
+        if not isinstance(other, F1):
+            return NotImplemented
+        return self.f1 < other.f1
+
     @property
     def prec(self):
         return self.n_correct / (self.n_pos_pred + 1e-10)
