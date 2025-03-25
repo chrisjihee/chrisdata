@@ -142,6 +142,7 @@ class GenSeq2SeqSampleWrapper(BaseModel):
 class GenNERSampleWrapper(GenSeq2SeqSampleWrapper):
     instance: GenNERSample
     label_list: list[str] = None
+    prediction: Optional[str] = None  # for original GNER version
 
     def set_missing_values_by_instruction_prompt(self, path: Path | str = None):
         instruction_lines = self.instance.instruction_inputs.splitlines()
