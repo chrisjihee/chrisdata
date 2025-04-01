@@ -6,9 +6,10 @@ from unittest.mock import patch
 from datasets import load_dataset, Dataset
 from datasets.utils.tqdm import disable_progress_bars, enable_progress_bars
 from pydantic import BaseModel, Field
+from tqdm import tqdm
 
 from chrisbase.data import NewProjectEnv
-from chrisbase.io import do_nothing, LoggingFormat
+from chrisbase.io import do_nothing, LoggingFormat, files, all_line_list, make_parent_dir
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +79,12 @@ if __name__ == "__main__":
         # HfDatasetsInfo(id="kmou_ner", home="https://huggingface.co/datasets/nlp-kmu/kor_ner"),
         # HfDatasetsInfo(id="glue/stsb", home="https://huggingface.co/datasets/glue", subset="stsb"),
         # HfDatasetsInfo(id="conll2003", home="https://huggingface.co/datasets/conll2003"),
-        HfDatasetsInfo(id="diann", home="https://huggingface.co/datasets/ferrazzipietro/diann-sentences-english")
+        # HfDatasetsInfo(id="diann", home="https://huggingface.co/datasets/ferrazzipietro/diann-sentences-english")
     ]
     for datasets_info in datasets_info_list:
         datasets_info.download_dataset(output_dir="data")
+    with make_parent_dir("data/casie/data.dev.jsonl").open("w", encoding="utf-8") as out:
+        input_files = sorted(files("CASIE/data/annotation/*.json"), key=lambda x: int(x.stem.split(".")[0]))
+        for file in tqdm(input_files, desc="CASIE", unit="file"):
+            lines = all_line_list(file)
+            out.writelines([line + "\n" for line in lines])
