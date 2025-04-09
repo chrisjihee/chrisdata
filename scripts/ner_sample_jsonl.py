@@ -135,5 +135,5 @@ def make_train_set():
 
 if __name__ == "__main__":
     make_dev_set()
-    # make_test_set()
-    # make_train_set()
+    make_test_set()
+    make_train_set()
