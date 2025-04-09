@@ -59,6 +59,15 @@ class EntityRelatedPassages(BaseModel):
     source_url: str
 
 
+class GoLLIESample(BaseModel):
+    ids: list[str]
+    task_id: str
+    scorer_cls: str
+    labels: str
+    text: str
+    unlabelled_sentence: str
+
+
 class GenSeq2SeqSample(BaseModel):
     id: str = None
     prompt_labels: str = None

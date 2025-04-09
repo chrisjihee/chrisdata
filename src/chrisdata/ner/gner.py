@@ -754,9 +754,16 @@ def convert_to_hybrid_round_cot_version(
         FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
         FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
     ):
-        for line in input_file:
-            print(line)
-            exit(1)
+        for line in islice(input_file, 0, 10):
+            sample = GoLLIESample.model_validate_json(line)
+            print(f"[sample.ids] {sample.ids}")
+            print(f"[sample.task_id] {sample.task_id}")
+            print(f"[sample.scorer_cls] {sample.scorer_cls}")
+            print(f"[sample.labels] {sample.labels}")
+            print(f"[sample.text] {sample.text}")
+            print(f"[sample.unlabelled_sentence] {sample.unlabelled_sentence}")
+            print("=" * 40)
+        exit(1)
 
 
 @app.command("convert_to_hybrid_round_version")
