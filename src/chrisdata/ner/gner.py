@@ -699,7 +699,7 @@ def stratified_sample_jsonl(
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
         random_seed: Annotated[int, typer.Option("--random_seed")] = 7,
 ):
-    env = NewProjectEnv(random_seed=random_seed)
+    env = NewProjectEnv(logging_level=logging_level, random_seed=random_seed)
     output_file = Path(output_file) if output_file else new_path(input_file, post="sampled")
     with (
         JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
@@ -739,6 +739,24 @@ def stratified_sample_jsonl(
     output_file.path.replace(final_output_file)
     print()
     return final_output_file
+
+
+@app.command("convert_to_hybrid_round_cot_version")
+def convert_to_hybrid_round_cot_version(
+        input_file: Annotated[str, typer.Argument()] = ...,  # "data/GoLLIE/baseline/ace05.ner.dev.jsonl",
+        output_file: Annotated[str, typer.Option("--output_file")] = None,
+        logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
+):
+    env = NewProjectEnv(logging_level=logging_level)
+    output_file = Path(output_file) if output_file else new_path(input_file, post="GNER")
+    with (
+        JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
+        FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
+        FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
+    ):
+        for line in input_file:
+            print(line)
+            exit(1)
 
 
 @app.command("convert_to_hybrid_round_version")

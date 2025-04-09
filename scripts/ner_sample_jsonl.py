@@ -1,7 +1,6 @@
 from chrisdata.ner.gner import stratified_sample_jsonl, convert_to_hybrid_round_version
 
 
-# DEV SET
 def make_dev_set():
     dev_sampled_70 = stratified_sample_jsonl(
         input_file="data/GNER/ZSE-dev.jsonl",
@@ -41,7 +40,6 @@ def make_dev_set():
     )  # 9,400
 
 
-# TEST SET
 def make_test_set():
     test_sampled_70 = stratified_sample_jsonl(
         input_file="data/GNER/ZSE-test.jsonl",
@@ -81,7 +79,6 @@ def make_test_set():
     )  # 9,400
 
 
-# TRAINING SET
 def make_train_set():
     train_sampled_1000 = stratified_sample_jsonl(
         input_file="data/GNER/pile-ner.jsonl",
