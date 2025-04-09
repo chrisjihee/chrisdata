@@ -58,11 +58,11 @@ def make_test_set():
         output_file="data/GNER/ZSE-test-sampled.jsonl",
         max_num_samples=100,
     )  # 700
-    test_sampled_2100 = stratified_sample_jsonl(
+    test_sampled_1400 = stratified_sample_jsonl(
         input_file="data/GNER/ZSE-test.jsonl",
         output_file="data/GNER/ZSE-test-sampled.jsonl",
-        max_num_samples=300,
-    )  # 2,100
+        max_num_samples=200,
+    )  # 1,400
     convert_to_hybrid_round_version(
         mr_input_file=test_sampled_70,
         sr_input_file=test_sampled_70,
@@ -77,8 +77,8 @@ def make_test_set():
     )  # 3,100
     convert_to_hybrid_round_version(
         mr_input_file=test_sampled_700,
-        sr_input_file=test_sampled_2100,
-    )  # 10,100
+        sr_input_file=test_sampled_1400,
+    )  # 9,400
 
 
 # TRAINING SET
