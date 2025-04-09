@@ -105,13 +105,6 @@ train_sampled_40000 = stratified_sample_jsonl(
     min_num_label=3, max_num_label=20,
     min_num_samples=3, max_num_samples=10,
 )  # 39,852
-train_sampled_50000 = stratified_sample_jsonl(
-    input_file="data/GNER/pile-ner.jsonl",
-    output_file="data/GNER/pile-ner-sampled.jsonl",
-    min_num_word=7, max_num_word=120,
-    min_num_label=3, max_num_label=20,
-    min_num_samples=3, max_num_samples=10,
-)  # 49,800
 convert_to_hybrid_round_version(
     sr_input_file="data/GNER/pile-ner.jsonl",
     mr_inst_file=None,
@@ -132,7 +125,3 @@ convert_to_hybrid_round_version(
     mr_input_file=train_sampled_40000,
     sr_input_file="data/GNER/pile-ner.jsonl",
 )  # 433,594
-convert_to_hybrid_round_version(
-    mr_input_file=train_sampled_50000,
-    sr_input_file="data/GNER/pile-ner.jsonl",
-)  # 523,562
