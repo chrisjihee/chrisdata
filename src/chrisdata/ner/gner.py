@@ -752,7 +752,8 @@ def convert_to_hybrid_round_version(
     assert sr_input_file or mr_input_file, "Either sr_input_file or mr_input_file is required"
     post = "HR" if sr_inst_file and mr_inst_file else "MR" if mr_inst_file else "SR" if sr_inst_file else None
     env = NewProjectEnv(logging_level=logging_level)
-    output_file = new_path(mr_input_file or sr_input_file, post=post)
+    output_file = Path(mr_input_file or sr_input_file)
+    output_file = new_path(output_file.with_stem(output_file.stem.split("-N")[0]), post=post)
     mr_inst_temp = Path(mr_inst_file).read_text() if mr_inst_file else None
     sr_inst_temp = Path(sr_inst_file).read_text() if sr_inst_file else None
     if not sr_input_file:
