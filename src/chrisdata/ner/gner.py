@@ -10,13 +10,14 @@ from urllib.parse import urljoin
 
 import httpx
 import typer
+import yaml
 from bs4 import BeautifulSoup
-from typing_extensions import Annotated
-
 from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, NewProjectEnv
 from chrisbase.io import LoggingFormat, new_path, merge_dicts, normalize_simple_list_in_json, LoggerWriter, dirs, text_blocks
 from chrisbase.util import mute_tqdm_cls, shuffled
 from progiter import ProgIter
+from typing_extensions import Annotated
+
 from . import *
 
 logger = logging.getLogger(__name__)
@@ -755,14 +756,17 @@ def convert_to_hybrid_round_cot_version(
         FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
     ):
         for line in islice(input_file, 0, 10):
+            print(f"[line] {line}")
             sample = GoLLIESample.model_validate_json(line)
             print(f"[sample.ids] {sample.ids}")
             print(f"[sample.task_id] {sample.task_id}")
             print(f"[sample.scorer_cls] {sample.scorer_cls}")
             print(f"[sample.labels] {sample.labels}")
-            print(f"[sample.text] {sample.text}")
             print(f"[sample.unlabelled_sentence] {sample.unlabelled_sentence}")
+            print(f"[sample.text] {sample.text}")
+            print(f"[yaml.safe_load(sample.txt)] {yaml.safe_load(sample.text)}")
             print("=" * 40)
+            exit(1)
         exit(1)
 
 

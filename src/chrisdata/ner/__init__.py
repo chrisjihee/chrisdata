@@ -60,7 +60,7 @@ class EntityRelatedPassages(BaseModel):
 
 
 class GoLLIESample(BaseModel):
-    ids: list[str]
+    ids: list[str | int]
     task_id: str
     scorer_cls: str
     labels: str

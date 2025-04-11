@@ -2,7 +2,10 @@ from chrisdata.ner.gner import convert_to_hybrid_round_cot_version
 
 
 def make_dev_set():
-    convert_to_hybrid_round_cot_version("data/GoLLIE/baseline/ace05.ner.dev.jsonl")
+    # convert_to_hybrid_round_cot_version("data/GoLLIE/baseline/ace05.ner.dev.jsonl")
+    # convert_to_hybrid_round_cot_version("data/GoLLIE/baseline/conll03.ner.dev.jsonl")
+    # convert_to_hybrid_round_cot_version("data/GoLLIE/processed/crossner.crossner_ai.dev.jsonl")
+    convert_to_hybrid_round_cot_version("data/GoLLIE/processed_w_examples/crossner.crossner_ai.dev.jsonl")
 
 
 def make_test_set():
