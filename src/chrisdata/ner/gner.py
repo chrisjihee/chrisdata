@@ -555,6 +555,9 @@ def convert_json_to_jsonl(
         logger.info("Number of samples in output_file: %d", prog.n)
 
 
+conll_label = re.compile("[ \t](O|[BIES]-[^\n]+)$")
+
+
 def read_class_names(input_file):
     all_label_names = []
     for text_block in text_blocks(input_file):
@@ -567,10 +570,7 @@ def read_class_names(input_file):
         class_name = re.sub(r"^[BIES]-|^O$", "", label_name)
         if class_name and class_name not in all_class_names:
             all_class_names.append(class_name)
-    return all_class_names
-
-
-conll_label = re.compile("[ \t](O|[BIES]-[^\n]+)$")
+    return sorted(all_class_names)
 
 
 def normalize_conll(input_file, temp_file="temp.txt"):
@@ -583,13 +583,29 @@ def normalize_conll(input_file, temp_file="temp.txt"):
                 if len(word) == 0:
                     word = " "
                 assert word, f"Invalid word: input_file={input_file}, text_block=[{text_block}] / len(word)={len(word)}"
-                label = m.group(1).strip()  # .replace(" ", "_").upper()  # for easy post-processing
+                label = m.group(1)
+                label = label.replace(" ", "_").upper()  # for easy post-processing
+                label = re.sub("^S-", "B-", label)  # normalize to BIO-style
+                label = re.sub("^E-", "I-", label)  # normalize to BIO-style
                 f.write(f"{word}\t{label}\n")
             f.write("\n")
     with Path(temp_file).open() as f:
         with Path(input_file).open("w") as g:
             for line in f:
                 g.write(line)
+
+
+def verify_conll(input_file, label_names):
+    for text_block in text_blocks(input_file):
+        for line in text_block:
+            m = conll_label.search(line)
+            assert m, f"Invalid line: {line}"
+            word = line[:m.start()]
+            if len(word) == 0:
+                word = " "
+            label = m.group(1)
+            assert word, f"Invalid word: input_file={input_file}, text_block=[{text_block}] / len(word)={len(word)}"
+            assert label in label_names, f"Invalid label: {label}, label_names={label_names}"
 
 
 @app.command("normalize_conll")
@@ -603,27 +619,24 @@ def normalize_conll_dirs(
     ):
         for input_dir in sorted(dirs(input_dirs), key=lambda x: x.name.lower()):
             logger.info("[input_dir]: %s", input_dir)
-            label_file = [x for x in [input_dir / "label.txt"] if x.exists() and x.is_file()]
-            train_file = [x for x in [input_dir / "train.txt"] if x.exists() and x.is_file()]
-            eval_file = [x for x in [input_dir / "dev.txt"] if x.exists() and x.is_file()]
-            test_file = [x for x in [input_dir / "test.txt"] if x.exists() and x.is_file()]
-            label_file = label_file[0] if label_file else None
-            train_file = train_file[0] if train_file else None
-            eval_file = eval_file[0] if eval_file else None
-            test_file = test_file[0] if test_file else None
-            if not label_file:
-                class_names = read_class_names(train_file)
-                (input_dir / "label.txt").write_text("\n".join(class_names) + "\n")
-                label_file = [x for x in [input_dir / "label.txt"] if x.exists() and x.is_file()]
-                label_file = label_file[0] if label_file else None
-            assert label_file, f"Missing label file: {input_dir}"
+            train_file = input_dir / "train.txt"
+            eval_file = input_dir / "dev.txt"
+            test_file = input_dir / "test.txt"
+            assert train_file.exists() and eval_file.exists() and test_file.exists()
+            assert train_file.is_file() and eval_file.is_file() and test_file.is_file()
 
             for input_file in [train_file, eval_file, test_file]:
                 normalize_conll(input_file)
-            classes = [x.strip() for x in all_line_list(label_file)]
-            labels = [f"B-{x}" for x in classes] + [f"I-{x}" for x in classes] + ["O"]
-            logger.info("  - class(%d): %s", len(classes), ', '.join(classes))
-            logger.info("  - label(%d): %s", len(labels), ', '.join(labels))
+
+            class_names = read_class_names(train_file)
+            label_names = [f"B-{x}" for x in class_names] + [f"I-{x}" for x in class_names] + ["O"]
+            logger.info("  - class(%d): %s", len(class_names), ', '.join(class_names))
+            logger.info("  - label(%d): %s", len(label_names), ', '.join(label_names))
+
+            for input_file in [train_file, eval_file, test_file]:
+                verify_conll(input_file, label_names)
+
+            (input_dir / "label.txt").write_text("\n".join(class_names) + "\n")
 
 
 @app.command("sample_jsonl")
