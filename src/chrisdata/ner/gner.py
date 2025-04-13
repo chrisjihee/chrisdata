@@ -555,28 +555,6 @@ def convert_json_to_jsonl(
         logger.info("Number of samples in output_file: %d", prog.n)
 
 
-conll_label = re.compile("[ \t](O|[BIES]-[^\n]+)$")
-
-
-def normalize_conll(input_file, temp_file="temp.txt"):
-    with Path(temp_file).open("w") as f:
-        for text_block in text_blocks(input_file):
-            for line in text_block:
-                m = conll_label.search(line)
-                assert m, f"Invalid line: {line}"
-                word = line[:m.start()]
-                if len(word) == 0:
-                    word = " "
-                assert word, f"Invalid word: input_file={input_file}, text_block=[{text_block}] / len(word)={len(word)}"
-                label = m.group(1)
-                f.write(f"{word}\t{label}\n")
-            f.write("\n")
-    with Path(temp_file).open() as f:
-        with Path(input_file).open("w") as g:
-            for line in f:
-                g.write(line)
-
-
 def read_class_names(input_file):
     all_label_names = []
     for text_block in text_blocks(input_file):
@@ -590,6 +568,28 @@ def read_class_names(input_file):
         if class_name and class_name not in all_class_names:
             all_class_names.append(class_name)
     return all_class_names
+
+
+conll_label = re.compile("[ \t](O|[BIES]-[^\n]+)$")
+
+
+def normalize_conll(input_file, temp_file="temp.txt"):
+    with Path(temp_file).open("w") as f:
+        for text_block in text_blocks(input_file):
+            for line in text_block:
+                m = conll_label.search(line)
+                assert m, f"Invalid line: {line}"
+                word = line[:m.start()]
+                if len(word) == 0:
+                    word = " "
+                assert word, f"Invalid word: input_file={input_file}, text_block=[{text_block}] / len(word)={len(word)}"
+                label = m.group(1).strip()  # .replace(" ", "_").upper()  # for easy post-processing
+                f.write(f"{word}\t{label}\n")
+            f.write("\n")
+    with Path(temp_file).open() as f:
+        with Path(input_file).open("w") as g:
+            for line in f:
+                g.write(line)
 
 
 @app.command("normalize_conll")

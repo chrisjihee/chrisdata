@@ -1,5 +1,4 @@
-from chrisdata.ner.gner import convert_to_hybrid_round_cot_version
-from chrisdata.ner.gner import normalize_conll_dirs
+from chrisdata.ner.gner import normalize_conll_dirs, convert_to_hybrid_round_cot_version
 
 
 def make_dev_set():
