@@ -1,4 +1,5 @@
 from chrisdata.ner.gner import convert_to_hybrid_round_cot_version
+from chrisdata.ner.gner import normalize_conll_dirs
 
 
 def make_dev_set():
@@ -17,6 +18,7 @@ def make_train_set():
 
 
 if __name__ == "__main__":
-    make_dev_set()
+    normalize_conll_dirs("data/GNER/*")
+    # make_dev_set()
     # make_test_set()
     # make_train_set()

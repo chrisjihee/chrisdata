@@ -13,7 +13,7 @@ import typer
 import yaml
 from bs4 import BeautifulSoup
 from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, NewProjectEnv
-from chrisbase.io import LoggingFormat, new_path, merge_dicts, normalize_simple_list_in_json, LoggerWriter, dirs, text_blocks
+from chrisbase.io import LoggingFormat, new_path, merge_dicts, normalize_simple_list_in_json, LoggerWriter, dirs, text_blocks, all_line_list
 from chrisbase.util import mute_tqdm_cls, shuffled
 from progiter import ProgIter
 from typing_extensions import Annotated
@@ -592,11 +592,9 @@ def read_class_names(input_file):
     return all_class_names
 
 
-@app.command("convert_conll")
-def convert_conll_to_jsonl(
-        input_dirs: Annotated[str, typer.Argument()] = "data/*",  # "data"
-        instruction_file: Annotated[str, typer.Option("--instruction_file")] = "configs/instruction/GNER-paper.txt",
-        split_names: Annotated[List[str], typer.Option("--split_names")] = ("train", "dev", "test"),
+@app.command("normalize_conll")
+def normalize_conll_dirs(
+        input_dirs: Annotated[str, typer.Argument()] = "data/GNER/*",  # "data/GNER/*"
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     env = NewProjectEnv(logging_level=logging_level)
@@ -622,44 +620,10 @@ def convert_conll_to_jsonl(
 
             for input_file in [train_file, eval_file, test_file]:
                 normalize_conll(input_file)
-            # classes = [x.strip() for x in all_line_list(label_file)]
-            # labels = [f"B-{x}" for x in classes] + [f"I-{x}" for x in classes] + ["O"]
-            # logger.info("  - class(%d): %s", len(classes), ', '.join(classes))
-            # logger.info("  - label(%d): %s", len(labels), ', '.join(labels))
-
-    # input_dir = Path(input_dir)
-    # if not output_file:
-    #     output_file = input_dir.with_suffix(".jsonl")
-    # with (
-    #     JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
-    #     FileStreamer(FileOption.from_path(path=new_path(output_file, post=split_name), mode="w")) as output_file,
-    #     FileStreamer(FileOption.from_path(path=input_dir)) as input_dir,
-    # ):
-    #     num_outputs = 0
-    #     dataset_builder = GNERDataset()
-    #     dataset_path = input_dir.path / f"{split_name}.txt"
-    #     labels_path = input_dir.path / "label.txt"
-    #     if dataset_path.exists() and labels_path.exists():
-    #         instances, label_list = dataset_builder._load_dataset(dataset_path, labels_path)
-    #         for instance in ProgIter(instances, total=len(instances), desc=f"Converting {input_dir.path}:",
-    #                                  stream=LoggerWriter(logger), verbose=2):
-    #             instance_id = f"{instance.pop('id')}"
-    #             instance = GenNERSample.model_validate(
-    #                 merge_dicts({"id": f"{instance_id}"}, instance)
-    #             ).set_instruction_prompt(
-    #                 instruction_file=instruction_file,
-    #                 label_list=label_list,
-    #             )
-    #             wrapped = GenNERSampleWrapper(
-    #                 id=instance_id,
-    #                 dataset=input_dir.path.stem,
-    #                 split=split_name,
-    #                 label_list=label_list,
-    #                 instance=instance,
-    #             )
-    #             output_file.fp.write(wrapped.model_dump_json() + "\n")
-    #             num_outputs += 1
-    #     logger.info(f"Number of samples in {output_file.path}: %d", num_outputs)
+            classes = [x.strip() for x in all_line_list(label_file)]
+            labels = [f"B-{x}" for x in classes] + [f"I-{x}" for x in classes] + ["O"]
+            logger.info("  - class(%d): %s", len(classes), ', '.join(classes))
+            logger.info("  - label(%d): %s", len(labels), ', '.join(labels))
 
 
 @app.command("sample_jsonl")
