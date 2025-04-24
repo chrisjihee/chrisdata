@@ -136,7 +136,7 @@ class GenNERSample(GenSeq2SeqSample):
         instruction += f"\nUse the specific entity tags: {', '.join(label_list)} and O.\n"
         instruction += "Sentence: " + " ".join(words)
         self.instruction_inputs = instruction
-        self.prompt_labels = GNERDataset._generate_labeled_string(words, labels)
+        self.prompt_labels = dataset._generate_labeled_string(words, labels)
 
         return self
 
