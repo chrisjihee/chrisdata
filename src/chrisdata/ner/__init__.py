@@ -119,7 +119,7 @@ class GenNERSample(GenSeq2SeqSample):
 
         self.prompt_labels = GNERDataset._generate_labeled_string(words, labels)
 
-    def set_instruction_prompt(self, instruction_file: Path | str, label_list: list[str]):
+    def set_instruction_prompt(self, instruction_file: Path | str, label_list: list[str], shuffle: bool = True):
         words = self.words
         labels = self.labels
 
@@ -132,7 +132,8 @@ class GenNERSample(GenSeq2SeqSample):
             dataset.config.instructions = [instruction_file.read_text()]
 
         instruction = dataset._get_instruction()
-        random.shuffle(label_list)
+        if shuffle:
+            random.shuffle(label_list)
         instruction += f"\nUse the specific entity tags: {', '.join(label_list)} and O.\n"
         instruction += "Sentence: " + " ".join(words)
         self.instruction_inputs = instruction
