@@ -1,9 +1,11 @@
+import csv
 import json
 import os
 import random
+from pathlib import Path
+
 import datasets
 import pandas as pd
-import csv
 
 logger = datasets.logging.get_logger(__name__)
 
@@ -39,10 +41,12 @@ class GNERConfig(datasets.BuilderConfig):
         """
         if not instruction_file:
             return None
-        instructions = []
-
-        with open(instruction_file, 'r+') as f:
-            instructions = json.load(f)
+        instruction_file = Path(instruction_file)
+        if instruction_file.suffix == ".json":
+            with instruction_file.open('r+') as f:
+                instructions = json.load(f)
+        else:
+            instructions = [instruction_file.read_text()]
         return instructions
 
     def _parse_data_config(self, data_config_dir):
@@ -177,8 +181,7 @@ class GNERDataset(datasets.GeneratorBasedBuilder):
         return self.config.instructions[0]
 
     # generate prompt labels
-    @staticmethod
-    def _generate_labeled_string(words, labels):
+    def _generate_labeled_string(self, words, labels):
         label_text_list = []
         for word, label in zip(words, labels):
             label_text_list.append(f"{word}({label})")
@@ -209,8 +212,8 @@ class GNERDataset(datasets.GeneratorBasedBuilder):
             over_sampling = dataset.get("over_sampling", False)
             dataset_path = os.path.join(data_dir, dataset_name, split + ".txt")
             labels_path = os.path.join(data_dir, dataset_name, "label.txt")
-            assert os.path.exists(dataset_path)
-            assert os.path.exists(labels_path)
+            assert os.path.exists(dataset_path), f"dataset_path not exists: {dataset_path}"
+            assert os.path.exists(labels_path), f"labels_path not exists: {labels_path}"
 
             # load data from files
             instances, label_list = self._load_dataset(dataset_path, labels_path)
@@ -223,7 +226,7 @@ class GNERDataset(datasets.GeneratorBasedBuilder):
                 if add_dataset_name:
                     instruction += f"Dataset: {dataset_name}.\n"
                 instruction += "Sentence: " + " ".join(words)
-                label_text = GNERDataset._generate_labeled_string(words, labels)
+                label_text = self._generate_labeled_string(words, labels)
                 yield f"{dataset_name}##{idx}", {
                     "dataset": dataset_name,
                     "split": split,
