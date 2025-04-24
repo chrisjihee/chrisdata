@@ -646,8 +646,49 @@ def _normalize_label(label: str):
     return label
 
 
-@app.command("normalize_jsonl_fast")
-def normalize_jsonl_file_fast(
+@app.command("normalize_jsonl")
+def normalize_jsonl_file(
+        input_file: Annotated[str, typer.Argument()] = ...,  # "data/GNER/pile-ner.jsonl"
+        output_file: Annotated[str, typer.Option("--output_file")] = "",
+        instruction_file: Annotated[str, typer.Option("--instruction_file")] = "conf/instruct/GNER-paper.json",
+        logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
+):
+    output_file = Path(output_file) if output_file else new_path(input_file, post="normalized")
+    env = NewProjectEnv(logging_level=logging_level)
+    with (
+        JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
+        FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
+        FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
+    ):
+        num_new_samples = 0
+        logger.info("[output_file]   : %s", output_file.path)
+        for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Normalizing {input_file.path}:", stream=LoggerWriter(logger, level=logging_level), verbose=3):
+            sample: GenNERSampleWrapper = sample
+            sample.label_list = [_normalize_label(label) for label in sample.label_list]
+            sample.instance.labels = [_normalize_label(label) for label in sample.instance.labels]
+            new_sample = GenNERSampleWrapper(
+                id=sample.id,
+                dataset=sample.dataset,
+                split=sample.split,
+                label_list=sample.label_list,
+                instance=GenNERSample(
+                    id=sample.instance.id,
+                    group=sample.instance.group,
+                    words=sample.instance.words,
+                    labels=sample.instance.labels,
+                ).set_instruction_prompt(
+                    instruction_file=instruction_file,
+                    label_list=sample.label_list,
+                )
+            )
+            output_file.fp.write(new_sample.model_dump_json() + "\n")
+            num_new_samples += 1
+
+        logger.warning(f">> Number of new samples in {output_file.path} = {num_new_samples}")
+
+
+@app.command("normalize_jsonl_fast1")
+def normalize_jsonl_file_fast1(
         input_file: Annotated[str, typer.Argument()] = ...,  # "data/GNER/pile-ner.jsonl"
         output_file: Annotated[str, typer.Option("--output_file")] = "",
         instruction_file: Annotated[str, typer.Option("--instruction_file")] = "conf/instruct/GNER-paper.json",
@@ -697,26 +738,28 @@ def normalize_jsonl_file_fast(
         logger.warning(">> Number of new samples in %s = %d", output_file, ds.num_rows)
 
 
-@app.command("normalize_jsonl")
-def normalize_jsonl_file(
-        input_file: Annotated[str, typer.Argument()] = ...,  # "data/GNER/pile-ner.jsonl"
+@app.command("normalize_jsonl_fast2")
+def normalize_jsonl_file_fast2(
+        input_file: Annotated[str, typer.Argument()] = ...,
         output_file: Annotated[str, typer.Option("--output_file")] = "",
         instruction_file: Annotated[str, typer.Option("--instruction_file")] = "conf/instruct/GNER-paper.json",
+        batch_size: Annotated[int, typer.Option("--batch_size")] = 40,
+        num_proc: Annotated[int, typer.Option("--num_proc")] = 40,
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     output_file = Path(output_file) if output_file else new_path(input_file, post="normalized")
     env = NewProjectEnv(logging_level=logging_level)
-    with (
-        JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
-        FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
-        FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
-    ):
-        num_new_samples = 0
-        logger.info("[output_file]   : %s", output_file.path)
-        for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Normalizing {input_file.path}:", stream=LoggerWriter(logger, level=logging_level), verbose=3):
-            sample: GenNERSampleWrapper = sample
-            sample.label_list = [_normalize_label(label) for label in sample.label_list]
-            sample.instance.labels = [_normalize_label(label) for label in sample.instance.labels]
+
+    def _process_batch(batch: dict) -> dict:
+        n = len(next(iter(batch.values())))  # 배치 크기
+        rows_out = []
+
+        for i in range(n):
+            row = {k: v[i] for k, v in batch.items()}
+
+            sample = GenNERSampleWrapper.model_validate(row)
+            sample.label_list = [_normalize_label(l) for l in sample.label_list]
+            sample.instance.labels = [_normalize_label(l) for l in sample.instance.labels]
             new_sample = GenNERSampleWrapper(
                 id=sample.id,
                 dataset=sample.dataset,
@@ -732,10 +775,37 @@ def normalize_jsonl_file(
                     label_list=sample.label_list,
                 )
             )
-            output_file.fp.write(new_sample.model_dump_json() + "\n")
-            num_new_samples += 1
+            rows_out.append(new_sample.model_dump())
 
-        logger.warning(f">> Number of new samples in {output_file.path} = {num_new_samples}")
+        cols = {k: [] for k in rows_out[0].keys()}
+        for r in rows_out:
+            for k, v in r.items():
+                cols[k].append(v)
+        return cols
+
+    with (
+        JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
+        FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
+        FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
+    ):
+        logger.info("[output_file]   : %s", output_file.path)
+
+        logger.info("▶︎ Loading JSONL with datasets…")
+        ds = load_dataset("json", data_files=str(input_file.path), split="train")
+
+        logger.info("▶︎ Normalizing with map(num_proc=%d, batch_size=%d)…", num_proc, batch_size)
+        ds = ds.map(
+            _process_batch,
+            batched=True,
+            batch_size=batch_size,
+            num_proc=num_proc,
+            desc="normalizing"
+        )
+
+        logger.info("▶︎ Saving to %s", output_file)
+        ds.to_json(str(output_file), orient="records", lines=True)
+
+        logger.warning(">> Number of new samples in %s = %d", output_file, ds.num_rows)
 
 
 @app.command("sample_jsonl")

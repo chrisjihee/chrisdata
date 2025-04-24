@@ -1,4 +1,4 @@
-from chrisdata.ner.gner import normalize_conll_dirs, convert_to_hybrid_round_cot_version, normalize_jsonl_file, normalize_jsonl_file_fast
+from chrisdata.ner.gner import normalize_conll_dirs, convert_to_hybrid_round_cot_version, normalize_jsonl_file, normalize_jsonl_file_fast, normalize_jsonl_file_fast2
 
 
 def make_dev_set():
@@ -17,7 +17,8 @@ def make_train_set():
 
 
 if __name__ == "__main__":
-    normalize_jsonl_file_fast("data/GNER/pile-ner.jsonl")
+    normalize_jsonl_file_fast2("data/GNER/pile-ner.jsonl")
+    # normalize_jsonl_file_fast("data/GNER/pile-ner.jsonl")
     # normalize_jsonl_file("data/GNER/pile-ner.jsonl")
     # normalize_conll_dirs("data/GNER/*")
 
