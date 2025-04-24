@@ -1,5 +1,6 @@
 import json
 import math
+import os
 import time
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import nullcontext
@@ -12,12 +13,13 @@ import httpx
 import typer
 import yaml
 from bs4 import BeautifulSoup
-from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, NewProjectEnv
-from chrisbase.io import LoggingFormat, new_path, merge_dicts, normalize_simple_list_in_json, LoggerWriter, dirs, text_blocks, all_line_list
-from chrisbase.util import mute_tqdm_cls, shuffled
-from progiter import ProgIter
+from datasets import load_dataset
 from typing_extensions import Annotated
 
+from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, NewProjectEnv
+from chrisbase.io import LoggingFormat, new_path, merge_dicts, normalize_simple_list_in_json, LoggerWriter, dirs, text_blocks
+from chrisbase.util import mute_tqdm_cls, shuffled
+from progiter import ProgIter
 from . import *
 
 logger = logging.getLogger(__name__)
@@ -642,6 +644,57 @@ def _normalize_label(label: str):
     label = re.sub("^S-", "B-", label)  # normalize to BIO-style
     label = re.sub("^E-", "I-", label)  # normalize to BIO-style
     return label
+
+
+@app.command("normalize_jsonl_fast")
+def normalize_jsonl_file_fast(
+        input_file: Annotated[str, typer.Argument()] = ...,  # "data/GNER/pile-ner.jsonl"
+        output_file: Annotated[str, typer.Option("--output_file")] = "",
+        instruction_file: Annotated[str, typer.Option("--instruction_file")] = "conf/instruct/GNER-paper.json",
+        num_proc: Annotated[int, typer.Option("--num_proc")] = int(os.cpu_count() / 2),
+        logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
+):
+    output_file = Path(output_file) if output_file else new_path(input_file, post="normalized")
+    env = NewProjectEnv(logging_level=logging_level)
+
+    def _process_row(example: dict) -> dict:
+        sample: GenNERSampleWrapper = GenNERSampleWrapper.model_validate(example)
+        sample.label_list = [_normalize_label(l) for l in sample.label_list]
+        sample.instance.labels = [_normalize_label(l) for l in sample.instance.labels]
+        new_sample = GenNERSampleWrapper(
+            id=sample.id,
+            dataset=sample.dataset,
+            split=sample.split,
+            label_list=sample.label_list,
+            instance=GenNERSample(
+                id=sample.instance.id,
+                group=sample.instance.group,
+                words=sample.instance.words,
+                labels=sample.instance.labels,
+            ).set_instruction_prompt(
+                instruction_file=instruction_file,
+                label_list=sample.label_list,
+            )
+        )
+        return new_sample.model_dump()
+
+    with (
+        JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
+        FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
+        FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
+    ):
+        logger.info("[output_file]   : %s", output_file.path)
+
+        logger.info("▶︎ Loading JSONL with datasets…")
+        ds = load_dataset("json", data_files=str(input_file.path), split="train")
+
+        logger.info("▶︎ Normalizing with map(num_proc=%d)…", num_proc)
+        ds = ds.map(_process_row, num_proc=num_proc, desc="normalizing")
+
+        logger.info("▶︎ Saving to %s", output_file)
+        ds.to_json(str(output_file), orient="records", lines=True)
+
+        logger.warning(">> Number of new samples in %s = %d", output_file, ds.num_rows)
 
 
 @app.command("normalize_jsonl")
