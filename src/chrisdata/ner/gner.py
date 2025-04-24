@@ -653,7 +653,7 @@ def normalize_jsonl_file1(
         instruction_file: Annotated[str, typer.Option("--instruction_file")] = "conf/instruct/GNER-paper.txt",
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
-    output_file = Path(output_file) if output_file else new_path(input_file, post="norm1")
+    output_file = Path(output_file) if output_file else new_path(input_file, post=f"norm1-{Path(instruction_file).name.replace('.', '_')}")
     env = NewProjectEnv(logging_level=logging_level)
     with (
         JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
@@ -691,12 +691,12 @@ def normalize_jsonl_file1(
 def normalize_jsonl_file2(
         input_file: Annotated[str, typer.Argument()] = ...,
         output_file: Annotated[str, typer.Option("--output_file")] = "",
-        instruction_file: Annotated[str, typer.Option("--instruction_file")] = "conf/instruct/GNER-paper.json",
+        instruction_file: Annotated[str, typer.Option("--instruction_file")] = "conf/instruct/GNER-paper.txt",
         batch_size: Annotated[int, typer.Option("--batch_size")] = 40,
         num_proc: Annotated[int, typer.Option("--num_proc")] = 40,
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
-    output_file = Path(output_file) if output_file else new_path(input_file, post="norm2")
+    output_file = Path(output_file) if output_file else new_path(input_file, post=f"norm2-{Path(instruction_file).name.replace('.', '_')}")
     env = NewProjectEnv(logging_level=logging_level)
 
     def _process_batch(batch: dict) -> dict:

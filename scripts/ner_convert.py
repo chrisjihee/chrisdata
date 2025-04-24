@@ -17,8 +17,8 @@ def make_train_set():
 
 
 if __name__ == "__main__":
-    # normalize_jsonl_file2("data/GNER/pile-ner.jsonl")
-    normalize_jsonl_file1("data/GNER/pile-ner.jsonl")
+    normalize_jsonl_file2("data/GNER/pile-ner.jsonl", instruction_file="conf/instruct/GNER-paper.txt")
+    normalize_jsonl_file1("data/GNER/pile-ner.jsonl", instruction_file="conf/instruct/GNER-paper.txt")
     # normalize_conll_dirs("data/GNER/*")
 
     # make_dev_set()
