@@ -646,14 +646,14 @@ def _normalize_label(label: str):
     return label
 
 
-@app.command("normalize_jsonl")
-def normalize_jsonl_file(
+@app.command("normalize_jsonl1")
+def normalize_jsonl_file1(
         input_file: Annotated[str, typer.Argument()] = ...,  # "data/GNER/pile-ner.jsonl"
         output_file: Annotated[str, typer.Option("--output_file")] = "",
-        instruction_file: Annotated[str, typer.Option("--instruction_file")] = "conf/instruct/GNER-paper.json",
+        instruction_file: Annotated[str, typer.Option("--instruction_file")] = "conf/instruct/GNER-paper.txt",
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
-    output_file = Path(output_file) if output_file else new_path(input_file, post="normalized")
+    output_file = Path(output_file) if output_file else new_path(input_file, post="norm1")
     env = NewProjectEnv(logging_level=logging_level)
     with (
         JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
@@ -687,8 +687,8 @@ def normalize_jsonl_file(
         logger.warning(f">> Number of new samples in {output_file.path} = {num_new_samples}")
 
 
-@app.command("normalize_jsonl_batch")
-def normalize_jsonl_file_batch(
+@app.command("normalize_jsonl2")
+def normalize_jsonl_file2(
         input_file: Annotated[str, typer.Argument()] = ...,
         output_file: Annotated[str, typer.Option("--output_file")] = "",
         instruction_file: Annotated[str, typer.Option("--instruction_file")] = "conf/instruct/GNER-paper.json",
@@ -696,7 +696,7 @@ def normalize_jsonl_file_batch(
         num_proc: Annotated[int, typer.Option("--num_proc")] = 40,
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
-    output_file = Path(output_file) if output_file else new_path(input_file, post="normalized")
+    output_file = Path(output_file) if output_file else new_path(input_file, post="norm2")
     env = NewProjectEnv(logging_level=logging_level)
 
     def _process_batch(batch: dict) -> dict:
