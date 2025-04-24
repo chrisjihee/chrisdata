@@ -751,10 +751,10 @@ def normalize_jsonl_file_batch(
             desc="normalizing"
         )
 
-        logger.info("▶︎ Saving to %s", output_file)
-        ds.to_json(str(output_file), orient="records", lines=True)
+        logger.info("▶︎ Saving to %s", output_file.path)
+        ds.to_json(str(output_file.path), orient="records", lines=True)
 
-        logger.warning(">> Number of new samples in %s = %d", output_file, ds.num_rows)
+        logger.warning(">> Number of new samples in %s = %d", output_file.path, ds.num_rows)
 
 
 @app.command("sample_jsonl")
