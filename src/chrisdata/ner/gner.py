@@ -639,6 +639,64 @@ def normalize_conll_dirs(
             (input_dir / "label.txt").write_text("\n".join(class_names) + "\n")
 
 
+@app.command("normalize_jsonl")
+def normalize_jsonl_file(
+        input_file: Annotated[str, typer.Argument()] = ...,  # "data/GNER/pile-ner.jsonl"
+        output_file: Annotated[str, typer.Option("--output_file")] = "",
+        logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
+):
+    env = NewProjectEnv(logging_level=logging_level)
+    with (
+        JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
+        FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
+        FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
+    ):
+        for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Normalizing {input_file.path}:", stream=LoggerWriter(logger, level=logging_level), verbose=3):
+            sample: GenNERSampleWrapper = sample
+            print(sample.model_dump_json(indent=4))
+            print(f"sample.label_list={sample.label_list} / sample.instance.labels={sample.instance.labels}")
+            # sample.label_list = [str(x).replace(" ", "_").upper() for x in sample.label_list]  # for easy post-processing
+            # sample.instance.labels = [str(x).replace(" ", "_").upper() for x in sample.instance.labels]  # for easy post-processing
+
+            #TODO: make GenNERSampleWrapper instance!
+
+            new_sample = GenNERSampleWrapper(
+                id=f"{sample.id}.M{i}",
+                dataset=sample.dataset,
+                split=sample.split,
+                label_list=sample.label_list,
+                instance=GenNERSample(
+                    id=f"{sample.id}.M{i}",
+                    group=f"{sample.id}",
+                    words=final_words,
+                    labels=final_labels,
+                    target_label=entity_type,
+                    prompt_labels=prompt_labels,
+                    instruction_inputs=instruction_inputs,
+                )
+            )
+
+            GenNERSample(words=words, labels=labels, id=id)
+
+
+            instance = GenNERSample.from_wiki_passage(
+                wiki_passage=wiki_passage,
+                label=label_name,
+                id=instance_id,
+            ).set_instruction_prompt(
+                instruction_file=instruction_file,
+                label_list=label_list,
+            )
+            wrapped = GenNERSampleWrapper(
+                id=instance_id,
+                dataset=input_file.path.stem,
+                split=split_name,
+                label_list=label_list,
+                instance=instance,
+            )
+            exit(1)
+
+
 @app.command("sample_jsonl")
 def sample_jsonl_lines(
         input_file: Annotated[str, typer.Argument()] = ...,
