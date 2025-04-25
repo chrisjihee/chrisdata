@@ -577,7 +577,7 @@ def read_class_names(input_file):
 def _normalize_label(label: str):
     label = re.sub("^S-", "B-", label)  # normalize to BIO-style
     label = re.sub("^E-", "I-", label)  # normalize to BIO-style
-    # label = label.replace(" ", "_")
+    label = label.replace(" ", "_")  # normalize space to underscore
     # label = label.upper()
     return label
 
