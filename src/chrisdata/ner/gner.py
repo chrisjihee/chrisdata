@@ -574,8 +574,16 @@ def read_class_names(input_file):
     return sorted(all_class_names)
 
 
-def normalize_conll(input_file, temp_file="temp.txt"):
-    with Path(temp_file).open("w") as f:
+def _normalize_label(label: str):
+    label = re.sub("^S-", "B-", label)  # normalize to BIO-style
+    label = re.sub("^E-", "I-", label)  # normalize to BIO-style
+    # label = label.replace(" ", "_")
+    # label = label.upper()
+    return label
+
+
+def normalize_conll(input_file, output_file):
+    with Path(output_file).open("w") as f:
         for text_block in text_blocks(input_file):
             for line in text_block:
                 m = conll_label.search(line)
