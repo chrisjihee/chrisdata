@@ -16,7 +16,7 @@ from datasets import load_dataset
 from typing_extensions import Annotated
 
 from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, NewProjectEnv
-from chrisbase.io import LoggingFormat, new_path, merge_dicts, normalize_simple_list_in_json, LoggerWriter, dirs, text_blocks
+from chrisbase.io import LoggingFormat, new_path, merge_dicts, normalize_simple_list_in_json, LoggerWriter, dirs, text_blocks, make_dir
 from chrisbase.util import mute_tqdm_cls, shuffled
 from progiter import ProgIter
 from . import *
@@ -596,7 +596,7 @@ def normalize_conll(input_file, output_file):
                 label = _normalize_label(label)
                 f.write(f"{word}\t{label}\n")
             f.write("\n")
-    with Path(temp_file).open() as f:
+    with Path(output_file).open() as f:
         with Path(input_file).open("w") as g:
             for line in f:
                 g.write(line)
@@ -617,15 +617,19 @@ def verify_conll(input_file, label_names):
 
 @app.command("normalize_conll")
 def normalize_conll_dirs(
-        input_dirs: Annotated[str, typer.Argument()] = "data/GNER/*",  # "data/GNER/*"
+        input_home: Annotated[str, typer.Argument()] = "data/GNER",  # "data/GNER"
+        output_home: Annotated[str, typer.Option("--output_home")] = "",
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
+    output_home = Path(output_home) if output_home else new_path(input_home, post="N")
     env = NewProjectEnv(logging_level=logging_level)
     with (
         JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
     ):
+        input_dirs = Path(input_home) / "*"
         for input_dir in sorted(dirs(input_dirs), key=lambda x: x.name.lower()):
-            logger.info("[input_dir]: %s", input_dir)
+            output_dir = make_dir(output_home / input_dir.relative_to(input_home))
+            logger.info("[input_dir] : %s", input_dir)
             train_file = input_dir / "train.txt"
             eval_file = input_dir / "dev.txt"
             test_file = input_dir / "test.txt"
@@ -633,7 +637,15 @@ def normalize_conll_dirs(
             assert train_file.is_file() and eval_file.is_file() and test_file.is_file()
 
             for input_file in [train_file, eval_file, test_file]:
-                normalize_conll(input_file)
+                output_file = output_dir / input_file.name
+                normalize_conll(input_file, output_file)
+
+            logger.info("[output_dir]: %s", output_dir)
+            train_file = output_dir / "train.txt"
+            eval_file = output_dir / "dev.txt"
+            test_file = output_dir / "test.txt"
+            assert train_file.exists() and eval_file.exists() and test_file.exists()
+            assert train_file.is_file() and eval_file.is_file() and test_file.is_file()
 
             class_names = read_class_names(train_file)
             label_names = [f"B-{x}" for x in class_names] + [f"I-{x}" for x in class_names] + ["O"]
@@ -643,14 +655,7 @@ def normalize_conll_dirs(
             for input_file in [train_file, eval_file, test_file]:
                 verify_conll(input_file, label_names)
 
-            (input_dir / "label.txt").write_text("\n".join(class_names) + "\n")
-
-
-def _normalize_label(label: str):
-    label = label.replace(" ", "_").upper()  # for easy post-processing
-    label = re.sub("^S-", "B-", label)  # normalize to BIO-style
-    label = re.sub("^E-", "I-", label)  # normalize to BIO-style
-    return label
+            (output_dir / "label.txt").write_text("\n".join(class_names) + "\n")
 
 
 @app.command("normalize_jsonl1")
