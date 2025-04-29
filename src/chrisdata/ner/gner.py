@@ -803,8 +803,9 @@ def stratified_sample_jsonl(
         min_num_label: Annotated[int, typer.Option("--min_num_label")] = 0,
         max_num_label: Annotated[int, typer.Option("--max_num_label")] = 300,
         min_num_samples: Annotated[int, typer.Option("--min_num_samples")] = 0,
-        max_num_samples: Annotated[int, typer.Option("--max_num_samples")] = 10000,
+        max_num_samples: Annotated[int, typer.Option("--max_num_samples")] = 30000,
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
+        show_population: Annotated[bool, typer.Option("--show_data_label_list")] = False,
         random_seed: Annotated[int, typer.Option("--random_seed")] = 7,
 ):
     env = NewProjectEnv(logging_level=logging_level, random_seed=random_seed)
@@ -817,8 +818,6 @@ def stratified_sample_jsonl(
         random.seed(env.random_seed)
         data_label_lists = dict()
         for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Sampling {input_file.path}:", stream=LoggerWriter(logger, level=logging_level), verbose=3):
-            sample.label_list = [str(x).replace(" ", "_").upper() for x in sample.label_list]  # for easy post-processing
-            sample.instance.labels = [str(x).replace(" ", "_").upper() for x in sample.instance.labels]  # for easy post-processing
             if len(sample.instance.words) != len(sample.instance.labels):
                 continue
             possible_labels = [tag for entity_type in sample.label_list for tag in (f"B-{entity_type}", f"I-{entity_type}")] + ["O"]
@@ -827,8 +826,11 @@ def stratified_sample_jsonl(
             if min_num_word <= len(sample.instance.words) == len(sample.instance.labels) <= max_num_word:
                 label_list = sorted(set(sample.label_list))
                 if min_num_label <= len(label_list) <= max_num_label:
-                    data_label_list = f'{len(label_list):04d} {" ".join(label_list)}'
+                    data_label_list = f'{sample.dataset} / {len(label_list):04d} / {" ".join(label_list)}'
                     data_label_lists.setdefault(data_label_list, []).append(sample)
+        if show_population:
+            for i, data_label_list in enumerate(data_label_lists, start=1):
+                logger.info(f" - [{i:05d}] {len(data_label_lists[data_label_list]):5d} samples:\t{data_label_list}")
         for data_label_list in sorted(data_label_lists.keys()):
             if min_num_samples <= len(data_label_lists[data_label_list]):
                 if max_num_samples < len(data_label_lists[data_label_list]):
@@ -1002,8 +1004,8 @@ def convert_to_hybrid_round_version(
         logger.warning(f">> Number of new SR samples in {output_file.path} = {num_new_sr_samples}")
         logger.warning(f">> Number of new MR samples in {output_file.path} = {num_new_mr_samples}")
         final_output_file = output_file.path.with_stem(output_file.path.stem.replace(post, f"{post}{num_new_sr_samples + num_new_mr_samples}"
-                                                                                           # f"{f',{num_new_sr_samples}' if post == 'HR' else ''}"
-                                                                                           # f"{f',{num_new_mr_samples}' if post == 'HR' else ''}"
+                                                                                     # f"{f',{num_new_sr_samples}' if post == 'HR' else ''}"
+                                                                                     # f"{f',{num_new_mr_samples}' if post == 'HR' else ''}"
                                                                                      ))
         logger.info(f"Renamed output file to {final_output_file}")
     output_file.path.replace(final_output_file)
