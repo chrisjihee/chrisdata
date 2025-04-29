@@ -881,8 +881,8 @@ def convert_to_hybrid_round_cot_version(
 def convert_to_hybrid_round_version(
         mr_input_file: Annotated[Optional[str], typer.Option("--mr_input_file")] = None,  # "data/pile-ner=10-100,3-7,3-10.jsonl", "data/pile-ner=10-100,3-10,3-10.jsonl", "data/pile-ner.jsonl", "data/ZSE-validation.jsonl", "data/ZSE-test.jsonl"
         sr_input_file: Annotated[Optional[str], typer.Option("--sr_input_file")] = None,  # "data/pile-ner.jsonl"
-        mr_inst_file: Annotated[Optional[str], typer.Option("--mr_inst_file")] = "configs/instruction/GNER-EQ-MR.txt",  # "configs/instruction/GNER-EQ-MR.txt",
-        sr_inst_file: Annotated[Optional[str], typer.Option("--sr_inst_file")] = "configs/instruction/GNER-EQ-SR.txt",  # "configs/instruction/GNER-EQ-SR.txt"
+        mr_inst_file: Annotated[Optional[str], typer.Option("--mr_inst_file")] = "conf/instruct/GNER-EQ-MR.txt",  # "conf/instruct/GNER-EQ-MR.txt",
+        sr_inst_file: Annotated[Optional[str], typer.Option("--sr_inst_file")] = "conf/instruct/GNER-EQ-SR.txt",  # "conf/instruct/GNER-EQ-SR.txt"
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     assert sr_input_file or mr_input_file, "Either sr_input_file or mr_input_file is required"
@@ -1002,8 +1002,9 @@ def convert_to_hybrid_round_version(
         logger.warning(f">> Number of new SR samples in {output_file.path} = {num_new_sr_samples}")
         logger.warning(f">> Number of new MR samples in {output_file.path} = {num_new_mr_samples}")
         final_output_file = output_file.path.with_stem(output_file.path.stem.replace(post, f"{post}{num_new_sr_samples + num_new_mr_samples}"
-                                                                                           f"{f',{num_new_sr_samples}' if post == 'HR' else ''}"
-                                                                                           f"{f',{num_new_mr_samples}' if post == 'HR' else ''}"))
+                                                                                           # f"{f',{num_new_sr_samples}' if post == 'HR' else ''}"
+                                                                                           # f"{f',{num_new_mr_samples}' if post == 'HR' else ''}"
+                                                                                     ))
         logger.info(f"Renamed output file to {final_output_file}")
     output_file.path.replace(final_output_file)
     print()

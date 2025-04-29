@@ -181,7 +181,8 @@ class GNERDataset(datasets.GeneratorBasedBuilder):
         return self.config.instructions[0]
 
     # generate prompt labels
-    def _generate_labeled_string(self, words, labels):
+    @staticmethod
+    def _generate_labeled_string(words, labels):
         label_text_list = []
         for word, label in zip(words, labels):
             label_text_list.append(f"{word}({label})")
@@ -226,7 +227,7 @@ class GNERDataset(datasets.GeneratorBasedBuilder):
                 if add_dataset_name:
                     instruction += f"Dataset: {dataset_name}.\n"
                 instruction += "Sentence: " + " ".join(words)
-                label_text = self._generate_labeled_string(words, labels)
+                label_text = GNERDataset._generate_labeled_string(words, labels)
                 yield f"{dataset_name}##{idx}", {
                     "dataset": dataset_name,
                     "split": split,
