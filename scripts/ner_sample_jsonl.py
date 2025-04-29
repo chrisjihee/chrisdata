@@ -49,15 +49,16 @@ def make_train_set_for_ZSE(input_file, output_file):
 
 
 if __name__ == "__main__":
-    make_dev_set(
+    pass
+    make_dev_set_for_ZSE(
         input_file="data/GNER-N2/GNER-ZSE-validation.jsonl",
         output_file="data/HybridGNER/GNER-ZSE-validation.jsonl"
     )
-    make_test_set(
+    make_test_set_for_ZSE(
         input_file="data/GNER-N2/GNER-ZSE-test.jsonl",
         output_file="data/HybridGNER/GNER-ZSE-test.jsonl"
     )
-    make_train_set(
+    make_train_set_for_ZSE(
         input_file="data/GNER-N2/pile-ner.jsonl",
         output_file="data/HybridGNER/pile-ner.jsonl"
     )
