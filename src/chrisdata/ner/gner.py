@@ -883,14 +883,15 @@ def convert_to_hybrid_round_cot_version(
 def convert_to_hybrid_round_version(
         mr_input_file: Annotated[Optional[str], typer.Option("--mr_input_file")] = None,  # "data/pile-ner=10-100,3-7,3-10.jsonl", "data/pile-ner=10-100,3-10,3-10.jsonl", "data/pile-ner.jsonl", "data/ZSE-validation.jsonl", "data/ZSE-test.jsonl"
         sr_input_file: Annotated[Optional[str], typer.Option("--sr_input_file")] = None,  # "data/pile-ner.jsonl"
+        output_file: Annotated[str, typer.Option("--output_file")] = None,
         mr_inst_file: Annotated[Optional[str], typer.Option("--mr_inst_file")] = "conf/instruct/GNER-EQ-MR.txt",  # "conf/instruct/GNER-EQ-MR.txt",
         sr_inst_file: Annotated[Optional[str], typer.Option("--sr_inst_file")] = "conf/instruct/GNER-EQ-SR.txt",  # "conf/instruct/GNER-EQ-SR.txt"
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     assert sr_input_file or mr_input_file, "Either sr_input_file or mr_input_file is required"
-    post = "HR" if sr_inst_file and mr_inst_file else "MR" if mr_inst_file else "SR" if sr_inst_file else None
+    post = "HR" if (sr_inst_file and mr_inst_file) and (sr_input_file and mr_input_file) else "MR" if mr_inst_file and mr_input_file else "SR" if sr_inst_file and sr_input_file else None
     env = NewProjectEnv(logging_level=logging_level)
-    output_file = Path(mr_input_file or sr_input_file)
+    output_file = Path(output_file or mr_input_file or sr_input_file)
     output_file = new_path(output_file.with_stem(output_file.stem.split("-N")[0]), post=post)
     mr_inst_temp = Path(mr_inst_file).read_text() if mr_inst_file else None
     sr_inst_temp = Path(sr_inst_file).read_text() if sr_inst_file else None
