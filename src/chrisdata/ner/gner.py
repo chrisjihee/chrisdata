@@ -881,15 +881,22 @@ def convert_to_hybrid_round_cot_version(
 
 @app.command("convert_to_hybrid_round_version")
 def convert_to_hybrid_round_version(
-        mr_input_file: Annotated[Optional[str], typer.Option("--mr_input_file")] = None,  # "data/pile-ner=10-100,3-7,3-10.jsonl", "data/pile-ner=10-100,3-10,3-10.jsonl", "data/pile-ner.jsonl", "data/ZSE-validation.jsonl", "data/ZSE-test.jsonl"
-        sr_input_file: Annotated[Optional[str], typer.Option("--sr_input_file")] = None,  # "data/pile-ner.jsonl"
+        mr_input_file: Annotated[Optional[str], typer.Option("--mr_input_file")] = None,
+        sr_input_file: Annotated[Optional[str], typer.Option("--sr_input_file")] = None,
         output_file: Annotated[str, typer.Option("--output_file")] = None,
-        mr_inst_file: Annotated[Optional[str], typer.Option("--mr_inst_file")] = "conf/instruct/GNER-EQ-MR.txt",  # "conf/instruct/GNER-EQ-MR.txt",
-        sr_inst_file: Annotated[Optional[str], typer.Option("--sr_inst_file")] = "conf/instruct/GNER-EQ-SR.txt",  # "conf/instruct/GNER-EQ-SR.txt"
+        mr_inst_file: Annotated[Optional[str], typer.Option("--mr_inst_file")] = "conf/instruct/GNER-EQ-MR.txt",
+        sr_inst_file: Annotated[Optional[str], typer.Option("--sr_inst_file")] = "conf/instruct/GNER-EQ-SR.txt",
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
     assert sr_input_file or mr_input_file, "Either sr_input_file or mr_input_file is required"
-    post = "HR" if (sr_inst_file and mr_inst_file) and (sr_input_file and mr_input_file) else "MR" if mr_inst_file and mr_input_file else "SR" if sr_inst_file and sr_input_file else None
+    if (mr_inst_file and mr_input_file) and (sr_inst_file and sr_input_file):
+        post = "HR"
+    elif (mr_inst_file and mr_input_file):
+        post = "MR"
+    elif (sr_inst_file and sr_input_file):
+        post = "SR"
+    else:
+        post = None
     env = NewProjectEnv(logging_level=logging_level)
     output_file = Path(output_file or mr_input_file or sr_input_file)
     output_file = new_path(output_file.with_stem(output_file.stem.split("-N")[0]), post=post)
@@ -918,8 +925,8 @@ def convert_to_hybrid_round_version(
         if sr_input_file:
             for sample in ProgIter(ner_samples(sr_input_file), total=len(sr_input_file), desc=f"Converting {sr_input_file.path}:", stream=LoggerWriter(logger, level=logging_level), verbose=3):
                 sample.instance.id = sample.id = sample.instance.id or sample.id
-                sample.label_list = [str(x).replace(" ", "_").upper() for x in sample.label_list]  # for easy post-processing
-                sample.instance.labels = [str(x).replace(" ", "_").upper() for x in sample.instance.labels]  # for easy post-processing
+                # sample.label_list = [str(x).replace(" ", "_").upper() for x in sample.label_list]  # for easy post-processing
+                # sample.instance.labels = [str(x).replace(" ", "_").upper() for x in sample.instance.labels]  # for easy post-processing
                 if len(sample.instance.words) != len(sample.instance.labels):
                     continue
                 possible_labels = [tag for entity_type in sample.label_list for tag in (f"B-{entity_type}", f"I-{entity_type}")] + ["O"]
@@ -943,7 +950,7 @@ def convert_to_hybrid_round_version(
                     logger.debug(f">> new_prompt_labels=\n{prompt_labels}")
                     new_sample = GenNERSampleWrapper(
                         id=f"{sample.id}.S",
-                        dataset=sample.dataset,
+                        dataset=f"{sample.dataset}.S",  # for discrete evaluation
                         split=sample.split,
                         label_list=sample.label_list,
                         instance=GenNERSample(
@@ -962,8 +969,8 @@ def convert_to_hybrid_round_version(
         if mr_input_file:
             for sample in ProgIter(ner_samples(mr_input_file), total=len(mr_input_file), desc=f"Converting {mr_input_file.path}:", stream=LoggerWriter(logger, level=logging_level), verbose=3):
                 sample.instance.id = sample.id = sample.instance.id or sample.id
-                sample.label_list = [str(x).replace(" ", "_").upper() for x in sample.label_list]  # for easy post-processing
-                sample.instance.labels = [str(x).replace(" ", "_").upper() for x in sample.instance.labels]  # for easy post-processing
+                # sample.label_list = [str(x).replace(" ", "_").upper() for x in sample.label_list]  # for easy post-processing
+                # sample.instance.labels = [str(x).replace(" ", "_").upper() for x in sample.instance.labels]  # for easy post-processing
                 if len(sample.instance.words) != len(sample.instance.labels):
                     continue
                 possible_labels = [tag for entity_type in sample.label_list for tag in (f"B-{entity_type}", f"I-{entity_type}")] + ["O"]
@@ -986,7 +993,7 @@ def convert_to_hybrid_round_version(
                     logger.debug(f">> new_prompt_labels=\n{prompt_labels}")
                     new_sample = GenNERSampleWrapper(
                         id=f"{sample.id}.M{i}",
-                        dataset=sample.dataset,
+                        dataset=f"{sample.dataset}.M",  # for discrete evaluation
                         split=sample.split,
                         label_list=sample.label_list,
                         instance=GenNERSample(
@@ -1002,12 +1009,10 @@ def convert_to_hybrid_round_version(
                     output_file.fp.write(new_sample.model_dump_json() + "\n")
                     num_new_mr_samples += 1
 
-        logger.warning(f">> Number of new SR samples in {output_file.path} = {num_new_sr_samples}")
-        logger.warning(f">> Number of new MR samples in {output_file.path} = {num_new_mr_samples}")
-        final_output_file = output_file.path.with_stem(output_file.path.stem.replace(post, f"{post}{num_new_sr_samples + num_new_mr_samples}"
-                                                                                     # f"{f',{num_new_sr_samples}' if post == 'HR' else ''}"
-                                                                                     # f"{f',{num_new_mr_samples}' if post == 'HR' else ''}"
-                                                                                     ))
+        logger.warning(f">> Number of new HR samples in {output_file.path} = {num_new_sr_samples + num_new_mr_samples}")
+        logger.warning(f"   Number of new SR samples in {output_file.path} = {num_new_sr_samples}")
+        logger.warning(f"   Number of new MR samples in {output_file.path} = {num_new_mr_samples}")
+        final_output_file = output_file.path.with_stem(output_file.path.stem.replace(post, f"{post}{num_new_sr_samples + num_new_mr_samples}"))
         logger.info(f"Renamed output file to {final_output_file}")
     output_file.path.replace(final_output_file)
     print()
@@ -1075,8 +1080,8 @@ def convert_to_word_query_version(
         for sample in ProgIter(ner_samples(input_file), total=len(input_file), desc=f"Converting {input_file.path}:",
                                stream=LoggerWriter(logger, level=logging_level), verbose=3):
             sample.instance.id = sample.id = sample.instance.id or sample.id
-            sample.label_list = [x.replace(" ", "_") for x in sample.label_list]  # for easy post-processing
-            sample.instance.labels = [x.replace(" ", "_") for x in sample.instance.labels]  # for easy post-processing
+            # sample.label_list = [x.replace(" ", "_") for x in sample.label_list]  # for easy post-processing
+            # sample.instance.labels = [x.replace(" ", "_") for x in sample.instance.labels]  # for easy post-processing
             if len(sample.instance.words) != len(sample.instance.labels):
                 continue
             sentence = " ".join(sample.instance.words)
