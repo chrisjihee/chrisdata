@@ -796,7 +796,7 @@ def sample_jsonl_lines(
 
 @app.command("stratified_sample_jsonl")
 def stratified_sample_jsonl(
-        input_file: Annotated[str, typer.Argument()] = ...,  # "data/pile-ner.jsonl",
+        input_file: Annotated[str, typer.Argument()] = ...,
         output_file: Annotated[str, typer.Option("--output_file")] = None,
         min_num_word: Annotated[int, typer.Option("--min_num_word")] = 0,
         max_num_word: Annotated[int, typer.Option("--max_num_word")] = 512,
@@ -809,7 +809,7 @@ def stratified_sample_jsonl(
         random_seed: Annotated[int, typer.Option("--random_seed")] = 7,
 ):
     env = NewProjectEnv(logging_level=logging_level, random_seed=random_seed)
-    output_file = Path(output_file) if output_file else new_path(input_file, post="sampled")
+    output_file = Path(output_file) if output_file and output_file != input_file else new_path(input_file, post="[sampled]")
     with (
         JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
         FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
@@ -844,7 +844,7 @@ def stratified_sample_jsonl(
                 output_file.fp.write(sample.model_dump_json() + "\n")
                 num_outputs += 1
         logger.info(f"Number of samples in {output_file.path}: %d", num_outputs)
-        final_output_file = new_path(output_file.path, post=f"N{num_outputs}")
+        final_output_file = new_path(output_file.path.parent / output_file.path.name.replace("-[sampled]", ""), post=f"N{num_outputs}")
         logger.info(f"Renamed output file to {final_output_file}")
     output_file.path.replace(final_output_file)
     print()

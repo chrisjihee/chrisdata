@@ -2,10 +2,10 @@ from chrisdata.ner.gner import stratified_sample_jsonl, convert_to_hybrid_round_
 
 
 def make_dev_set_for_ZSE(input_file, output_file):
-    dev_sampled_per10 = stratified_sample_jsonl(output_file=output_file, input_file=input_file, max_num_samples=10, show_population=True)  # N70
-    dev_sampled_per30 = stratified_sample_jsonl(output_file=output_file, input_file=input_file, max_num_samples=30)  # N210
-    dev_sampled_per100 = stratified_sample_jsonl(output_file=output_file, input_file=input_file, max_num_samples=100)  # N700
-    dev_sampled_per200 = stratified_sample_jsonl(output_file=output_file, input_file=input_file, max_num_samples=200)  # N1400
+    dev_sampled_per10 = stratified_sample_jsonl(input_file=input_file, max_num_samples=10, show_population=True)  # N70
+    dev_sampled_per30 = stratified_sample_jsonl(input_file=input_file, max_num_samples=30)  # N210
+    dev_sampled_per100 = stratified_sample_jsonl(input_file=input_file, max_num_samples=100)  # N700
+    dev_sampled_per200 = stratified_sample_jsonl(input_file=input_file, max_num_samples=200)  # N1400
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per10, sr_input_file=dev_sampled_per10)  # HR870
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per30, sr_input_file=dev_sampled_per100)  # HR3100
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per100, sr_input_file=dev_sampled_per200)  # HR9400
@@ -13,10 +13,10 @@ def make_dev_set_for_ZSE(input_file, output_file):
 
 
 def make_dev_set_for_SFT(input_file, output_file):
-    dev_sampled_per10 = stratified_sample_jsonl(output_file=output_file, input_file=input_file, max_num_samples=10, show_population=True)  # N190
-    dev_sampled_per30 = stratified_sample_jsonl(output_file=output_file, input_file=input_file, max_num_samples=30)  # N570
-    dev_sampled_per100 = stratified_sample_jsonl(output_file=output_file, input_file=input_file, max_num_samples=100)  # N1900
-    dev_sampled_per200 = stratified_sample_jsonl(output_file=output_file, input_file=input_file, max_num_samples=200)  # N3800
+    dev_sampled_per10 = stratified_sample_jsonl(input_file=input_file, max_num_samples=10, show_population=True)  # N190
+    dev_sampled_per30 = stratified_sample_jsonl(input_file=input_file, max_num_samples=30)  # N570
+    dev_sampled_per100 = stratified_sample_jsonl(input_file=input_file, max_num_samples=100)  # N1900
+    dev_sampled_per200 = stratified_sample_jsonl(input_file=input_file, max_num_samples=200)  # N3800
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per10, sr_input_file=dev_sampled_per10)  # HR1430
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per30, sr_input_file=dev_sampled_per100)  # HR5620
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per100, sr_input_file=dev_sampled_per200)  # HR16200
@@ -24,11 +24,11 @@ def make_dev_set_for_SFT(input_file, output_file):
 
 
 def make_test_set_for_ZSE(input_file, output_file):
-    test_sampled_per10 = stratified_sample_jsonl(output_file=output_file, input_file=input_file, max_num_samples=10, show_population=True)  # N70
-    test_sampled_per30 = stratified_sample_jsonl(output_file=output_file, input_file=input_file, max_num_samples=30)  # N210
-    test_sampled_per100 = stratified_sample_jsonl(output_file=output_file, input_file=input_file, max_num_samples=100)  # N700
-    test_sampled_per200 = stratified_sample_jsonl(output_file=output_file, input_file=input_file, max_num_samples=200)  # N1400
-    test_sampled_per500 = stratified_sample_jsonl(output_file=output_file, input_file=input_file, max_num_samples=500)  # N3312
+    test_sampled_per10 = stratified_sample_jsonl(input_file=input_file, max_num_samples=10, show_population=True)  # N70
+    test_sampled_per30 = stratified_sample_jsonl(input_file=input_file, max_num_samples=30)  # N210
+    test_sampled_per100 = stratified_sample_jsonl(input_file=input_file, max_num_samples=100)  # N700
+    test_sampled_per200 = stratified_sample_jsonl(input_file=input_file, max_num_samples=200)  # N1400
+    test_sampled_per500 = stratified_sample_jsonl(input_file=input_file, max_num_samples=500)  # N3312
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per10, sr_input_file=test_sampled_per10)  # HR870
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per30, sr_input_file=test_sampled_per100)  # HR3100
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per100, sr_input_file=test_sampled_per200)  # HR9400
@@ -38,11 +38,11 @@ def make_test_set_for_ZSE(input_file, output_file):
 
 
 def make_test_set_for_SFT(input_file, output_file):
-    test_sampled_per10 = stratified_sample_jsonl(output_file=output_file, input_file=input_file, max_num_samples=10, show_population=True)  # N190
-    test_sampled_per30 = stratified_sample_jsonl(output_file=output_file, input_file=input_file, max_num_samples=30)  # N570
-    test_sampled_per100 = stratified_sample_jsonl(output_file=output_file, input_file=input_file, max_num_samples=100)  # N1900
-    test_sampled_per200 = stratified_sample_jsonl(output_file=output_file, input_file=input_file, max_num_samples=200)  # N3800
-    test_sampled_per500 = stratified_sample_jsonl(output_file=output_file, input_file=input_file, max_num_samples=500)  # N9500
+    test_sampled_per10 = stratified_sample_jsonl(input_file=input_file, max_num_samples=10, show_population=True)  # N190
+    test_sampled_per30 = stratified_sample_jsonl(input_file=input_file, max_num_samples=30)  # N570
+    test_sampled_per100 = stratified_sample_jsonl(input_file=input_file, max_num_samples=100)  # N1900
+    test_sampled_per200 = stratified_sample_jsonl(input_file=input_file, max_num_samples=200)  # N3800
+    test_sampled_per500 = stratified_sample_jsonl(input_file=input_file, max_num_samples=500)  # N9500
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per10, sr_input_file=test_sampled_per10)  # HR1430
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per30, sr_input_file=test_sampled_per100)  # HR5620
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per100, sr_input_file=test_sampled_per200)  # HR16200
@@ -52,19 +52,19 @@ def make_test_set_for_SFT(input_file, output_file):
 
 
 def make_train_set_for_ZSE(input_file, output_file):
-    train_sampled_tiny_ = stratified_sample_jsonl(output_file=output_file, input_file=input_file,
+    train_sampled_tiny_ = stratified_sample_jsonl(input_file=input_file,
                                                   min_num_word=10, max_num_word=81,
                                                   min_num_label=3, max_num_label=7,
                                                   min_num_samples=3, max_num_samples=10)  # N1207
-    train_sampled_small = stratified_sample_jsonl(output_file=output_file, input_file=input_file,
+    train_sampled_small = stratified_sample_jsonl(input_file=input_file,
                                                   min_num_word=10, max_num_word=100,
                                                   min_num_label=3, max_num_label=7,
                                                   min_num_samples=3, max_num_samples=10)  # N20026
-    train_sampled_base_ = stratified_sample_jsonl(output_file=output_file, input_file=input_file,
+    train_sampled_base_ = stratified_sample_jsonl(input_file=input_file,
                                                   min_num_word=10, max_num_word=100,
                                                   min_num_label=3, max_num_label=10,
                                                   min_num_samples=3, max_num_samples=10)  # N30197
-    train_sampled_large = stratified_sample_jsonl(output_file=output_file, input_file=input_file,
+    train_sampled_large = stratified_sample_jsonl(input_file=input_file,
                                                   min_num_word=10, max_num_word=100,
                                                   min_num_label=3, max_num_label=15,
                                                   min_num_samples=3, max_num_samples=10)  # N37652
@@ -76,19 +76,19 @@ def make_train_set_for_ZSE(input_file, output_file):
 
 
 def make_train_set_for_SFT(input_file, output_file):
-    train_sampled_tiny_ = stratified_sample_jsonl(output_file=output_file, input_file=input_file, show_population=True,
+    train_sampled_tiny_ = stratified_sample_jsonl(input_file=input_file, show_population=True,
                                                   min_num_word=3, max_num_word=100,
                                                   min_num_label=1, max_num_label=30,
                                                   min_num_samples=3, max_num_samples=50)  # N900
-    train_sampled_small = stratified_sample_jsonl(output_file=output_file, input_file=input_file,
+    train_sampled_small = stratified_sample_jsonl(input_file=input_file,
                                                   min_num_word=3, max_num_word=100,
                                                   min_num_label=1, max_num_label=30,
                                                   min_num_samples=3, max_num_samples=600)  # N10800
-    train_sampled_base_ = stratified_sample_jsonl(output_file=output_file, input_file=input_file,
+    train_sampled_base_ = stratified_sample_jsonl(input_file=input_file,
                                                   min_num_word=3, max_num_word=100,
                                                   min_num_label=1, max_num_label=30,
                                                   min_num_samples=3, max_num_samples=1200)  # N21600
-    train_sampled_large = stratified_sample_jsonl(output_file=output_file, input_file=input_file,
+    train_sampled_large = stratified_sample_jsonl(input_file=input_file,
                                                   min_num_word=3, max_num_word=100,
                                                   min_num_label=1, max_num_label=30,
                                                   min_num_samples=3, max_num_samples=1800)  # N32400
