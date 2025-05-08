@@ -17,7 +17,6 @@ from chrisbase.util import to_dataframe, mute_tqdm_cls
 from . import *
 
 logger = logging.getLogger(__name__)
-app = AppTyper()
 
 
 @dataclass
@@ -138,12 +137,12 @@ def parse(
         input_inter: int = typer.Option(default=10000),
         input_total: int = typer.Option(default=1410203),
         input_file_home: str = typer.Option(default="input/Wikipedia"),
-        input_file_name: str = typer.Option(default="kowiki-20230701-all-titles-in-ns0.jsonl"),
+        input_file_name: str = typer.Option(default="kowiki-20250501-all-titles-in-ns0.jsonl"),
         # output
         output_file_home: str = typer.Option(default="input/Wikipedia"),
-        output_file_name: str = typer.Option(default="kowiki-20230701-all-titles-in-ns0-parse.jsonl"),
+        output_file_name: str = typer.Option(default="kowiki-20250501-all-titles-in-ns0-parse.jsonl"),
         output_table_home: str = typer.Option(default="localhost:8800/wikimedia"),
-        output_table_name: str = typer.Option(default="kowiki-20230701-all-titles-in-ns0-parse"),
+        output_table_name: str = typer.Option(default="kowiki-20250501-all-titles-in-ns0-parse"),
         output_table_reset: bool = typer.Option(default=True),
         # filter
         filter_min_char: int = typer.Option(default=40),

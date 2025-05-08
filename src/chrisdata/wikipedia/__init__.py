@@ -40,3 +40,4 @@ class WikipediaStat(BaseModel):
 
 from . import convert_wikipedia
 from . import crawl_wikipedia
+from . import parse_wikipedia
