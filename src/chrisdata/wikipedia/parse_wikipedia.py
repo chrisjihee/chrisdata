@@ -77,8 +77,8 @@ class PassageUnit(DataClassJsonMixin):
     body_text: str
 
 
-def parse_one(x: dict, parsed_ids: set[int], opt: FilterOption) -> Iterable[PassageUnit]:
-    doc: WikipediaCrawlResult = WikipediaCrawlResult.from_dict(x)
+def parse_one(x: str, parsed_ids: set[int], opt: FilterOption) -> Iterable[PassageUnit]:
+    doc: WikipediaCrawlResult = WikipediaCrawlResult.model_validate_json(x)
     doc.title = doc.title.strip() if doc.title else ""
     if not doc.page_id or doc.page_id in parsed_ids or not doc.title or not doc.section_list:
         return None
@@ -114,7 +114,7 @@ def parse_one(x: dict, parsed_ids: set[int], opt: FilterOption) -> Iterable[Pass
     parsed_ids.add(doc.page_id)
 
 
-def parse_many(batch: Iterable[dict], wrapper: MongoStreamer, parsed_ids: set[int], filter_opt: FilterOption):
+def parse_many(batch: Iterable[str], wrapper: MongoStreamer, parsed_ids: set[int], filter_opt: FilterOption):
     batch_units = [x for x in [parse_one(x, parsed_ids, opt=filter_opt) for x in batch] if x]
     all_units = [unit for batch in batch_units for unit in batch]
     rows = [row.to_dict() for row in all_units if row]
@@ -210,7 +210,7 @@ def parse(
         logger.info(f"- amount: inputs={input_total}, batches={args.input.batch}")
         logger.info(f"- filter: num_black_sect={args.filter.num_black_sect}, min_char={args.filter.min_char}, min_word={args.filter.min_word}")
         progress, interval = (
-            tqdm(inputs.items, total=inputs.total, unit="batch", pre="*", desc="parsing"),
+            tqdm(inputs.items, total=inputs.num_item, unit="batch", pre="*", desc="parsing"),
             math.ceil(args.input.inter / args.input.batch),
         )
         parsed_ids = set()
