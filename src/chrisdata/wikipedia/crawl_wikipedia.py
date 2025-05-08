@@ -275,6 +275,7 @@ def crawl(
         table=TableOption(
             home=table_home,
             name=env.job_name,
+            reset=from_scratch,
         ),
     )
     tqdm = mute_tqdm_cls()
