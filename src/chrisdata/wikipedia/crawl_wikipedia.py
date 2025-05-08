@@ -2,6 +2,7 @@ import json
 import re
 import time
 from concurrent.futures import ProcessPoolExecutor
+from dataclasses import dataclass, field
 from itertools import islice
 from pathlib import Path
 from typing import List, Dict, Any, Tuple
@@ -15,10 +16,9 @@ from wikipediaapi import WikipediaPage
 from chrisbase.data import JobTimer, ProjectEnv, OptionData, CommonArguments, TableOption, MongoStreamer
 from chrisbase.io import LoggingFormat
 from chrisbase.util import to_dataframe, mute_tqdm_cls, wait_future_jobs, LF
-from chrisdata.wikipedia import *
+from . import *
 
 logger = logging.getLogger(__name__)
-app = AppTyper()
 
 
 class WikipediaEx(Wikipedia):
