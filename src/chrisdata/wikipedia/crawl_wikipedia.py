@@ -299,7 +299,8 @@ def crawl(
                 prog_bar = tqdm(rows, unit="ea", pre="*", desc="exporting", total=num_row)
                 for i, row in enumerate(prog_bar, start=1):
                     done_ids.add(row.get("_id"))
-                    out.write(json.dumps(row, ensure_ascii=False) + '\n')
+                    row = WikipediaCrawlResult.model_validate(row)
+                    out.write(row.model_dump_json() + '\n')
                     if i % (args.data.prog_interval * 10) == 0:
                         logger.info(prog_bar)
                 logger.info(prog_bar)
