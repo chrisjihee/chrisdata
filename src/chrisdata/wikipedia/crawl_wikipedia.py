@@ -214,7 +214,7 @@ def process_query(i: int, x: str, args: ProgramArguments):
 
         if db.table.count_documents({"_id": i}, limit=1) > 0:
             db.table.delete_one({"_id": i})
-        db.table.insert_one(result.to_dict())
+        db.table.insert_one(result.model_dump())
 
 
 def table_name(args: ProgramArguments) -> str:
