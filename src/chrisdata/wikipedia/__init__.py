@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 
 from pydantic import BaseModel
@@ -9,8 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class WikipediaCrawlResult(BaseModel):
-    _id: int
     query: str
+    _id: int | None = None
     title: str | None = None
     page_id: int | None = None
     section_list: list = []
