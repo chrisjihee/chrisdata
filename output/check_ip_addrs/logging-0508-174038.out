@@ -1,0 +1,73 @@
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇ =========================================================================================================================================
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇ [INIT] python /home/chris/proj/chrisdata/src/chrisdata/cli.py net check
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇ =========================================================================================================================================
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇ -----------------------------------------------------------------------------------------------------------------------------------------
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇   #	IOArguments          	value
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇ -----------------------------------------------------------------------------------------------------------------------------------------
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇   1	tag
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇   2	env.project          	chrisdata
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇   3	env.job_name         	check_ip_addrs
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇   4	env.job_version
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇   5	env.hostname         	chris36
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇   6	env.hostaddr         	129.254.181.36
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇   7	env.time_stamp       	0508-174038
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇   8	env.python_path      	/home/chris/miniforge3/envs/chrisdata/bin/python
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇   9	env.current_dir      	/mnt/dat/proj/chrisdata
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  10	env.current_file     	/home/chris/proj/chrisdata/src/chrisdata/cli.py
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  11	env.working_dir      	/mnt/dat/proj/chrisdata
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  12	env.command_args     	['net', 'check']
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  13	env.max_workers      	5
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  14	env.calling_sec      	0.001
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  15	env.waiting_sec      	300.0
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  16	env.debugging        	False
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  17	env.logging_home     	/mnt/dat/proj/chrisdata/output/check_ip_addrs
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  18	env.logging_file     	logging-0508-174038.out
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  19	env.argument_file
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  20	env.date_format      	[%m.%d %H:%M:%S]
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  21	env.message_level    	20
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  22	env.message_format   	LoggingFormat.CHECK_24
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  23	time.t1              	2025-05-08 17:40:39.388533
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  24	time.t2              	2025-05-08 17:40:38.293296
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  25	time.started         	[05.08 17:40:39]
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  26	time.settled
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  27	time.elapsed
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  28	input.start          	0
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  29	input.limit          	-1
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  30	input.batch          	10
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  31	input.inter          	1
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  32	input.data           	[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  33	output.file.name     	check_ip_addrs-0508-174038.jsonl
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  34	output.file.home     	output/check_ip_addrs
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  35	output.file.user
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  36	output.file.pswd
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  37	output.file.reset    	False
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  38	output.file.required 	True
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  39	output.file.mode     	w
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  40	output.file.encoding 	utf-8
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  41	output.table.name    	check_ip_addrs
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  42	output.table.home    	localhost:8800/device
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  43	output.table.user
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  44	output.table.pswd
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  45	output.table.reset   	True
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  46	output.table.required	True
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  47	output.table.sort    	_id
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  48	output.table.find    	{}
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇  49	output.table.timeout 	30000
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇ -----------------------------------------------------------------------------------------------------------------------------------------
+[05.08 17:40:39] ┇ INFO    ┇           chrisbase.data ┇ Drop an existing table: localhost:8800/device/check_ip_addrs
+[05.08 17:40:39] ┇ INFO    ┇      chrisdata.net.check ┇ Check 41 addresses to [localhost:8800/device/check_ip_addrs]
+[05.08 17:40:39] ┇ INFO    ┇      chrisdata.net.check ┇ - amount: 41 * 10 (BatchItems)
+[05.08 17:40:40] ┇ INFO    ┇      chrisdata.net.check ┇ =>   checking:  20%|██████████                                        | 1/5 [00:00<00:03,  1.02item/s]
+[05.08 17:40:41] ┇ INFO    ┇      chrisdata.net.check ┇ =>   checking:  40%|████████████████████                              | 2/5 [00:02<00:03,  1.01s/item]
+[05.08 17:40:42] ┇ INFO    ┇      chrisdata.net.check ┇ =>   checking:  60%|██████████████████████████████                    | 3/5 [00:03<00:02,  1.03s/item]
+[05.08 17:40:43] ┇ INFO    ┇      chrisdata.net.check ┇ =>   checking:  80%|████████████████████████████████████████          | 4/5 [00:04<00:01,  1.04s/item]
+[05.08 17:40:44] ┇ INFO    ┇      chrisdata.net.check ┇ =>   checking: 100%|██████████████████████████████████████████████████| 5/5 [00:04<00:00,  1.19item/s]
+[05.08 17:40:44] ┇ INFO    ┇      chrisdata.net.check ┇ =>  exporting:  24%|████████████▏                                     | 10/41 [00:00<00:00, 7491.17row/s]
+[05.08 17:40:44] ┇ INFO    ┇      chrisdata.net.check ┇ =>  exporting:  49%|████████████████████████▍                         | 20/41 [00:00<00:00, 12516.57row/s]
+[05.08 17:40:44] ┇ INFO    ┇      chrisdata.net.check ┇ =>  exporting:  73%|████████████████████████████████████▌             | 30/41 [00:00<00:00, 16452.55row/s]
+[05.08 17:40:44] ┇ INFO    ┇      chrisdata.net.check ┇ =>  exporting:  98%|████████████████████████████████████████████████▊ | 40/41 [00:00<00:00, 19431.57row/s]
+[05.08 17:40:44] ┇ INFO    ┇      chrisdata.net.check ┇ =>  exporting: 100%|██████████████████████████████████████████████████| 41/41 [00:00<00:00, 18473.14row/s]
+[05.08 17:40:44] ┇ INFO    ┇      chrisdata.net.check ┇ Export 41/41 rows to [output/check_ip_addrs/check_ip_addrs-0508-174038.jsonl]
+[05.08 17:40:44] ┇ INFO    ┇           chrisbase.data ┇ =========================================================================================================================================
+[05.08 17:40:44] ┇ INFO    ┇           chrisbase.data ┇ [EXIT] python /home/chris/proj/chrisdata/src/chrisdata/cli.py net check ($=00:00:04.628)
+[05.08 17:40:44] ┇ INFO    ┇           chrisbase.data ┇ =========================================================================================================================================
