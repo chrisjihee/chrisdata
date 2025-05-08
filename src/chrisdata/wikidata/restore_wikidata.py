@@ -48,7 +48,7 @@ def restore(
         data_total: int = typer.Option(default=1018174),
         file_home: str = typer.Option(default="input/wikimedia"),
         file_name: str = typer.Option(default="wikidata-20230920-parse-kowiki.jsonl"),
-        table_home: str = typer.Option(default="localhost:6382/wikimedia"),
+        table_home: str = typer.Option(default="localhost:8800/wikimedia"),
         table_name: str = typer.Option(default="wikidata-20230920-parse-kowiki"),
         table_reset: bool = typer.Option(default=True),
 ):

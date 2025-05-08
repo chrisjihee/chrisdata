@@ -77,7 +77,7 @@ class ExtractApp:
                 input_index_user: str = typer.Option(default="elastic"),
                 input_index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
                 input_index_sort: str = typer.Option(default="hits:desc"),
-                input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
+                input_table_home: str = typer.Option(default="localhost:8800/wikimedia"),
                 input_table_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
                 # output
                 output_index_home: str = typer.Option(default="localhost:9810"),
@@ -85,7 +85,7 @@ class ExtractApp:
                 output_index_user: str = typer.Option(default="elastic"),
                 output_index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
                 output_index_reset: bool = typer.Option(default=True),
-                output_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
+                output_table_home: str = typer.Option(default="localhost:8800/wikimedia"),
                 output_table_name: str = typer.Option(default="wikidata-20230920-extract-kowiki"),
                 output_table_reset: bool = typer.Option(default=True),
         ):
@@ -188,7 +188,7 @@ class ExportApp:
                 input_index_name: str = typer.Option(default="wikidata-20230920-extract-kowiki"),
                 input_index_user: str = typer.Option(default="elastic"),
                 input_index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
-                input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
+                input_table_home: str = typer.Option(default="localhost:8800/wikimedia"),
                 input_table_name: str = typer.Option(default="wikidata-20230920-extract-kowiki"),
                 # output
                 output_file_home: str = typer.Option(default="output-extract_wikidata"),

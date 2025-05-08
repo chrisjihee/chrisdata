@@ -244,7 +244,7 @@ def crawl(
         from_scratch: bool = typer.Option(default=False),
         prog_interval: int = typer.Option(default=15),
         # table
-        table_home: str = typer.Option(default="localhost:6382/wikipedia"),
+        table_home: str = typer.Option(default="localhost:8800/wikipedia"),
 ):
     env = ProjectEnv(
         project=project,

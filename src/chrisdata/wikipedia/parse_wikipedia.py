@@ -142,7 +142,7 @@ def parse(
         # output
         output_file_home: str = typer.Option(default="input/Wikipedia"),
         output_file_name: str = typer.Option(default="kowiki-20230701-all-titles-in-ns0-parse.jsonl"),
-        output_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
+        output_table_home: str = typer.Option(default="localhost:8800/wikimedia"),
         output_table_name: str = typer.Option(default="kowiki-20230701-all-titles-in-ns0-parse"),
         output_table_reset: bool = typer.Option(default=True),
         # filter

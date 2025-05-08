@@ -101,7 +101,7 @@ def search(
         data_logging: int = typer.Option(default=100000),
         from_table: bool = typer.Option(default=True),
         # table
-        table_host: str = typer.Option(default="localhost:6382"),
+        table_host: str = typer.Option(default="localhost:8800"),
         # index
         index_host: str = typer.Option(default="localhost:9810"),
         index_user: str = typer.Option(default="elastic"),

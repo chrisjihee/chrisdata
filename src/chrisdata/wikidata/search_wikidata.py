@@ -218,7 +218,7 @@ class SearchApp:
                 input_index_name: str = typer.Option(default="wikipedia-20230920-index-kowiki"),
                 input_index_user: str = typer.Option(default="elastic"),
                 input_index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
-                input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
+                input_table_home: str = typer.Option(default="localhost:8800/wikimedia"),
                 input_table_name: str = typer.Option(default="wikidata-20230920-parse-kowiki"),
                 # output
                 output_index_home: str = typer.Option(default="localhost:9810"),
@@ -226,7 +226,7 @@ class SearchApp:
                 output_index_user: str = typer.Option(default="elastic"),
                 output_index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
                 output_index_reset: bool = typer.Option(default=False),
-                output_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
+                output_table_home: str = typer.Option(default="localhost:8800/wikimedia"),
                 output_table_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
                 output_table_reset: bool = typer.Option(default=False),
                 # filter
@@ -359,7 +359,7 @@ class ExportApp:
                 input_index_user: str = typer.Option(default="elastic"),
                 input_index_pswd: str = typer.Option(default="cIrEP5OCwTLn0QIQwnsA"),
                 input_index_sort: str = typer.Option(default="hits:desc"),
-                input_table_home: str = typer.Option(default="localhost:6382/wikimedia"),
+                input_table_home: str = typer.Option(default="localhost:8800/wikimedia"),
                 input_table_name: str = typer.Option(default="wikidata-20230920-search-kowiki"),
                 # output
                 output_file_home: str = typer.Option(default="output-search_wikidata"),
