@@ -14,22 +14,23 @@ Data processing tools for data analysis
 2. Clone the repository
     ```bash
     rm -rf chrisdata*
-    git clone git@github.com:chrisjihee/chrisdata.git
+    git clone https://github.com/chrisjihee/chrisdata.git
     cd chrisdata*
     ```
 
 3. Create a new environment
     ```bash
-    mamba create -n chrisdata python=3.11 -y
+    conda install -n base conda-forge::conda --all -y
+    mamba create -n chrisdata python=3.12 -y
     mamba activate chrisdata
     ```
 
 4. Install the required packages
     ```bash
     pip install -U -e .
-    rm -rf chrisbase*; git clone git@github.com:chrisjihee/chrisbase.git
-    pip install -U -e chrisbase*
-    pip list | grep -E "mongo|search|Wiki|wiki|json|pydantic|chris|Flask"
+    rm -rf chrisbase;    git clone https://github.com/chrisjihee/chrisbase.git;    pip install -e chrisbase
+    rm -rf progiter;     git clone https://github.com/chrisjihee/progiter.git;     pip install -e progiter
+    pip list | grep -E "mongo|search|Wiki|wiki|json|pydantic|chris|prog|Flask"
     ```
 
 5. Install MongoDB
