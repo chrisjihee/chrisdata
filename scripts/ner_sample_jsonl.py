@@ -20,6 +20,7 @@ def make_dev_set_for_SFT(input_file, output_file):
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per10, sr_input_file=dev_sampled_per10)  # HR1430
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per30, sr_input_file=dev_sampled_per100)  # HR5620
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per100, sr_input_file=dev_sampled_per200)  # HR16200
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=None, sr_input_file=dev_sampled_per100)  # SR1900
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=None, sr_input_file=input_file)  # SR3800
 
 
@@ -47,6 +48,7 @@ def make_test_set_for_SFT(input_file, output_file):
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per30, sr_input_file=test_sampled_per100)  # HR5620
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per100, sr_input_file=test_sampled_per200)  # HR16200
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per200, sr_input_file=test_sampled_per500)  # HR34300
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=None, sr_input_file=test_sampled_per200)  # SR3800
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=None, sr_input_file=test_sampled_per500)  # SR9500
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=None, sr_input_file=input_file)  # SR134835
 
