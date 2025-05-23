@@ -804,6 +804,7 @@ def stratified_sample_jsonl(
         max_num_label: Annotated[int, typer.Option("--max_num_label")] = 300,
         min_num_samples: Annotated[int, typer.Option("--min_num_samples")] = 0,
         max_num_samples: Annotated[int, typer.Option("--max_num_samples")] = 30000,
+        ignore_data: Annotated[list[str], typer.Option("--ignore_data")] = [],
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
         show_population: Annotated[bool, typer.Option("--show_data_label_list")] = False,
         random_seed: Annotated[int, typer.Option("--random_seed")] = 7,
@@ -841,6 +842,8 @@ def stratified_sample_jsonl(
         num_outputs = 0
         for samples in data_label_lists.values():
             for sample in samples:
+                if sample.dataset in ignore_data:
+                    continue
                 output_file.fp.write(sample.model_dump_json() + "\n")
                 num_outputs += 1
         logger.info(f"Number of samples in {output_file.path}: %d", num_outputs)
