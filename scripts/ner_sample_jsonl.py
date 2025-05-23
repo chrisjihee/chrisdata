@@ -92,7 +92,7 @@ def make_train_set_for_ZSE(input_file, output_file):
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny1, sr_input_file=train_sampled_tiny1)  # HR16938 (17k)
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny2, sr_input_file=train_sampled_tiny2)  # HR28790 (29k)
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny2, sr_input_file=train_sampled_tiny3)  # HR33763 (34k)
-    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny3, sr_input_file=train_sampled_tiny3)  # HR57578 (58k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny3, sr_input_file=train_sampled_tiny3)  # HR57578 (58k) [Top10]
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny3, sr_input_file=train_sampled_base1)  # HR67658 (68k)
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_base1, sr_input_file=train_sampled_base1)  # HR123584 (124k)
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_base1, sr_input_file=input_file)  # HR207372 (200k)
@@ -101,33 +101,47 @@ def make_train_set_for_ZSE(input_file, output_file):
 
 
 def make_train_set_for_SFT(input_file, output_file):
-    train_sampled_tiny_ = stratified_sample_jsonl(input_file=input_file, show_population=True,
+    train_sampled_tiny1 = stratified_sample_jsonl(input_file=input_file, show_population=True,
                                                   min_num_word=3, max_num_word=100,
                                                   min_num_label=1, max_num_label=30,
-                                                  min_num_samples=3, max_num_samples=50)  # N900
-    train_sampled_small = stratified_sample_jsonl(input_file=input_file,
+                                                  min_num_samples=3, max_num_samples=200)  # N3600 (4k)
+    train_sampled_tiny2 = stratified_sample_jsonl(input_file=input_file,
                                                   min_num_word=3, max_num_word=100,
                                                   min_num_label=1, max_num_label=30,
-                                                  min_num_samples=3, max_num_samples=600)  # N10800
-    train_sampled_base_ = stratified_sample_jsonl(input_file=input_file,
+                                                  min_num_samples=3, max_num_samples=300)  # N5400 (5k)
+    train_sampled_tiny3 = stratified_sample_jsonl(input_file=input_file,
                                                   min_num_word=3, max_num_word=100,
                                                   min_num_label=1, max_num_label=30,
-                                                  min_num_samples=3, max_num_samples=1200)  # N21600
-    train_sampled_large = stratified_sample_jsonl(input_file=input_file,
+                                                  min_num_samples=3, max_num_samples=600)  # N10800 (11k)
+    train_sampled_base1 = stratified_sample_jsonl(input_file=input_file,
                                                   min_num_word=3, max_num_word=100,
                                                   min_num_label=1, max_num_label=30,
-                                                  min_num_samples=3, max_num_samples=1800)  # N32400
-    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny_, sr_input_file=train_sampled_tiny_)  # HR6900 (7k)
-    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_small, sr_input_file=input_file)  # HR225180 (230k)
-    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_base_, sr_input_file=input_file)  # HR297180 (300k)
-    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_large, sr_input_file=input_file)  # HR369180 (370k)
-    convert_to_hybrid_round_version(output_file=output_file, mr_inst_file=None, sr_input_file=input_file)  # SR153180 (150k)
+                                                  min_num_samples=3, max_num_samples=1200)  # N21600 (22k)
+    train_sampled_base2 = stratified_sample_jsonl(input_file=input_file,
+                                                  min_num_word=3, max_num_word=100,
+                                                  min_num_label=1, max_num_label=30,
+                                                  min_num_samples=3, max_num_samples=1800)  # N32400 (32k)
+    train_sampled_base3 = stratified_sample_jsonl(input_file=input_file,
+                                                  min_num_word=3, max_num_word=100,
+                                                  min_num_label=1, max_num_label=30,
+                                                  min_num_samples=3, max_num_samples=2400)  # N43200 (43k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_inst_file=None, sr_input_file=input_file)  # SR153180 (153k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny1, sr_input_file=train_sampled_tiny1)  # HR27600 (28k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny2, sr_input_file=train_sampled_tiny2)  # HR41400 (41k) [Top10]
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny2, sr_input_file=train_sampled_tiny3)  # HR46800 (47k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny3, sr_input_file=train_sampled_tiny3)  # HR82800 (83k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny3, sr_input_file=train_sampled_base1)  # HR93600 (94k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_base1, sr_input_file=train_sampled_base1)  # HR165600 (170k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny3, sr_input_file=input_file)  # HR225180 (230k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_base1, sr_input_file=input_file)  # HR297180 (300k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_base2, sr_input_file=input_file)  # HR369180 (370k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_base3, sr_input_file=input_file)  # HR441180 (440k)
 
 
 if __name__ == "__main__":
-    # make_dev_set_for_ZSE(output_file="data/HybridGNER/ZSE-validation.jsonl", input_file="data/GNER-N2/ZSE-validation.jsonl")
-    # make_dev_set_for_SFT(output_file="data/HybridGNER/SFT-validation.jsonl", input_file="data/GNER-N2/SFT-validation.jsonl")
-    # make_test_set_for_ZSE(output_file="data/HybridGNER/ZSE-test.jsonl", input_file="data/GNER-N2/ZSE-test.jsonl")
-    # make_test_set_for_SFT(output_file="data/HybridGNER/SFT-test.jsonl", input_file="data/GNER-N2/SFT-test.jsonl")
+    make_dev_set_for_ZSE(output_file="data/HybridGNER/ZSE-validation.jsonl", input_file="data/GNER-N2/ZSE-validation.jsonl")
+    make_dev_set_for_SFT(output_file="data/HybridGNER/SFT-validation.jsonl", input_file="data/GNER-N2/SFT-validation.jsonl")
+    make_test_set_for_ZSE(output_file="data/HybridGNER/ZSE-test.jsonl", input_file="data/GNER-N2/ZSE-test.jsonl")
+    make_test_set_for_SFT(output_file="data/HybridGNER/SFT-test.jsonl", input_file="data/GNER-N2/SFT-test.jsonl")
     make_train_set_for_ZSE(output_file="data/HybridGNER/ZSE-train.jsonl", input_file="data/GNER-N2/ZSE-train.jsonl")
-    # make_train_set_for_SFT(output_file="data/HybridGNER/SFT-train.jsonl", input_file="data/GNER-N2/SFT-train.jsonl")
+    make_train_set_for_SFT(output_file="data/HybridGNER/SFT-train.jsonl", input_file="data/GNER-N2/SFT-train.jsonl")
