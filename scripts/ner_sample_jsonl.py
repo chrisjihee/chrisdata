@@ -2,12 +2,10 @@ from chrisdata.ner.gner import stratified_sample_jsonl, convert_to_hybrid_round_
 
 
 def make_dev_set_for_ZSE(input_file, output_file):
-    dev_sampled_per10 = stratified_sample_jsonl(input_file=input_file, max_num_samples=10, show_population=True)  # N70
-    dev_sampled_per30 = stratified_sample_jsonl(input_file=input_file, max_num_samples=30)  # N210
+    dev_sampled_per30 = stratified_sample_jsonl(input_file=input_file, max_num_samples=30, show_population=True)  # N210
     dev_sampled_per100 = stratified_sample_jsonl(input_file=input_file, max_num_samples=100)  # N700
     dev_sampled_per200 = stratified_sample_jsonl(input_file=input_file, max_num_samples=200)  # N1400
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=None, sr_input_file=dev_sampled_per200)  # SR1400
-    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per10, sr_input_file=dev_sampled_per10)  # HR870
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per30, sr_input_file=dev_sampled_per100)  # HR3100
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per100, sr_input_file=dev_sampled_per100)  # HR8700
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per100, sr_input_file=dev_sampled_per200)  # HR9400
@@ -15,13 +13,11 @@ def make_dev_set_for_ZSE(input_file, output_file):
 
 
 def make_dev_set_for_SFT(input_file, output_file):
-    dev_sampled_per10 = stratified_sample_jsonl(input_file=input_file, max_num_samples=10, ignore_data=["conllpp"], show_population=True)  # N180
-    dev_sampled_per30 = stratified_sample_jsonl(input_file=input_file, max_num_samples=30, ignore_data=["conllpp"])  # N540
+    dev_sampled_per30 = stratified_sample_jsonl(input_file=input_file, max_num_samples=30, ignore_data=["conllpp"], show_population=True)  # N540
     dev_sampled_per100 = stratified_sample_jsonl(input_file=input_file, max_num_samples=100, ignore_data=["conllpp"])  # N1800
     dev_sampled_per200 = stratified_sample_jsonl(input_file=input_file, max_num_samples=200, ignore_data=["conllpp"])  # N3600
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=None, sr_input_file=dev_sampled_per100)  # SR1800
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=None, sr_input_file=dev_sampled_per200)  # SR3600
-    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per10, sr_input_file=dev_sampled_per10)  # HR1380
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per30, sr_input_file=dev_sampled_per100)  # HR5400
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per100, sr_input_file=dev_sampled_per100)  # HR13800
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per100, sr_input_file=dev_sampled_per200)  # HR15600
@@ -29,15 +25,13 @@ def make_dev_set_for_SFT(input_file, output_file):
 
 
 def make_test_set_for_ZSE(input_file, output_file):
-    test_sampled_per10 = stratified_sample_jsonl(input_file=input_file, max_num_samples=10, show_population=True)  # N70
-    test_sampled_per30 = stratified_sample_jsonl(input_file=input_file, max_num_samples=30)  # N210
+    test_sampled_per30 = stratified_sample_jsonl(input_file=input_file, max_num_samples=30, show_population=True)  # N210
     test_sampled_per100 = stratified_sample_jsonl(input_file=input_file, max_num_samples=100)  # N700
     test_sampled_per200 = stratified_sample_jsonl(input_file=input_file, max_num_samples=200)  # N1400
     test_sampled_per500 = stratified_sample_jsonl(input_file=input_file, max_num_samples=500)  # N3312
     test_sampled_per3000 = stratified_sample_jsonl(input_file=input_file, max_num_samples=3000)  # N6470
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=None, sr_input_file=test_sampled_per500)  # SR3312
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=None, sr_input_file=test_sampled_per3000)  # SR6470
-    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per10, sr_input_file=test_sampled_per10)  # HR870
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per30, sr_input_file=test_sampled_per100)  # HR3100
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per100, sr_input_file=test_sampled_per100)  # HR8700
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per100, sr_input_file=test_sampled_per200)  # HR9400
@@ -46,8 +40,7 @@ def make_test_set_for_ZSE(input_file, output_file):
 
 
 def make_test_set_for_SFT(input_file, output_file):
-    test_sampled_per10 = stratified_sample_jsonl(input_file=input_file, max_num_samples=10, ignore_data=["conllpp"], show_population=True)  # N180
-    test_sampled_per30 = stratified_sample_jsonl(input_file=input_file, max_num_samples=30, ignore_data=["conllpp"])  # N540
+    test_sampled_per30 = stratified_sample_jsonl(input_file=input_file, max_num_samples=30, ignore_data=["conllpp"], show_population=True)  # N540
     test_sampled_per100 = stratified_sample_jsonl(input_file=input_file, max_num_samples=100, ignore_data=["conllpp"])  # N1800
     test_sampled_per200 = stratified_sample_jsonl(input_file=input_file, max_num_samples=200, ignore_data=["conllpp"])  # N3600
     test_sampled_per500 = stratified_sample_jsonl(input_file=input_file, max_num_samples=500, ignore_data=["conllpp"])  # N9000
@@ -55,7 +48,6 @@ def make_test_set_for_SFT(input_file, output_file):
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=None, sr_input_file=test_sampled_per200)  # SR3600
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=None, sr_input_file=test_sampled_per500)  # SR9000
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=None, sr_input_file=test_sampled_per30000)  # SR131378
-    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per10, sr_input_file=test_sampled_per10)  # HR1380
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per30, sr_input_file=test_sampled_per100)  # HR5400
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per100, sr_input_file=test_sampled_per100)  # HR13800
     convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per100, sr_input_file=test_sampled_per200)  # HR15600
