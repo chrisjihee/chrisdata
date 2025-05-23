@@ -64,27 +64,40 @@ def make_test_set_for_SFT(input_file, output_file):
 
 
 def make_train_set_for_ZSE(input_file, output_file):
-    train_sampled_tiny_ = stratified_sample_jsonl(input_file=input_file,
-                                                  min_num_word=10, max_num_word=81,
-                                                  min_num_label=3, max_num_label=7,
-                                                  min_num_samples=3, max_num_samples=10)  # N1207
-    train_sampled_small = stratified_sample_jsonl(input_file=input_file,
+    train_sampled_tiny1 = stratified_sample_jsonl(input_file=input_file,
+                                                  min_num_word=10, max_num_word=90,
+                                                  min_num_label=3, max_num_label=6,
+                                                  min_num_samples=3, max_num_samples=1)  # N2964 (3k)
+    train_sampled_tiny2 = stratified_sample_jsonl(input_file=input_file,
+                                                  min_num_word=10, max_num_word=100,
+                                                  min_num_label=3, max_num_label=6,
+                                                  min_num_samples=3, max_num_samples=1)  # N4973 (5k)
+    train_sampled_tiny3 = stratified_sample_jsonl(input_file=input_file,
+                                                  min_num_word=10, max_num_word=100,
+                                                  min_num_label=3, max_num_label=6,
+                                                  min_num_samples=3, max_num_samples=2)  # N9946 (10k)
+    train_sampled_base1 = stratified_sample_jsonl(input_file=input_file,
                                                   min_num_word=10, max_num_word=100,
                                                   min_num_label=3, max_num_label=7,
-                                                  min_num_samples=3, max_num_samples=10)  # N20026
-    train_sampled_base_ = stratified_sample_jsonl(input_file=input_file,
+                                                  min_num_samples=3, max_num_samples=10)  # N20026 (20k)
+    train_sampled_base2 = stratified_sample_jsonl(input_file=input_file,
                                                   min_num_word=10, max_num_word=100,
                                                   min_num_label=3, max_num_label=10,
-                                                  min_num_samples=3, max_num_samples=10)  # N30197
-    train_sampled_large = stratified_sample_jsonl(input_file=input_file,
+                                                  min_num_samples=3, max_num_samples=10)  # N30197 (30k)
+    train_sampled_base3 = stratified_sample_jsonl(input_file=input_file,
                                                   min_num_word=10, max_num_word=100,
                                                   min_num_label=3, max_num_label=15,
-                                                  min_num_samples=3, max_num_samples=10)  # N37652
-    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny_, sr_input_file=train_sampled_tiny_)  # HR6040 (6k)
-    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_small, sr_input_file=input_file)  # HR207372 (200k)
-    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_base_, sr_input_file=input_file)  # HR297809 (300k)
-    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_large, sr_input_file=input_file)  # HR392516 (400k)
+                                                  min_num_samples=3, max_num_samples=10)  # N37652 (38k)
     convert_to_hybrid_round_version(output_file=output_file, mr_inst_file=None, sr_input_file=input_file)  # SR103814 (100k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny1, sr_input_file=train_sampled_tiny1)  # HR16938 (17k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny2, sr_input_file=train_sampled_tiny2)  # HR28790 (29k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny2, sr_input_file=train_sampled_tiny3)  # HR33763 (34k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny3, sr_input_file=train_sampled_tiny3)  # HR57578 (58k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_tiny3, sr_input_file=train_sampled_base1)  # HR67658 (68k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_base1, sr_input_file=train_sampled_base1)  # HR123584 (124k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_base1, sr_input_file=input_file)  # HR207372 (200k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_base2, sr_input_file=input_file)  # HR297809 (300k)
+    convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_base3, sr_input_file=input_file)  # HR392516 (400k)
 
 
 def make_train_set_for_SFT(input_file, output_file):
@@ -112,9 +125,9 @@ def make_train_set_for_SFT(input_file, output_file):
 
 
 if __name__ == "__main__":
-    make_dev_set_for_ZSE(output_file="data/HybridGNER/ZSE-validation.jsonl", input_file="data/GNER-N2/ZSE-validation.jsonl")
-    make_dev_set_for_SFT(output_file="data/HybridGNER/SFT-validation.jsonl", input_file="data/GNER-N2/SFT-validation.jsonl")
-    make_test_set_for_ZSE(output_file="data/HybridGNER/ZSE-test.jsonl", input_file="data/GNER-N2/ZSE-test.jsonl")
-    make_test_set_for_SFT(output_file="data/HybridGNER/SFT-test.jsonl", input_file="data/GNER-N2/SFT-test.jsonl")
-    # make_train_set_for_ZSE(output_file="data/HybridGNER/ZSE-train.jsonl", input_file="data/GNER-N2/ZSE-train.jsonl")
+    # make_dev_set_for_ZSE(output_file="data/HybridGNER/ZSE-validation.jsonl", input_file="data/GNER-N2/ZSE-validation.jsonl")
+    # make_dev_set_for_SFT(output_file="data/HybridGNER/SFT-validation.jsonl", input_file="data/GNER-N2/SFT-validation.jsonl")
+    # make_test_set_for_ZSE(output_file="data/HybridGNER/ZSE-test.jsonl", input_file="data/GNER-N2/ZSE-test.jsonl")
+    # make_test_set_for_SFT(output_file="data/HybridGNER/SFT-test.jsonl", input_file="data/GNER-N2/SFT-test.jsonl")
+    make_train_set_for_ZSE(output_file="data/HybridGNER/ZSE-train.jsonl", input_file="data/GNER-N2/ZSE-train.jsonl")
     # make_train_set_for_SFT(output_file="data/HybridGNER/SFT-train.jsonl", input_file="data/GNER-N2/SFT-train.jsonl")
