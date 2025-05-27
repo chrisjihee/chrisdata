@@ -46,7 +46,7 @@ class F1(BaseModel):
     def f1(self):
         if self.n_pos_gold == 0 and self.n_pos_pred == 0:
             return 1.0
-        return 2 * self.prec * self.rec / (self.prec + self.rec)
+        return 2 * self.prec * self.rec / (self.prec + self.rec + 1e-10)
 
 
 class Sum(BaseModel):
