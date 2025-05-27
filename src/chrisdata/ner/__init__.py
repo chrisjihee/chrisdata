@@ -81,7 +81,8 @@ class GenSeq2SeqSample(BaseModel):
     prompt_labels: str = None
     instruction_inputs: str = None
     prediction_output: Optional[str] = None
-    prediction_outputs: Optional[List[str]] = None
+    prediction_outputs: Optional[list[str]] = None
+    prediction_qualities: Optional[list[dict]] = None
 
 
 class GenNERSample(GenSeq2SeqSample):
