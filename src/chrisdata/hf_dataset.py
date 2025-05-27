@@ -1,17 +1,27 @@
 import logging
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional, Dict, List
 from unittest.mock import patch
 
+import datasets
+from chrisbase.data import NewProjectEnv
+from chrisbase.io import do_nothing, LoggingFormat, files, all_line_list, make_parent_dir
 from datasets import load_dataset, Dataset
 from datasets.utils.tqdm import disable_progress_bars, enable_progress_bars
 from pydantic import BaseModel, Field
 from tqdm import tqdm
 
-from chrisbase.data import NewProjectEnv
-from chrisbase.io import do_nothing, LoggingFormat, files, all_line_list, make_parent_dir
-
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def no_dataset_progress():
+    datasets.disable_progress_bars()
+    try:
+        yield
+    finally:
+        datasets.enable_progress_bars()
 
 
 class HfDatasetsInfo(BaseModel):
