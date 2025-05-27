@@ -32,15 +32,21 @@ class F1(BaseModel):
 
     @property
     def prec(self):
-        return self.n_correct / (self.n_pos_pred + 1e-10)
+        if self.n_pos_pred == 0:
+            return 1.0 if self.n_pos_gold == 0 else 0.0
+        return self.n_correct / self.n_pos_pred
 
     @property
     def rec(self):
-        return self.n_correct / (self.n_pos_gold + 1e-10)
+        if self.n_pos_gold == 0:
+            return 1.0 if self.n_pos_pred == 0 else 0.0
+        return self.n_correct / self.n_pos_gold
 
     @property
     def f1(self):
-        return 2 * self.prec * self.rec / (self.prec + self.rec + 1e-10)
+        if self.n_pos_gold == 0 and self.n_pos_pred == 0:
+            return 1.0
+        return 2 * self.prec * self.rec / (self.prec + self.rec)
 
 
 class Sum(BaseModel):
