@@ -4,9 +4,10 @@ import re
 from pathlib import Path
 from typing import List, Tuple, Optional
 
+from chrisbase.data import AppTyper
+from nltk import edit_distance
 from pydantic import BaseModel, Field
 
-from chrisbase.data import AppTyper
 from .gner_dataset import GNERDataset, GNERConfig
 
 app = AppTyper()
@@ -49,6 +50,13 @@ def bio_to_entities(words, labels):
     for entity in entities:
         entity['text'] = ' '.join(entity.pop('words'))
     return entities
+
+
+def normalized_edit_distance(hyp_text: str, ref_text: str) -> float:
+    dist = edit_distance(ref_text, hyp_text)
+    max_len = max(len(ref_text), len(hyp_text))
+    norm_dist = dist / max_len if max_len else 0.0
+    return norm_dist
 
 
 class EntityRelatedPassages(BaseModel):
