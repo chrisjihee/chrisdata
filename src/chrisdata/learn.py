@@ -12,13 +12,13 @@ class F1(BaseModel):
         return f"F1={self.f1:.4f}, Prec={self.prec:.4f}, Rec={self.rec:.4f}, #correct={self.n_correct}, #pos_gold={self.n_pos_gold}, #pos_pred={self.n_pos_pred}"
 
     def __add__(self, other: "F1") -> "F1":
-        if not isinstance(other, F1):
-            return NotImplemented
-        return F1(
-            n_correct=self.n_correct + other.n_correct,
-            n_pos_gold=self.n_pos_gold + other.n_pos_gold,
-            n_pos_pred=self.n_pos_pred + other.n_pos_pred,
-        )
+        if isinstance(other, F1):
+            return F1(
+                n_correct=self.n_correct + other.n_correct,
+                n_pos_gold=self.n_pos_gold + other.n_pos_gold,
+                n_pos_pred=self.n_pos_pred + other.n_pos_pred,
+            )
+        return NotImplemented
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, F1):
