@@ -13,6 +13,7 @@ import typer
 import yaml
 from bs4 import BeautifulSoup
 from datasets import load_dataset
+from sklearn.model_selection import train_test_split
 from typing_extensions import Annotated
 
 from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, NewProjectEnv
@@ -852,6 +853,95 @@ def stratified_sample_jsonl(
     output_file.path.replace(final_output_file)
     print()
     return final_output_file
+
+
+@app.command("split_data_into_two_files")
+def split_data_into_two_files(
+        input_file: Annotated[str, typer.Argument()] = ...,
+        output_file1: Annotated[str, typer.Option("--output_file1")] = None,
+        output_file2: Annotated[str, typer.Option("--output_file2")] = None,
+        split_ratio: Annotated[str, typer.Option("--split_ratio")] = "9:1",
+        random_seed: Annotated[int, typer.Option("--random_seed")] = 7,
+        logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
+):
+    """
+    Split a JSONL dataset into two files based on a given ratio.
+    
+    Args:
+        input_file: Input JSONL file path
+        output_file1: Output file path for the first split (larger portion by default)
+        output_file2: Output file path for the second split (smaller portion by default)  
+        split_ratio: Ratio for splitting (e.g., "9:1", "7:3", "5:5")
+        random_seed: Random seed for reproducible splits
+        logging_level: Logging level
+    """
+    env = NewProjectEnv(logging_level=logging_level, random_seed=random_seed)
+
+    # Parse split ratio
+    try:
+        ratio_parts = split_ratio.split(":")
+        if len(ratio_parts) != 2:
+            raise ValueError("Split ratio must be in format 'x:y'")
+        ratio1, ratio2 = map(int, ratio_parts)
+        total_ratio = ratio1 + ratio2
+        test_size = ratio2 / total_ratio
+        train_size = ratio1 / total_ratio
+    except Exception as e:
+        logger.error(f"Invalid split ratio '{split_ratio}': {e}")
+        raise typer.Exit(1)
+
+    # Generate output file names if not provided
+    input_path = Path(input_file)
+    if not output_file1:
+        output_file1 = new_path(input_path, post=f"split1-{ratio1}")
+    if not output_file2:
+        output_file2 = new_path(input_path, post=f"split2-{ratio2}")
+
+    output_file1 = Path(output_file1)
+    output_file2 = Path(output_file2)
+
+    with (
+        JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
+    ):
+        logger.info("[input_file]    : %s", input_file)
+        logger.info("[output_file1]  : %s", output_file1)
+        logger.info("[output_file2]  : %s", output_file2)
+        logger.info("[split_ratio]   : %s (train_size=%.2f, test_size=%.2f)", split_ratio, train_size, test_size)
+        logger.info("[random_seed]   : %d", random_seed)
+
+        logger.info("▶︎ Loading JSONL with datasets…")
+        ds = load_dataset("json", data_files=str(input_path), split="train")
+        logger.info("   Total samples: %d", ds.num_rows)
+
+        logger.info("▶︎ Splitting data with train_test_split…")
+        # Convert dataset to list of indices for splitting
+        indices = list(range(ds.num_rows))
+
+        train_indices, test_indices = train_test_split(
+            indices,
+            test_size=test_size,
+            random_state=random_seed,
+            shuffle=True
+        )
+
+        # Create splits using select method
+        ds_split1 = ds.select(train_indices)
+        ds_split2 = ds.select(test_indices)
+
+        logger.info("   Split1 samples: %d", ds_split1.num_rows)
+        logger.info("   Split2 samples: %d", ds_split2.num_rows)
+
+        logger.info("▶︎ Saving split1 to %s", output_file1)
+        ds_split1.to_json(str(output_file1), orient="records", lines=True)
+
+        logger.info("▶︎ Saving split2 to %s", output_file2)
+        ds_split2.to_json(str(output_file2), orient="records", lines=True)
+
+        logger.warning(">> Split completed successfully!")
+        logger.warning("   File1 (%s): %d samples", output_file1.name, ds_split1.num_rows)
+        logger.warning("   File2 (%s): %d samples", output_file2.name, ds_split2.num_rows)
+
+    return output_file1, output_file2
 
 
 @app.command("convert_to_hybrid_round_cot_version")
