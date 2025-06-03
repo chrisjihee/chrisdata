@@ -12,14 +12,15 @@ import httpx
 import typer
 import yaml
 from bs4 import BeautifulSoup
-from datasets import load_dataset
-from sklearn.model_selection import train_test_split
-from typing_extensions import Annotated
-
 from chrisbase.data import ProjectEnv, InputOption, FileOption, OutputOption, IOArguments, JobTimer, FileStreamer, TableOption, MongoStreamer, NewProjectEnv
 from chrisbase.io import LoggingFormat, new_path, merge_dicts, normalize_simple_list_in_json, LoggerWriter, dirs, text_blocks, make_dir
 from chrisbase.util import mute_tqdm_cls, shuffled
+from chrisdata.hf_dataset import no_dataset_progress
+from datasets import load_dataset
 from progiter import ProgIter
+from sklearn.model_selection import train_test_split
+from typing_extensions import Annotated
+
 from . import *
 
 logger = logging.getLogger(__name__)
@@ -864,17 +865,6 @@ def split_data_into_two_files(
         random_seed: Annotated[int, typer.Option("--random_seed")] = 7,
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
-    """
-    Split a JSONL dataset into two files based on a given ratio.
-    
-    Args:
-        input_file: Input JSONL file path
-        output_file1: Output file path for the first split (larger portion by default)
-        output_file2: Output file path for the second split (smaller portion by default)  
-        split_ratio: Ratio for splitting (e.g., "9:1", "7:3", "5:5")
-        random_seed: Random seed for reproducible splits
-        logging_level: Logging level
-    """
     env = NewProjectEnv(logging_level=logging_level, random_seed=random_seed)
 
     # Parse split ratio
@@ -910,7 +900,8 @@ def split_data_into_two_files(
         logger.info("[random_seed]   : %d", random_seed)
 
         logger.info("▶︎ Loading JSONL with datasets…")
-        ds = load_dataset("json", data_files=str(input_path), split="train")
+        with no_dataset_progress():
+            ds = load_dataset("json", data_files=str(input_path), split="train")
         logger.info("   Total samples: %d", ds.num_rows)
 
         logger.info("▶︎ Splitting data with train_test_split…")
@@ -932,14 +923,16 @@ def split_data_into_two_files(
         logger.info("   Split2 samples: %d", ds_split2.num_rows)
 
         logger.info("▶︎ Saving split1 to %s", output_file1)
-        ds_split1.to_json(str(output_file1), orient="records", lines=True)
+        with no_dataset_progress():
+            ds_split1.to_json(str(output_file1), orient="records", lines=True)
 
         logger.info("▶︎ Saving split2 to %s", output_file2)
-        ds_split2.to_json(str(output_file2), orient="records", lines=True)
+        with no_dataset_progress():
+            ds_split2.to_json(str(output_file2), orient="records", lines=True)
 
-        logger.warning(">> Split completed successfully!")
-        logger.warning("   File1 (%s): %d samples", output_file1.name, ds_split1.num_rows)
-        logger.warning("   File2 (%s): %d samples", output_file2.name, ds_split2.num_rows)
+        logger.info("▶︎ Split completed successfully!")
+        logger.info("   File1 (%s): %d samples", output_file1.name, ds_split1.num_rows)
+        logger.info("   File2 (%s): %d samples", output_file2.name, ds_split2.num_rows)
 
     return output_file1, output_file2
 
