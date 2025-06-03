@@ -905,6 +905,16 @@ def split_data_into_two_files(
     output_file1 = Path(output_file1)
     output_file2 = Path(output_file2)
 
+    def sort_key_func(example):
+        try:
+            id_raw = example.get('id', '0')
+            id_num = re.findall(r'\d+', id_raw.split('.')[0])
+            id_str = f"{int(id_num[0]):08d}" if id_num else f"{0:08d}"
+            dataset = example.get('dataset', 'unknown').rsplit('.', 1)[0]
+            return f"{dataset}_{id_str}"
+        except (ValueError, AttributeError):
+            return "unknown_00000000"
+
     with (
         JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
     ):
@@ -934,6 +944,16 @@ def split_data_into_two_files(
         # Create splits using select method
         ds_split1 = ds.select(task1_indices)
         ds_split2 = ds.select(task2_indices)
+
+        # Add sort key column and sort
+        with no_dataset_progress():
+            ds_split1 = ds_split1.map(lambda x: {"sort_key": sort_key_func(x), **x})
+            ds_split1 = ds_split1.sort("sort_key")
+            ds_split1 = ds_split1.remove_columns(["sort_key"])
+            ds_split2 = ds_split2.map(lambda x: {"sort_key": sort_key_func(x), **x})
+            ds_split2 = ds_split2.sort("sort_key")
+            ds_split2 = ds_split2.remove_columns(["sort_key"])
+
         logger.info("   Split1 (%s) samples: %d", task_name1, ds_split1.num_rows)
         logger.info("   Split2 (%s) samples: %d", task_name2, ds_split2.num_rows)
 
@@ -1252,7 +1272,7 @@ sample_Y = {
         "group": "0",
         "words": ["Popular", "approaches", "of", "opinion-based", "recommender", "system", "utilize", "various", "techniques", "including", "text", "mining", ",", "information", "retrieval", ",", "sentiment", "analysis", "(", "see", "also", "Multimodal", "sentiment", "analysis", ")", "and", "deep", "learning", "X.Y.", "Feng", ",", "H.", "Zhang", ",", "Y.J.", "Ren", ",", "P.H.", "Shang", ",", "Y.", "Zhu", ",", "Y.C.",
                   "Liang", ",", "R.C.", "Guan", ",", "D.", "Xu", ",", "(", "2019", ")", ",", ",", "21", "(", "5", ")", ":", "e12957", "."],
-        "labels": ["O", "O", "O", "B-product", "I-product", "I-product", "O", "O", "O", "O", "B-field", "I-field", "O", "B-task", "I-task", "O", "B-task", "I-task", "O", "O", "O", "B-task", "I-task", "I-task", "O", "O", "B-field", "I-field", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O",
+        "labels": ["O", "O", "O", "B-product", "I-product", "I-product", "O", "O", "O", "O", "B-field", "I-field", "O", "B-task", "I-task", "O", "B-task", "I-task", "O", "O", "O", "B-task", "I-task", "I-task", "O", "O", "B-field", "I-field", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O",
                    "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"],
         "target_word": None,
         "target_label": "conference",
