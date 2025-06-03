@@ -862,9 +862,24 @@ def split_data_into_two_files(
         output_file1: Annotated[str, typer.Option("--output_file1")] = None,
         output_file2: Annotated[str, typer.Option("--output_file2")] = None,
         split_ratio: Annotated[str, typer.Option("--split_ratio")] = "9:1",
+        task_name1: Annotated[str, typer.Option("--task_name1")] = "NER",
+        task_name2: Annotated[str, typer.Option("--task_name2")] = "QE",
         random_seed: Annotated[int, typer.Option("--random_seed")] = 7,
         logging_level: Annotated[int, typer.Option("--logging_level")] = logging.INFO,
 ):
+    """
+    Split a JSONL dataset into two files based on a given ratio for different tasks.
+    
+    Args:
+        input_file: Input JSONL file path
+        output_file1: Output file path for the first split (larger portion by default)
+        output_file2: Output file path for the second split (smaller portion by default)  
+        split_ratio: Ratio for splitting (e.g., "9:1", "7:3", "5:5")
+        task_name1: Task name for the first split (e.g., "NER")
+        task_name2: Task name for the second split (e.g., "QE")
+        random_seed: Random seed for reproducible splits
+        logging_level: Logging level
+    """
     env = NewProjectEnv(logging_level=logging_level, random_seed=random_seed)
 
     # Parse split ratio
@@ -874,8 +889,8 @@ def split_data_into_two_files(
             raise ValueError("Split ratio must be in format 'x:y'")
         ratio1, ratio2 = map(int, ratio_parts)
         total_ratio = ratio1 + ratio2
-        test_size = ratio2 / total_ratio
-        train_size = ratio1 / total_ratio
+        task1_size = ratio1 / total_ratio
+        task2_size = ratio2 / total_ratio
     except Exception as e:
         logger.error(f"Invalid split ratio '{split_ratio}': {e}")
         raise typer.Exit(1)
@@ -883,9 +898,9 @@ def split_data_into_two_files(
     # Generate output file names if not provided
     input_path = Path(input_file)
     if not output_file1:
-        output_file1 = new_path(input_path, post=f"split1-{ratio1}")
+        output_file1 = new_path(input_path, post=f"{task_name1}-{ratio1}")
     if not output_file2:
-        output_file2 = new_path(input_path, post=f"split2-{ratio2}")
+        output_file2 = new_path(input_path, post=f"{task_name2}-{ratio2}")
 
     output_file1 = Path(output_file1)
     output_file2 = Path(output_file2)
@@ -894,9 +909,10 @@ def split_data_into_two_files(
         JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
     ):
         logger.info("[input_file]    : %s", input_file)
-        logger.info("[output_file1]  : %s", output_file1)
-        logger.info("[output_file2]  : %s", output_file2)
-        logger.info("[split_ratio]   : %s (train_size=%.2f, test_size=%.2f)", split_ratio, train_size, test_size)
+        logger.info("[task_names]    : %s:%s", task_name1, task_name2)
+        logger.info("[split_ratio]   : %s (task1_size=%.2f, task2_size=%.2f)", split_ratio, task1_size, task2_size)
+        logger.info("[output_file1]  : %s (%s task)", output_file1, task_name1)
+        logger.info("[output_file2]  : %s (%s task)", output_file2, task_name2)
         logger.info("[random_seed]   : %d", random_seed)
 
         logger.info("▶︎ Loading JSONL with datasets…")
@@ -904,35 +920,30 @@ def split_data_into_two_files(
             ds = load_dataset("json", data_files=str(input_path), split="train")
         logger.info("   Total samples: %d", ds.num_rows)
 
-        logger.info("▶︎ Splitting data with train_test_split…")
         # Convert dataset to list of indices for splitting
+        logger.info("▶︎ Splitting data with train_test_split…")
         indices = list(range(ds.num_rows))
 
-        train_indices, test_indices = train_test_split(
+        task1_indices, task2_indices = train_test_split(
             indices,
-            test_size=test_size,
+            test_size=task2_size,
             random_state=random_seed,
             shuffle=True
         )
 
         # Create splits using select method
-        ds_split1 = ds.select(train_indices)
-        ds_split2 = ds.select(test_indices)
+        ds_split1 = ds.select(task1_indices)
+        ds_split2 = ds.select(task2_indices)
+        logger.info("   Split1 (%s) samples: %d", task_name1, ds_split1.num_rows)
+        logger.info("   Split2 (%s) samples: %d", task_name2, ds_split2.num_rows)
 
-        logger.info("   Split1 samples: %d", ds_split1.num_rows)
-        logger.info("   Split2 samples: %d", ds_split2.num_rows)
-
-        logger.info("▶︎ Saving split1 to %s", output_file1)
         with no_dataset_progress():
             ds_split1.to_json(str(output_file1), orient="records", lines=True)
-
-        logger.info("▶︎ Saving split2 to %s", output_file2)
-        with no_dataset_progress():
             ds_split2.to_json(str(output_file2), orient="records", lines=True)
 
         logger.info("▶︎ Split completed successfully!")
-        logger.info("   File1 (%s): %d samples", output_file1.name, ds_split1.num_rows)
-        logger.info("   File2 (%s): %d samples", output_file2.name, ds_split2.num_rows)
+        logger.info("   %s task file (%s): %d samples", task_name1, output_file1.name, ds_split1.num_rows)
+        logger.info("   %s task file (%s): %d samples", task_name2, output_file2.name, ds_split2.num_rows)
 
     return output_file1, output_file2
 
@@ -1241,7 +1252,7 @@ sample_Y = {
         "group": "0",
         "words": ["Popular", "approaches", "of", "opinion-based", "recommender", "system", "utilize", "various", "techniques", "including", "text", "mining", ",", "information", "retrieval", ",", "sentiment", "analysis", "(", "see", "also", "Multimodal", "sentiment", "analysis", ")", "and", "deep", "learning", "X.Y.", "Feng", ",", "H.", "Zhang", ",", "Y.J.", "Ren", ",", "P.H.", "Shang", ",", "Y.", "Zhu", ",", "Y.C.",
                   "Liang", ",", "R.C.", "Guan", ",", "D.", "Xu", ",", "(", "2019", ")", ",", ",", "21", "(", "5", ")", ":", "e12957", "."],
-        "labels": ["O", "O", "O", "B-product", "I-product", "I-product", "O", "O", "O", "O", "B-field", "I-field", "O", "B-task", "I-task", "O", "B-task", "I-task", "O", "O", "O", "B-task", "I-task", "I-task", "O", "O", "B-field", "I-field", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O",
+        "labels": ["O", "O", "O", "B-product", "I-product", "I-product", "O", "O", "O", "O", "B-field", "I-field", "O", "B-task", "I-task", "O", "B-task", "I-task", "O", "O", "O", "B-task", "I-task", "I-task", "O", "O", "B-field", "I-field", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O",
                    "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "B-researcher", "I-researcher", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"],
         "target_word": None,
         "target_label": "conference",
