@@ -77,8 +77,10 @@ def make_train_set_for_ZSE(input_file, output_file):
     train_sampled_full1_HR = convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_base1, sr_input_file=input_file)  # HR207372 (200k)
     train_sampled_full2_HR = convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_base2, sr_input_file=input_file)  # HR392516 (400k)
     train_sampled_full0_SR = convert_to_hybrid_round_version(output_file=output_file, mr_inst_file=None, sr_input_file=input_file)  # SR103814 (100k)
+    split_data_into_two_files(input_file=train_sampled_full0_SR, split_ratio="9:1")
     split_data_into_two_files(input_file=train_sampled_full0_SR, split_ratio="7:3")
     split_data_into_two_files(input_file=train_sampled_full0_SR, split_ratio="5:5")
+    split_data_into_two_files(input_file=train_sampled_full1_HR, split_ratio="9:1")
     split_data_into_two_files(input_file=train_sampled_full1_HR, split_ratio="7:3")
     split_data_into_two_files(input_file=train_sampled_full1_HR, split_ratio="5:5")
 
@@ -101,8 +103,10 @@ def make_train_set_for_SFT(input_file, output_file):
     train_sampled_full1_HR = convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_base1, sr_input_file=input_file)  # HR297180 (300k)
     train_sampled_full2_HR = convert_to_hybrid_round_version(output_file=output_file, mr_input_file=train_sampled_base2, sr_input_file=input_file)  # HR441180 (440k)
     train_sampled_full0_SR = convert_to_hybrid_round_version(output_file=output_file, mr_inst_file=None, sr_input_file=input_file)  # SR153180 (153k)
+    split_data_into_two_files(input_file=train_sampled_full0_SR, split_ratio="9:1")
     split_data_into_two_files(input_file=train_sampled_full0_SR, split_ratio="7:3")
     split_data_into_two_files(input_file=train_sampled_full0_SR, split_ratio="5:5")
+    split_data_into_two_files(input_file=train_sampled_full1_HR, split_ratio="9:1")
     split_data_into_two_files(input_file=train_sampled_full1_HR, split_ratio="7:3")
     split_data_into_two_files(input_file=train_sampled_full1_HR, split_ratio="5:5")
 
