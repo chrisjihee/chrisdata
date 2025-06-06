@@ -698,7 +698,7 @@ def normalize_jsonl_file1(
             output_file.fp.write(new_sample.model_dump_json() + "\n")
             num_new_samples += 1
 
-        logger.warning(f">> Number of new samples in {output_file.path} = {num_new_samples}")
+        logger.info(f">> Number of new samples in {output_file.path} = {num_new_samples}")
 
 
 @app.command("normalize_jsonl2")
@@ -768,7 +768,7 @@ def normalize_jsonl_file2(
         logger.info("▶︎ Saving to %s", output_file.path)
         ds.to_json(str(output_file.path), orient="records", lines=True)
 
-        logger.warning(">> Number of new samples in %s = %d", output_file.path, ds.num_rows)
+        logger.info(">> Number of new samples in %s = %d", output_file.path, ds.num_rows)
 
 
 @app.command("sample_jsonl")
@@ -814,7 +814,7 @@ def stratified_sample_jsonl(
     env = NewProjectEnv(logging_level=logging_level, random_seed=random_seed)
     output_file = Path(output_file) if output_file and output_file != input_file else new_path(input_file, post="[sampled]")
     with (
-        JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
+        JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', mb=1, verbose=logging_level <= logging.INFO),
         FileStreamer(FileOption.from_path(path=input_file, required=True)) as input_file,
         FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
     ):
@@ -916,7 +916,7 @@ def split_data_into_two_files(
             return "unknown_00000000"
 
     with (
-        JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
+        JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', mb=1, verbose=logging_level <= logging.INFO),
     ):
         logger.info("[input_file]    : %s", input_file)
         logger.info("[task_names]    : %s:%s", task_name1, task_name2)
@@ -965,6 +965,7 @@ def split_data_into_two_files(
         logger.info("   %s task file (%s): %d samples", task_name1, output_file1.name, ds_split1.num_rows)
         logger.info("   %s task file (%s): %d samples", task_name2, output_file2.name, ds_split2.num_rows)
 
+    print()
     return output_file1, output_file2
 
 
@@ -1022,7 +1023,7 @@ def convert_to_hybrid_round_version(
     if not sr_input_file:
         sr_input_file = mr_input_file
     with (
-        JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', verbose=logging_level <= logging.INFO),
+        JobTimer(f"python {env.current_file} {' '.join(env.command_args)}", rt=1, rb=1, rc='=', mb=1, verbose=logging_level <= logging.INFO),
         FileStreamer(FileOption.from_path(path=mr_input_file, required=True)) if mr_input_file else nullcontext() as mr_input_file,
         FileStreamer(FileOption.from_path(path=sr_input_file, required=True)) if sr_input_file else nullcontext() as sr_input_file,
         FileStreamer(FileOption.from_path(path=output_file, mode="w")) as output_file,
@@ -1126,9 +1127,9 @@ def convert_to_hybrid_round_version(
                     output_file.fp.write(new_sample.model_dump_json() + "\n")
                     num_new_mr_samples += 1
 
-        logger.warning(f">> Number of new HR samples in {output_file.path} = {num_new_sr_samples + num_new_mr_samples}")
-        logger.warning(f"   Number of new SR samples in {output_file.path} = {num_new_sr_samples}")
-        logger.warning(f"   Number of new MR samples in {output_file.path} = {num_new_mr_samples}")
+        logger.info(f">> Number of new HR samples in {output_file.path} = {num_new_sr_samples + num_new_mr_samples}")
+        logger.info(f"   Number of new SR samples in {output_file.path} = {num_new_sr_samples}")
+        logger.info(f"   Number of new MR samples in {output_file.path} = {num_new_mr_samples}")
         final_output_file = output_file.path.with_stem(output_file.path.stem.replace(post, f"{post}{num_new_sr_samples + num_new_mr_samples}"))
         logger.info(f"Renamed output file to {final_output_file}")
     output_file.path.replace(final_output_file)
@@ -1231,7 +1232,7 @@ def convert_to_word_query_version(
                 )
                 num_new_samples += 1
                 output_file.fp.write(new_sample.model_dump_json() + "\n")
-        logger.warning(f">> Number of new samples in {output_file.path} = {num_new_samples}")
+        logger.info(f">> Number of new samples in {output_file.path} = {num_new_samples}")
 
 
 sample_X = {

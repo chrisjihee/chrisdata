@@ -7,8 +7,10 @@ def make_dev_set_for_ZSE(input_file, output_file):
     dev_sampled_per200_SR = convert_to_hybrid_round_version(output_file=output_file, mr_input_file=None, sr_input_file=dev_sampled_per200)  # SR1400
     dev_sampled_per100_HR = convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per100, sr_input_file=dev_sampled_per100)  # HR8700
     dev_sampled_per200_HR = convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per200, sr_input_file=dev_sampled_per200)  # HR17400
+    split_data_into_two_files(input_file=dev_sampled_per200_SR, split_ratio="9:1")
     split_data_into_two_files(input_file=dev_sampled_per200_SR, split_ratio="7:3")
     split_data_into_two_files(input_file=dev_sampled_per200_SR, split_ratio="5:5")
+    split_data_into_two_files(input_file=dev_sampled_per100_HR, split_ratio="9:1")
     split_data_into_two_files(input_file=dev_sampled_per100_HR, split_ratio="7:3")
     split_data_into_two_files(input_file=dev_sampled_per100_HR, split_ratio="5:5")
 
@@ -19,8 +21,10 @@ def make_dev_set_for_SFT(input_file, output_file):
     dev_sampled_per200_SR = convert_to_hybrid_round_version(output_file=output_file, mr_input_file=None, sr_input_file=dev_sampled_per200)  # SR3600
     dev_sampled_per100_HR = convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per100, sr_input_file=dev_sampled_per100)  # HR13800
     dev_sampled_per200_HR = convert_to_hybrid_round_version(output_file=output_file, mr_input_file=dev_sampled_per200, sr_input_file=dev_sampled_per200)  # HR27600
+    split_data_into_two_files(input_file=dev_sampled_per200_SR, split_ratio="9:1")
     split_data_into_two_files(input_file=dev_sampled_per200_SR, split_ratio="7:3")
     split_data_into_two_files(input_file=dev_sampled_per200_SR, split_ratio="5:5")
+    split_data_into_two_files(input_file=dev_sampled_per100_HR, split_ratio="9:1")
     split_data_into_two_files(input_file=dev_sampled_per100_HR, split_ratio="7:3")
     split_data_into_two_files(input_file=dev_sampled_per100_HR, split_ratio="5:5")
 
@@ -36,8 +40,10 @@ def make_test_set_for_ZSE(input_file, output_file):
     test_sampled_per100_HR = convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per100, sr_input_file=test_sampled_per100)  # HR8700
     test_sampled_per200_HR = convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per200, sr_input_file=test_sampled_per200)  # HR17400
     test_sampled_per400_HR = convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per400, sr_input_file=test_sampled_per400)  # HR34800
+    split_data_into_two_files(input_file=test_sampled_per400_SR, split_ratio="9:1")
     split_data_into_two_files(input_file=test_sampled_per400_SR, split_ratio="7:3")
     split_data_into_two_files(input_file=test_sampled_per400_SR, split_ratio="5:5")
+    split_data_into_two_files(input_file=test_sampled_per200_HR, split_ratio="9:1")
     split_data_into_two_files(input_file=test_sampled_per200_HR, split_ratio="7:3")
     split_data_into_two_files(input_file=test_sampled_per200_HR, split_ratio="5:5")
 
@@ -53,8 +59,10 @@ def make_test_set_for_SFT(input_file, output_file):
     test_sampled_per100_HR = convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per100, sr_input_file=test_sampled_per100)  # HR13800
     test_sampled_per200_HR = convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per200, sr_input_file=test_sampled_per200)  # HR27600
     test_sampled_per400_HR = convert_to_hybrid_round_version(output_file=output_file, mr_input_file=test_sampled_per400, sr_input_file=test_sampled_per400)  # HR55200
+    split_data_into_two_files(input_file=test_sampled_per400_SR, split_ratio="9:1")
     split_data_into_two_files(input_file=test_sampled_per400_SR, split_ratio="7:3")
     split_data_into_two_files(input_file=test_sampled_per400_SR, split_ratio="5:5")
+    split_data_into_two_files(input_file=test_sampled_per200_HR, split_ratio="9:1")
     split_data_into_two_files(input_file=test_sampled_per200_HR, split_ratio="7:3")
     split_data_into_two_files(input_file=test_sampled_per200_HR, split_ratio="5:5")
 
