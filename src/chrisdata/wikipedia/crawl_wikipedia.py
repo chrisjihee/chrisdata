@@ -230,6 +230,12 @@ def process_query(i: int, x: str, args: ProgramArguments):
         if page_exists:
             result.title = page.title
             result.page_id = page.pageid
+            try:
+                revision_timestamp = api.get_last_revision_timestamp(page)
+                result.last_modified = revision_timestamp if revision_timestamp else None
+            except Exception as e:
+                logger.warning(f"Could not get last_modified for page {x}: {e}")
+                result.last_modified = None
             result.section_list.append((x, '', '', page.summary))
             result.section_list += get_section_list_lv2(x, page.sections)
             result.passage_list = get_passage_list(result.section_list, page.pageid)
