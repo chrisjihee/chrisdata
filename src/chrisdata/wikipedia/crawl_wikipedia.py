@@ -309,6 +309,7 @@ def crawl(
     logging.getLogger("wikipediaapi").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
         with MongoStreamer(args.table) as out_table:
+            args.table.reset = False
             input_list = load_query_list(args=args)
             input_size = len(input_list)
             num_global_api = reset_global_api(args=args)
