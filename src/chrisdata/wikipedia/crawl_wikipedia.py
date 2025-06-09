@@ -278,7 +278,7 @@ def crawl(
         logging_home=output_home,
         logging_file=logging_file,
         message_level=logging.DEBUG if debugging else logging.INFO,
-        message_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
+        message_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_40,
         max_workers=1 if debugging else max(max_workers, 1),
     )
     args = ProgramArguments(
