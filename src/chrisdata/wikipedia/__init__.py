@@ -15,6 +15,7 @@ class WikipediaCrawlResult(BaseModel):
     _id: int | None = None
     title: str | None = None
     page_id: int | None = None
+    last_modified: str | None = None
     section_list: list = []
     passage_list: list = []
 
