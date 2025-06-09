@@ -59,7 +59,6 @@ class WikipediaEx(Wikipedia):
             params = {
                 "action": "query",
                 "prop": "revisions",
-                # "titles": page.title,
                 "pageids": page.pageid,
                 "rvprop": "timestamp",
                 "rvlimit": 1,
