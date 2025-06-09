@@ -149,7 +149,6 @@ class DataOption(OptionData):
     name: str | Path = field()
     lang: str = field(default="ko")
     limit: int = field(default=-1)
-    from_scratch: bool = field(default=False)
     prog_interval: int = field(default=1)
 
     def __post_init__(self):
@@ -295,7 +294,6 @@ def crawl(
             name=input_name,
             lang=input_lang,
             limit=input_limit,
-            from_scratch=from_scratch,
             prog_interval=prog_interval if prog_interval > 0 else env.max_workers,
         ),
         table=TableOption(
