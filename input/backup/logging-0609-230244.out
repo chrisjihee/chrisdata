@@ -1,0 +1,120 @@
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇ =========================================================================================================================================
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇ [INIT] python /mnt/dat/proj/chrisdata/src/chrisdata/cli.py wikipedia crawl --from-scratch --max-workers 1
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇ =========================================================================================================================================
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇ -----------------------------------------------------------------------------------------------------------------------------------------
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇   #	ProgramArguments  	value
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇ -----------------------------------------------------------------------------------------------------------------------------------------
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇   1	time.t1           	2025-06-09 23:02:45.990748
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇   2	time.t2           	2025-06-09 23:02:44.412931
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇   3	time.started      	[06.09 23:02:45]
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇   4	time.settled
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇   5	time.elapsed
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇   6	env.project       	chrisdata
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇   7	env.job_name      	crawl_wikipedia
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇   8	env.job_version
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇   9	env.hostname      	chris36
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  10	env.hostaddr      	129.254.181.36
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  11	env.time_stamp    	0609-230244
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  12	env.python_path   	/home/chris/miniforge3/envs/chrisdata/bin/python
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  13	env.current_dir   	/mnt/dat/proj/chrisdata
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  14	env.current_file  	/mnt/dat/proj/chrisdata/src/chrisdata/cli.py
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  15	env.working_dir   	/mnt/dat/proj/chrisdata
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  16	env.command_args  	['wikipedia', 'crawl', '--from-scratch', '--max-workers', '1']
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  17	env.max_workers   	1
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  18	env.calling_sec   	0.001
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  19	env.waiting_sec   	300.0
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  20	env.debugging     	False
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  21	env.logging_home  	/mnt/dat/proj/chrisdata/output-crawl_wikipedia
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  22	env.logging_file  	logging-0609-230244.out
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  23	env.argument_file
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  24	env.date_format   	[%m.%d %H:%M:%S]
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  25	env.message_level 	20
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  26	env.message_format	LoggingFormat.CHECK_40
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  27	net.calling_sec   	0.001
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  28	net.waiting_sec   	300.0
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  29	net.retrial_sec   	3.0
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  30	net.max_retrial   	10.0
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  31	data.home         	input
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  32	data.name         	backup/kowiki-sample.txt
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  33	data.lang         	ko
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  34	data.limit        	-1
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  35	data.prog_interval	5
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  36	table.name        	crawl_wikipedia
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  37	table.home        	localhost:8800/wikipedia
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  38	table.user
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  39	table.pswd
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  40	table.reset       	True
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  41	table.required    	False
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  42	table.sort        	_id
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  43	table.find        	{}
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇  44	table.timeout     	30000
+[06.09 23:02:45] ┇ INFO    ┇                           chrisbase.data ┇ -----------------------------------------------------------------------------------------------------------------------------------------
+[06.09 23:02:46] ┇ INFO    ┇                           chrisbase.data ┇ Drop an existing table: localhost:8800/wikipedia/crawl_wikipedia
+[06.09 23:02:46] ┇ INFO    ┇      chrisdata.wikipedia.crawl_wikipedia ┇ Use 41 apis and 1 workers to crawl 276 wikipedia queries
+[06.09 23:02:53] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:   1%|▋                                                 | 4/276 [00:07<06:49,  1.50s/ea]
+[06.09 23:02:59] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:   3%|█▋                                                | 9/276 [00:13<05:29,  1.24s/ea]
+[06.09 23:03:06] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:   5%|██▌                                               | 14/276 [00:20<06:01,  1.38s/ea]
+[06.09 23:03:13] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:   7%|███▍                                              | 19/276 [00:27<05:41,  1.33s/ea]
+[06.09 23:03:19] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:   9%|████▎                                             | 24/276 [00:33<05:11,  1.23s/ea]
+[06.09 23:03:25] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  11%|█████▎                                            | 29/276 [00:39<05:10,  1.26s/ea]
+[06.09 23:03:33] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  12%|██████▏                                           | 34/276 [00:47<05:25,  1.34s/ea]
+[06.09 23:03:39] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  14%|███████                                           | 39/276 [00:53<04:50,  1.22s/ea]
+[06.09 23:03:46] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  16%|███████▉                                          | 44/276 [01:00<05:37,  1.45s/ea]
+[06.09 23:03:52] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  18%|████████▉                                         | 49/276 [01:06<04:20,  1.15s/ea]
+[06.09 23:03:58] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  20%|█████████▊                                        | 54/276 [01:12<04:17,  1.16s/ea]
+[06.09 23:04:04] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  21%|██████████▋                                       | 59/276 [01:18<04:07,  1.14s/ea]
+[06.09 23:04:10] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  23%|███████████▌                                      | 64/276 [01:24<04:24,  1.25s/ea]
+[06.09 23:04:16] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  25%|████████████▌                                     | 69/276 [01:30<03:56,  1.14s/ea]
+[06.09 23:04:22] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  27%|█████████████▍                                    | 74/276 [01:36<03:32,  1.05s/ea]
+[06.09 23:04:28] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  29%|██████████████▎                                   | 79/276 [01:42<03:44,  1.14s/ea]
+[06.09 23:04:32] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  30%|███████████████▏                                  | 84/276 [01:46<02:55,  1.10ea/s]
+[06.09 23:04:38] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  32%|████████████████                                  | 89/276 [01:52<03:16,  1.05s/ea]
+[06.09 23:04:43] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  34%|█████████████████                                 | 94/276 [01:57<03:20,  1.10s/ea]
+[06.09 23:04:49] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  36%|█████████████████▉                                | 99/276 [02:03<03:15,  1.11s/ea]
+[06.09 23:04:54] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  38%|██████████████████▊                               | 104/276 [02:08<03:04,  1.07s/ea]
+[06.09 23:05:00] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  39%|███████████████████▋                              | 109/276 [02:14<03:11,  1.15s/ea]
+[06.09 23:05:05] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  41%|████████████████████▋                             | 114/276 [02:19<03:03,  1.14s/ea]
+[06.09 23:05:11] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  43%|█████████████████████▌                            | 119/276 [02:25<02:55,  1.12s/ea]
+[06.09 23:05:17] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  45%|██████████████████████▍                           | 124/276 [02:31<03:04,  1.22s/ea]
+[06.09 23:05:22] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  47%|███████████████████████▎                          | 129/276 [02:36<02:39,  1.08s/ea]
+[06.09 23:05:27] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  49%|████████████████████████▎                         | 134/276 [02:41<02:31,  1.07s/ea]
+[06.09 23:05:33] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  50%|█████████████████████████▏                        | 139/276 [02:47<02:34,  1.13s/ea]
+[06.09 23:05:38] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  52%|██████████████████████████                        | 144/276 [02:52<02:26,  1.11s/ea]
+[06.09 23:05:42] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  54%|██████████████████████████▉                       | 149/276 [02:56<01:24,  1.50ea/s]
+[06.09 23:05:48] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  56%|███████████████████████████▉                      | 154/276 [03:02<02:04,  1.02s/ea]
+[06.09 23:05:53] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  58%|████████████████████████████▊                     | 159/276 [03:07<02:07,  1.09s/ea]
+[06.09 23:05:58] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  59%|█████████████████████████████▋                    | 164/276 [03:12<01:59,  1.06s/ea]
+[06.09 23:06:04] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  61%|██████████████████████████████▌                   | 169/276 [03:18<02:02,  1.14s/ea]
+[06.09 23:06:10] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  63%|███████████████████████████████▌                  | 174/276 [03:24<01:55,  1.13s/ea]
+[06.09 23:06:16] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  65%|████████████████████████████████▍                 | 179/276 [03:30<01:47,  1.11s/ea]
+[06.09 23:06:21] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  67%|█████████████████████████████████▎                | 184/276 [03:35<01:44,  1.13s/ea]
+[06.09 23:06:27] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  68%|██████████████████████████████████▏               | 189/276 [03:41<01:35,  1.10s/ea]
+[06.09 23:06:32] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  70%|███████████████████████████████████▏              | 194/276 [03:46<01:30,  1.10s/ea]
+[06.09 23:06:38] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  72%|████████████████████████████████████              | 199/276 [03:52<01:31,  1.19s/ea]
+[06.09 23:06:43] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  74%|████████████████████████████████████▉             | 204/276 [03:57<01:17,  1.07s/ea]
+[06.09 23:06:49] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  76%|█████████████████████████████████████▊            | 209/276 [04:03<01:11,  1.07s/ea]
+[06.09 23:06:54] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  78%|██████████████████████████████████████▊           | 214/276 [04:08<01:07,  1.09s/ea]
+[06.09 23:07:00] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  79%|███████████████████████████████████████▋          | 219/276 [04:14<01:01,  1.08s/ea]
+[06.09 23:07:06] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  81%|████████████████████████████████████████▌         | 224/276 [04:20<00:59,  1.14s/ea]
+[06.09 23:07:11] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  83%|█████████████████████████████████████████▍        | 229/276 [04:25<00:44,  1.05ea/s]
+[06.09 23:07:16] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  85%|██████████████████████████████████████████▍       | 234/276 [04:30<00:46,  1.10s/ea]
+[06.09 23:07:22] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  87%|███████████████████████████████████████████▎      | 239/276 [04:36<00:39,  1.08s/ea]
+[06.09 23:07:27] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  88%|████████████████████████████████████████████▏     | 244/276 [04:41<00:34,  1.08s/ea]
+[06.09 23:07:33] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  90%|█████████████████████████████████████████████     | 249/276 [04:47<00:29,  1.10s/ea]
+[06.09 23:07:38] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  92%|██████████████████████████████████████████████    | 254/276 [04:52<00:24,  1.10s/ea]
+[06.09 23:07:44] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  94%|██████████████████████████████████████████████▉   | 259/276 [04:58<00:18,  1.09s/ea]
+[06.09 23:07:50] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  96%|███████████████████████████████████████████████▊  | 264/276 [05:04<00:12,  1.08s/ea]
+[06.09 23:07:55] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  97%|████████████████████████████████████████████████▋ | 269/276 [05:09<00:07,  1.13s/ea]
+[06.09 23:08:00] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting:  99%|█████████████████████████████████████████████████▋| 274/276 [05:14<00:02,  1.07s/ea]
+[06.09 23:08:02] ┇ INFO    ┇                           chrisbase.util ┇ *   visiting: 100%|██████████████████████████████████████████████████| 276/276 [05:16<00:00,  1.15s/ea]
+[06.09 23:08:02] ┇ INFO    ┇      chrisdata.wikipedia.crawl_wikipedia ┇ *  exporting:   0%|                                                  | 0/276 [00:00<?, ?ea/s]
+[06.09 23:08:02] ┇ INFO    ┇      chrisdata.wikipedia.crawl_wikipedia ┇ *  exporting:   0%|                                                  | 0/276 [00:00<?, ?ea/s]
+[06.09 23:08:02] ┇ INFO    ┇      chrisdata.wikipedia.crawl_wikipedia ┇ *  exporting:   0%|                                                  | 0/276 [00:00<?, ?ea/s]
+[06.09 23:08:02] ┇ INFO    ┇      chrisdata.wikipedia.crawl_wikipedia ┇ *  exporting:   0%|                                                  | 0/276 [00:00<?, ?ea/s]
+[06.09 23:08:02] ┇ INFO    ┇      chrisdata.wikipedia.crawl_wikipedia ┇ *  exporting:   0%|                                                  | 0/276 [00:00<?, ?ea/s]
+[06.09 23:08:02] ┇ INFO    ┇      chrisdata.wikipedia.crawl_wikipedia ┇ *  exporting: 100%|██████████████████████████████████████████████████| 276/276 [00:00<00:00, 3335.80ea/s]
+[06.09 23:08:02] ┇ INFO    ┇      chrisdata.wikipedia.crawl_wikipedia ┇ Export 276/276 rows to /mnt/dat/proj/chrisdata/output-crawl_wikipedia/kowiki-sample.jsonl
+[06.09 23:08:02] ┇ INFO    ┇      chrisdata.wikipedia.crawl_wikipedia ┇ done_ids={1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276}
+[06.09 23:08:02] ┇ INFO    ┇                           chrisbase.data ┇ =========================================================================================================================================
+[06.09 23:08:02] ┇ INFO    ┇                           chrisbase.data ┇ [EXIT] python /mnt/dat/proj/chrisdata/src/chrisdata/cli.py wikipedia crawl --from-scratch --max-workers 1 ($=00:05:16.593)
+[06.09 23:08:02] ┇ INFO    ┇                           chrisbase.data ┇ =========================================================================================================================================

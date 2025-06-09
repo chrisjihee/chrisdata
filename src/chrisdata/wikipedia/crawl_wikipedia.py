@@ -332,7 +332,7 @@ def crawl(
                         logger.info(prog_bar)
                 logger.info(prog_bar)
             logger.info(f"Export {num_row}/{input_size} rows to {output_file}")
-            logger.info(f"done_ids={done_ids}")
+            # logger.info(f"done_ids={done_ids}")
             undone_inputs = [(i, x) for i, x in input_list if i not in done_ids]
             if undone_inputs:
                 logger.info(f"Found {len(undone_inputs)} undone inputs")
