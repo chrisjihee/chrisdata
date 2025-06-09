@@ -78,44 +78,44 @@ class WikipediaEx(Wikipedia):
 api_list_per_ip: List[WikipediaEx] = []
 
 
-def get_passage_list(section_list, page_id):
-    passage_list = []
-    for i, s in enumerate(section_list):
-        passage = {}
-
-        passage["파일명"] = s[0]
-        passage["문서제목"] = s[0]
-
-        passage["문서번호"] = str(page_id)
-        passage["장번호"] = str(i)
-        passage["절번호"] = '0'
-        passage["조번호"] = '0'
-        passage["단위번호"] = '%s-%s-%s-%s' % (passage["문서번호"], passage["장번호"], passage["절번호"], passage["조번호"])
-
-        passage["장제목"] = s[1]
-        passage["절제목"] = s[2]
-        passage["조제목"] = ''
-
-        passage["조내용"] = ''
-        sent_list = [s[0] + '. ']
-        if s[1] != '':    sent_list.append(s[1] + '. ')
-        if s[2] != '':    sent_list.append(s[2] + '. ')
-        for text in s[3].split('\n'):
-            if text.strip() != '':
-                sent_list.append(text.strip() + '\n')
-
-        for sent_i, text in enumerate(sent_list):
-            passage["조내용"] += text
-            passage["문장%d" % (sent_i)] = text[:-1]
-        passage["조내용"] = passage["조내용"][:-1]
-
-        passage["html"] = ''
-        passage["소스"] = 'passage'
-        passage["타입"] = 'passage'
-
-        passage_list.append(passage)
-
-    return passage_list
+# def get_passage_list(section_list, page_id):
+#     passage_list = []
+#     for i, s in enumerate(section_list):
+#         passage = {}
+#
+#         passage["파일명"] = s[0]
+#         passage["문서제목"] = s[0]
+#
+#         passage["문서번호"] = str(page_id)
+#         passage["장번호"] = str(i)
+#         passage["절번호"] = '0'
+#         passage["조번호"] = '0'
+#         passage["단위번호"] = '%s-%s-%s-%s' % (passage["문서번호"], passage["장번호"], passage["절번호"], passage["조번호"])
+#
+#         passage["장제목"] = s[1]
+#         passage["절제목"] = s[2]
+#         passage["조제목"] = ''
+#
+#         passage["조내용"] = ''
+#         sent_list = [s[0] + '. ']
+#         if s[1] != '':    sent_list.append(s[1] + '. ')
+#         if s[2] != '':    sent_list.append(s[2] + '. ')
+#         for text in s[3].split('\n'):
+#             if text.strip() != '':
+#                 sent_list.append(text.strip() + '\n')
+#
+#         for sent_i, text in enumerate(sent_list):
+#             passage["조내용"] += text
+#             passage["문장%d" % (sent_i)] = text[:-1]
+#         passage["조내용"] = passage["조내용"][:-1]
+#
+#         passage["html"] = ''
+#         passage["소스"] = 'passage'
+#         passage["타입"] = 'passage'
+#
+#         passage_list.append(passage)
+#
+#     return passage_list
 
 
 def get_subsections(sections):
@@ -218,7 +218,7 @@ def process_query(i: int, x: str, args: ProgramArguments):
             time.sleep(args.net.calling_sec)
         api = api_list_per_ip[i % len(api_list_per_ip)]
         page: WikipediaPage = api.page(x)
-        result = WikipediaCrawlResult(qid=i, query=x)
+        result = WikipediaCrawlResult(id=i, query=x)
         page_exists = False
         try:
             page_exists = page.exists()
@@ -235,7 +235,7 @@ def process_query(i: int, x: str, args: ProgramArguments):
                 result.last_modified = None
             result.section_list.append((x, '', '', page.summary))
             result.section_list += get_section_list_lv2(x, page.sections)
-            result.passage_list = get_passage_list(result.section_list, page.pageid)
+            # result.passage_list = get_passage_list(result.section_list, page.pageid)
 
         # Remove old records with same _id (MongoDB will handle uniqueness)
         if db.table.count_documents({"_id": i}, limit=1) > 0:
@@ -327,7 +327,7 @@ def crawl(
                 for i, row in enumerate(prog_bar, start=1):
                     done_ids.add(row.get("_id"))
                     row = WikipediaCrawlResult.model_validate(row)
-                    out.write(row.model_dump_json(by_alias=False) + '\n')
+                    out.write(row.model_dump_json(by_alias=True) + '\n')
                     if i % (args.data.prog_interval * 10) == 0:
                         logger.info(prog_bar)
                 logger.info(prog_bar)

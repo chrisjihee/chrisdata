@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import json
 import math
 from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Optional
 
 import pandas as pd
 import typer
@@ -75,6 +77,7 @@ class PassageUnit(DataClassJsonMixin):
     subtitle1: str
     subtitle2: str
     body_text: str
+    last_modified: Optional[str] = None
 
 
 def parse_one(x: str, parsed_ids: set[int], opt: FilterOption) -> Iterable[PassageUnit]:
@@ -110,7 +113,7 @@ def parse_one(x: str, parsed_ids: set[int], opt: FilterOption) -> Iterable[Passa
         for text_id, text in enumerate(sect_texts, start=1):
             path_ids = sect_ids + (text_id,)
             _id = f"{doc.page_id:07d}-{'-'.join([f'{i:03d}' for i in path_ids])}"
-            yield PassageUnit(_id=_id, title=doc.title, subtitle1=h1, subtitle2=h2, body_text=text)
+            yield PassageUnit(_id=_id, title=doc.title, subtitle1=h1, subtitle2=h2, body_text=text, last_modified=doc.last_modified)
     parsed_ids.add(doc.page_id)
 
 
@@ -137,12 +140,12 @@ def parse(
         input_inter: int = typer.Option(default=10000),
         input_total: int = typer.Option(default=1410203),
         input_file_home: str = typer.Option(default="input/Wikipedia"),
-        input_file_name: str = typer.Option(default="kowiki-20250501-all-titles-in-ns0.jsonl"),
+        input_file_name: str = typer.Option(default="kowiki-sample.jsonl"),
         # output
         output_file_home: str = typer.Option(default="input/Wikipedia"),
-        output_file_name: str = typer.Option(default="kowiki-20250501-all-titles-in-ns0-parse.jsonl"),
+        output_file_name: str = typer.Option(default="kowiki-sample.jsonl-parse.jsonl"),
         output_table_home: str = typer.Option(default="localhost:8800/wikimedia"),
-        output_table_name: str = typer.Option(default="kowiki-20250501-all-titles-in-ns0-parse"),
+        output_table_name: str = typer.Option(default="kowiki-sample.jsonl-parse"),
         output_table_reset: bool = typer.Option(default=True),
         # filter
         filter_min_char: int = typer.Option(default=40),
@@ -156,7 +159,7 @@ def parse(
         logging_home=output_home,
         logging_file=logging_file,
         message_level=logging.DEBUG if debugging else logging.INFO,
-        message_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
+        message_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_40,
     )
     input_opt = InputOption(
         start=input_start,

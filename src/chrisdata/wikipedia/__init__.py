@@ -12,13 +12,13 @@ logger = logging.getLogger(__name__)
 
 class WikipediaCrawlResult(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    qid: int = Field(alias="_id")  # MongoDB Primary Key
+    id: int = Field(alias="_id")  # MongoDB Primary Key
     query: str
     title: str | None = None
     page_id: int | None = None
     last_modified: str | None = None
     section_list: list = []
-    passage_list: list = []
+    # passage_list: list = []
 
 
 class WikipediaDocument(BaseModel):
