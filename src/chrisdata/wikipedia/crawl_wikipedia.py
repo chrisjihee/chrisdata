@@ -218,7 +218,7 @@ def process_query(i: int, x: str, args: ProgramArguments):
             time.sleep(args.net.calling_sec)
         api = api_list_per_ip[i % len(api_list_per_ip)]
         page: WikipediaPage = api.page(x)
-        result = WikipediaCrawlResult(_id=i, query=x)
+        result = WikipediaCrawlResult(qid=i, query=x)
         page_exists = False
         try:
             page_exists = page.exists()
@@ -237,9 +237,10 @@ def process_query(i: int, x: str, args: ProgramArguments):
             result.section_list += get_section_list_lv2(x, page.sections)
             result.passage_list = get_passage_list(result.section_list, page.pageid)
 
+        # Remove old records with same _id (MongoDB will handle uniqueness)
         if db.table.count_documents({"_id": i}, limit=1) > 0:
             db.table.delete_one({"_id": i})
-        db.table.insert_one(result.model_dump())
+        db.table.insert_one(result.model_dump(by_alias=True))
 
 
 def table_name(args: ProgramArguments) -> str:
@@ -326,11 +327,12 @@ def crawl(
                 for i, row in enumerate(prog_bar, start=1):
                     done_ids.add(row.get("_id"))
                     row = WikipediaCrawlResult.model_validate(row)
-                    out.write(row.model_dump_json() + '\n')
+                    out.write(row.model_dump_json(by_alias=False) + '\n')
                     if i % (args.data.prog_interval * 10) == 0:
                         logger.info(prog_bar)
                 logger.info(prog_bar)
             logger.info(f"Export {num_row}/{input_size} rows to {output_file}")
+            logger.info(f"done_ids={done_ids}")
             undone_inputs = [(i, x) for i, x in input_list if i not in done_ids]
             if undone_inputs:
                 logger.info(f"Found {len(undone_inputs)} undone inputs")

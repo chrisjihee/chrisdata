@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 
 from chrisbase.data import AppTyper
 
@@ -11,8 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 class WikipediaCrawlResult(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    qid: int = Field(alias="_id")  # MongoDB Primary Key
     query: str
-    _id: int | None = None
     title: str | None = None
     page_id: int | None = None
     last_modified: str | None = None
