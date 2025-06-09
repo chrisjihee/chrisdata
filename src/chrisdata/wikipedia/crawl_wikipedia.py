@@ -265,9 +265,9 @@ def crawl(
         input_home: str = typer.Option(default="input"),
         input_name: str = typer.Option(default="backup/kowiki-sample.txt"),
         input_lang: str = typer.Option(default="ko"),
-        input_limit: int = typer.Option(default=100),
+        input_limit: int = typer.Option(default=-1),
         from_scratch: bool = typer.Option(default=False),
-        prog_interval: int = typer.Option(default=15),
+        prog_interval: int = typer.Option(default=5),
         # table
         table_home: str = typer.Option(default="localhost:8800/wikipedia"),
 ):
