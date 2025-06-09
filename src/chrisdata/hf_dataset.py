@@ -5,12 +5,13 @@ from typing import Optional, Dict, List
 from unittest.mock import patch
 
 import datasets
-from chrisbase.data import NewProjectEnv
-from chrisbase.io import do_nothing, LoggingFormat, files, all_line_list, make_parent_dir
 from datasets import load_dataset, Dataset
 from datasets.utils.tqdm import disable_progress_bars, enable_progress_bars
 from pydantic import BaseModel, Field
 from tqdm import tqdm
+
+from chrisbase.data import NewProjectEnv
+from chrisbase.io import do_nothing, LoggingFormat, files, all_line_list, make_parent_dir
 
 logger = logging.getLogger(__name__)
 
