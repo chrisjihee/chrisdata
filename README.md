@@ -98,6 +98,9 @@ Data processing tools for data analysis
 2. Run command
   * To crawl Wikipedia articles
     ```bash
+    python -m chrisdata.cli wikipedia crawl --from-scratch --max-workers 1
+    ```
+    ```bash
     python -m chrisdata.cli wikipedia crawl --from-scratch --input-name backup/kowiki-20250601-all-titles-in-ns0.txt
     ```
 
