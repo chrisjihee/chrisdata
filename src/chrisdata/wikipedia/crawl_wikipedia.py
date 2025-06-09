@@ -56,20 +56,31 @@ class WikipediaEx(Wikipedia):
     def get_last_revision_timestamp(self, page: WikipediaPage):
         """Get the timestamp of the last revision for a page"""
         try:
+            # Use pageids instead of titles for more reliable querying
+            if not hasattr(page, 'pageid') or not page.pageid:
+                logger.warning(f"No pageid available for page: {page.title}")
+                return None
+                
             params = {
                 "action": "query",
                 "prop": "revisions",
-                # "titles": page.title,
                 "pageids": page.pageid,
                 "rvprop": "timestamp",
                 "rvlimit": 1,
                 "rvdir": "older"
             }
             response = self._query(page, params)
+            
             if 'query' in response and 'pages' in response['query']:
                 page_data = list(response['query']['pages'].values())[0]
                 if 'revisions' in page_data and page_data['revisions']:
-                    return page_data['revisions'][0].get('timestamp')
+                    timestamp = page_data['revisions'][0].get('timestamp')
+                    logger.debug(f"Retrieved timestamp for {page.title}: {timestamp}")
+                    return timestamp
+                else:
+                    logger.debug(f"No revisions found for {page.title}")
+            else:
+                logger.warning(f"Invalid response structure for {page.title}")
             return None
         except Exception as e:
             logger.warning(f"Error getting revision timestamp for {page.title}: {e}")
@@ -212,36 +223,72 @@ def reset_global_api(args: ProgramArguments):
 
 
 def process_query(i: int, x: str, args: ProgramArguments):
-    with MongoStreamer(args.table) as db:
-        is_done = db.table.count_documents({"_id": i, "query": x}, limit=1) > 0
-        if is_done:
-            return
-        if args.net and args.net.calling_sec > 0:
-            time.sleep(args.net.calling_sec)
-        api = api_list_per_ip[i % len(api_list_per_ip)]
-        page: WikipediaPage = api.page(x)
-        result = WikipediaCrawlResult(_id=i, query=x)
-        page_exists = False
-        try:
-            page_exists = page.exists()
-        except KeyError:
-            logger.warning(f"KeyError on process_query(i={i}, x={x})")
-        if page_exists:
-            result.title = page.title
-            result.page_id = page.pageid
+    try:
+        with MongoStreamer(args.table) as db:
+            is_done = db.table.count_documents({"_id": i, "query": x}, limit=1) > 0
+            if is_done:
+                logger.debug(f"Already processed: {i}:{x}")
+                return
+            if args.net and args.net.calling_sec > 0:
+                time.sleep(args.net.calling_sec)
+            api = api_list_per_ip[i % len(api_list_per_ip)]
+            page: WikipediaPage = api.page(x)
+            result = WikipediaCrawlResult(_id=i, query=x)
+            page_exists = False
             try:
+                page_exists = page.exists()
+                logger.debug(f"Page {i}:{x} exists: {page_exists}")
+            except KeyError as e:
+                logger.warning(f"KeyError on process_query(i={i}, x={x}): {e}")
+                return
+            except Exception as e:
+                logger.warning(f"Error checking page existence for {i}:{x}: {e}")
+                return
+                
+            if not page_exists:
+                logger.info(f"No page exist: [{args.data.home}/{args.data.name}:{i:07d}] => {x}")
+                # Still save the record with empty data
+                try:
+                    if db.table.count_documents({"_id": i}, limit=1) > 0:
+                        db.table.delete_one({"_id": i})
+                    db.table.insert_one(result.model_dump())
+                    logger.debug(f"Saved empty record for non-existent page: {i}:{x}")
+                except Exception as e:
+                    logger.error(f"Error saving empty record for {i}:{x}: {e}")
+                return
+
+            # Process existing page
+            try:
+                result.title = page.title
+                result.page_id = page.pageid
+                logger.debug(f"Page info: {i}:{x} -> title={result.title}, page_id={result.page_id}")
+                
                 revision_timestamp = api.get_last_revision_timestamp(page)
                 result.last_modified = revision_timestamp if revision_timestamp else None
+                logger.debug(f"Last modified for {i}:{x}: {result.last_modified}")
+                
+                result.section_list.append((x, '', '', page.summary))
+                result.section_list += get_section_list_lv2(x, page.sections)
+                result.passage_list = get_passage_list(result.section_list, page.pageid)
+                logger.debug(f"Sections collected for {i}:{x}: {len(result.section_list)} sections")
+                
             except Exception as e:
-                logger.warning(f"Could not get last_modified for page {x}: {e}")
-                result.last_modified = None
-            result.section_list.append((x, '', '', page.summary))
-            result.section_list += get_section_list_lv2(x, page.sections)
-            result.passage_list = get_passage_list(result.section_list, page.pageid)
-
-        if db.table.count_documents({"_id": i}, limit=1) > 0:
-            db.table.delete_one({"_id": i})
-        db.table.insert_one(result.model_dump())
+                logger.warning(f"Error processing page content for {i}:{x}: {e}")
+                # Save partial data even if content processing fails
+            
+            # Save the result
+            try:
+                if db.table.count_documents({"_id": i}, limit=1) > 0:
+                    db.table.delete_one({"_id": i})
+                db.table.insert_one(result.model_dump())
+                logger.debug(f"Successfully saved: {i}:{x}")
+            except Exception as e:
+                logger.error(f"Error saving to database for {i}:{x}: {e}")
+                
+    except Exception as e:
+        logger.error(f"Critical error in process_query({i}:{x}): {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
 
 
 def table_name(args: ProgramArguments) -> str:
@@ -280,7 +327,7 @@ def crawl(
         logging_home=output_home,
         logging_file=logging_file,
         message_level=logging.DEBUG if debugging else logging.INFO,
-        message_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_24,
+        message_format=LoggingFormat.DEBUG_48 if debugging else LoggingFormat.CHECK_40,
         max_workers=1 if debugging else max(max_workers, 1),
     )
     args = ProgramArguments(
@@ -311,13 +358,36 @@ def crawl(
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("wikipediaapi").setLevel(logging.WARNING)
     with JobTimer(f"python {args.env.current_file} {' '.join(args.env.command_args)}", args=args, rt=1, rb=1, rc='='):
-        with MongoStreamer(args.table) as out_table:
+        # Initialize table once in main process
+        table_args = TableOption(
+            home=args.table.home,
+            name=args.table.name,
+            reset=args.table.reset,  # Only reset in main process
+        )
+        with MongoStreamer(table_args) as main_table:
+            if args.table.reset:
+                logger.info(f"Table reset completed in main process")
+        
+        # Create args for workers (without reset)
+        worker_table_args = TableOption(
+            home=args.table.home,
+            name=args.table.name,
+            reset=False,  # Workers don't reset
+        )
+        worker_args = ProgramArguments(
+            env=args.env,
+            net=args.net,
+            data=args.data,
+            table=worker_table_args,
+        )
+        
+        with MongoStreamer(table_args) as out_table:
             input_list = load_query_list(args=args)
             input_size = len(input_list)
             num_global_api = reset_global_api(args=args)
             logger.info(f"Use {num_global_api} apis and {args.env.max_workers} workers to crawl {input_size} wikipedia queries")
             with ProcessPoolExecutor(max_workers=args.env.max_workers) as pool:
-                jobs = [(i, pool.submit(process_query, i=i, x=x, args=args)) for i, x in input_list]
+                jobs = [(i, pool.submit(process_query, i=i, x=x, args=worker_args)) for i, x in input_list]
                 prog_bar = tqdm(jobs, unit="ea", pre="*", desc="visiting")
                 wait_future_jobs(prog_bar, timeout=args.net.waiting_sec, interval=args.data.prog_interval, pool=pool)
             done_ids = set()
