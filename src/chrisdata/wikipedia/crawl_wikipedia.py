@@ -54,6 +54,28 @@ class WikipediaEx(Wikipedia):
         else:
             raise RuntimeError(f"Failed to query {page.title} after {self.max_retrial} retrials")
 
+    def get_last_revision_timestamp(self, page: WikipediaPage):
+        """Get the timestamp of the last revision for a page"""
+        try:
+            params = {
+                "action": "query",
+                "prop": "revisions",
+                # "titles": page.title,
+                "pageids": page.pageid,
+                "rvprop": "timestamp",
+                "rvlimit": 1,
+                "rvdir": "older"
+            }
+            response = self._query(page, params)
+            if 'query' in response and 'pages' in response['query']:
+                page_data = list(response['query']['pages'].values())[0]
+                if 'revisions' in page_data and page_data['revisions']:
+                    return page_data['revisions'][0].get('timestamp')
+            return None
+        except Exception as e:
+            logger.warning(f"Error getting revision timestamp for {page.title}: {e}")
+            return None
+
 
 api_list_per_ip: List[WikipediaEx] = []
 
