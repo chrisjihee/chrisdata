@@ -8,9 +8,6 @@ class F1(BaseModel):
     n_pos_gold: Optional[int] = None
     n_pos_pred: Optional[int] = None
 
-    def valid(self):
-        return self.n_correct is not None and self.n_pos_gold is not None and self.n_pos_pred is not None
-
     def __str__(self):
         return f"F1={self.f1:.4f}, Prec={self.prec:.4f}, Rec={self.rec:.4f}, #correct={self.n_correct}, #pos_gold={self.n_pos_gold}, #pos_pred={self.n_pos_pred}"
 
@@ -34,8 +31,12 @@ class F1(BaseModel):
         return NotImplemented
 
     @property
+    def valid(self) -> bool:
+        return self.n_correct is not None and self.n_pos_gold is not None and self.n_pos_pred is not None
+
+    @property
     def prec(self):
-        if not self.valid():
+        if not self.valid:
             return 0.0
         if self.n_pos_pred == 0:
             return 1.0 if self.n_pos_gold == 0 else 0.0
@@ -43,7 +44,7 @@ class F1(BaseModel):
 
     @property
     def rec(self):
-        if not self.valid():
+        if not self.valid:
             return 0.0
         if self.n_pos_gold == 0:
             return 1.0 if self.n_pos_pred == 0 else 0.0
@@ -51,7 +52,7 @@ class F1(BaseModel):
 
     @property
     def f1(self):
-        if not self.valid():
+        if not self.valid:
             return 0.0
         if self.n_pos_gold == 0 and self.n_pos_pred == 0:
             return 1.0
