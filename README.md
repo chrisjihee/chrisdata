@@ -103,6 +103,9 @@ Data processing tools for data analysis
     ```bash
     python -m chrisdata.cli wikipedia crawl --max-workers 12 --prog-interval 50 --input-name backup/kowiki-20250601-all-titles-in-ns0.txt
     ```
+    ```bash
+    python -m chrisdata.cli wikipedia crawl --max-workers 3 --prog-interval 10 --input-name kowiki-20250601-all-titles-in-ns0-failed.tsv
+    ```
 
   * To convert Wikipedia articles
     ```bash
