@@ -138,14 +138,14 @@ def parse(
         input_limit: int = typer.Option(default=-1),
         input_batch: int = typer.Option(default=1000),
         input_inter: int = typer.Option(default=10000),
-        input_total: int = typer.Option(default=1410203),
+        input_total: int = typer.Option(default=1556201),
         input_file_home: str = typer.Option(default="input/Wikipedia"),
-        input_file_name: str = typer.Option(default="kowiki-sample.jsonl"),
+        input_file_name: str = typer.Option(default="kowiki-20250601-all-titles-in-ns0.jsonl"),
         # output
         output_file_home: str = typer.Option(default="input/Wikipedia"),
-        output_file_name: str = typer.Option(default="kowiki-sample.jsonl-parse.jsonl"),
+        output_file_name: str = typer.Option(default="kowiki-20250601-parse.jsonl"),
         output_table_home: str = typer.Option(default="localhost:8800/wikimedia"),
-        output_table_name: str = typer.Option(default="kowiki-sample.jsonl-parse"),
+        output_table_name: str = typer.Option(default="kowiki-20250601-parse"),
         output_table_reset: bool = typer.Option(default=True),
         # filter
         filter_min_char: int = typer.Option(default=40),
