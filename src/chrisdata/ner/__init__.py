@@ -93,6 +93,8 @@ class GenNERSample(GenSeq2SeqSample):
     labels: list[str] = None
     target_index: Optional[int] = None
     target_label: Optional[str] = None
+    sentence: Optional[str] = None
+    sentence_token_count: Optional[int] = None
 
     @staticmethod
     def from_wiki_passage(wiki_passage: str, label: str, id: str = None) -> "GenNERSample":
@@ -149,6 +151,17 @@ class GenNERSample(GenSeq2SeqSample):
         self.prompt_labels = GNERDataset._generate_labeled_string(words, labels)
 
         return self
+
+    def sentence(self):
+        if self.sentence is None and self.words:
+            self.sentence = " ".join(self.words)
+        return self.sentence
+
+    def sentence_token_count(self, tokenizer):
+        sentence = self.sentence()
+        if sentence and tokenizer:
+            self.sentence_token_count = len(tokenizer.tokenize(sentence))
+        return self.sentence_token_count
 
 
 class GenSeq2SeqSampleWrapper(BaseModel):
