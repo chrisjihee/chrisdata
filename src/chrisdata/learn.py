@@ -99,5 +99,5 @@ class RegressionSample(BaseModel):
     label: float
     sentence1: str
     sentence2: Optional[str] = None
-    sentence1_token_count: Optional[int] = None
-    sentence2_token_count: Optional[int] = None
+    sentence1_length: Optional[int] = None
+    sentence2_length: Optional[int] = None
