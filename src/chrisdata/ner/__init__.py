@@ -152,13 +152,13 @@ class GenNERSample(GenSeq2SeqSample):
 
         return self
 
-    def sentence(self):
+    def get_sentence(self):
         if self.sentence is None and self.words:
             self.sentence = " ".join(self.words)
         return self.sentence
 
-    def sentence_token_count(self, tokenizer):
-        sentence = self.sentence()
+    def get_sentence_token_count(self, tokenizer):
+        sentence = self.get_sentence()
         if sentence and tokenizer:
             self.sentence_token_count = len(tokenizer.tokenize(sentence))
         return self.sentence_token_count
