@@ -81,7 +81,9 @@ class GoLLIESample(BaseModel):
 class GenSeq2SeqSample(BaseModel):
     id: str = None
     prompt_labels: str = None
+    prompt_labels_length: Optional[int] = None
     instruction_inputs: str = None
+    instruction_length: Optional[int] = None
     prediction_output: Optional[str] = None
     prediction_outputs: Optional[list[str | dict]] = None
 
@@ -94,7 +96,7 @@ class GenNERSample(GenSeq2SeqSample):
     target_index: Optional[int] = None
     target_label: Optional[str] = None
     sentence: Optional[str] = None
-    sentence_token_count: Optional[int] = None
+    sentence_length: Optional[int] = None
 
     @staticmethod
     def from_wiki_passage(wiki_passage: str, label: str, id: str = None) -> "GenNERSample":
@@ -157,11 +159,21 @@ class GenNERSample(GenSeq2SeqSample):
             self.sentence = " ".join(self.words)
         return self.sentence
 
-    def get_sentence_token_count(self, tokenizer):
+    def get_sentence_length(self, tokenizer):
         sentence = self.get_sentence()
         if sentence and tokenizer:
-            self.sentence_token_count = len(tokenizer.tokenize(sentence))
-        return self.sentence_token_count
+            self.sentence_length = len(tokenizer.tokenize(sentence))
+        return self.sentence_length
+
+    def get_instruction_length(self, tokenizer):
+        if self.instruction_inputs and tokenizer:
+            self.instruction_length = len(tokenizer.tokenize(self.instruction_inputs))
+        return self.instruction_length
+
+    def get_prompt_label_length(self, tokenizer):
+        if self.prompt_labels and tokenizer:
+            self.prompt_labels_length = len(tokenizer.tokenize(self.prompt_labels))
+        return self.prompt_labels_length
 
 
 class GenSeq2SeqSampleWrapper(BaseModel):
