@@ -170,7 +170,7 @@ class GenNERSample(GenSeq2SeqSample):
             self.instruction_length = len(tokenizer.tokenize(self.instruction_inputs))
         return self.instruction_length
 
-    def get_prompt_label_length(self, tokenizer):
+    def get_prompt_labels_length(self, tokenizer):
         if self.prompt_labels and tokenizer:
             self.prompt_labels_length = len(tokenizer.tokenize(self.prompt_labels))
         return self.prompt_labels_length
