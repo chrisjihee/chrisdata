@@ -44,7 +44,7 @@ class F1(BaseModel):
         return self.n_correct is not None and self.n_pos_gold is not None and self.n_pos_pred is not None
 
     @property
-    def prec(self):
+    def prec(self) -> Optional[float]:
         if not self.valid:
             return None
         if self.n_pos_pred == 0:
@@ -52,7 +52,7 @@ class F1(BaseModel):
         return self.n_correct / self.n_pos_pred
 
     @property
-    def rec(self):
+    def rec(self) -> Optional[float]:
         if not self.valid:
             return None
         if self.n_pos_gold == 0:
@@ -60,7 +60,7 @@ class F1(BaseModel):
         return self.n_correct / self.n_pos_gold
 
     @property
-    def f1(self):
+    def f1(self) -> Optional[float]:
         if not self.valid:
             return None
         if self.n_pos_gold == 0 and self.n_pos_pred == 0:
